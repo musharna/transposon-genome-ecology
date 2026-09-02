@@ -198,16 +198,35 @@ describe("guard 5: per-copy transposition rate evolves", () => {
    * STRONG mean r 0.14302729174503145 — the strong arm is retarded to 58.5% of the
    * neutral arm, yet still sits 43% ABOVE r0.
    *
-   * Pushing host selection harder does not reverse the direction either, it just
-   * kills the element. Re-derived here at a = 0.1, b = 0.05, same base, same seed,
-   * same horizon (`scripts/explore-crush.ts`): copy number falls monotonically —
-   * 93 copies at g=10, 6 at g=30, 1 at g=36, and 0 from g=37 onward, with the
-   * population still at 300 genomes. The last surviving copy carries r = 0.11023,
-   * ABOVE r0; the arm's mean rate never drops below r0 while any copy is alive.
-   * From g=37 `observe` reports meanRate 0 only because `totalCopies` is 0. So the
-   * one arm where mean rate appears to fall below r0 is not selection on rate at
-   * all — it is extinction reported as a rate, which is exactly what the survival
-   * assertions below exist to exclude.
+   * Four selection strengths were measured here at seed 101, g=60: a=0 (0.24461),
+   * a=0.002 (0.37831), a=0.02 (0.14303) and a=0.1/b=0.05. The three the element
+   * survives all end ABOVE r0; the fourth does not reverse the direction either, it
+   * kills the element. That crush arm was re-derived from its FULL per-generation
+   * trace rather than a sampled grid (`scripts/explore-crush.ts`, which prints every
+   * fact below as a summary block). At seed 101 it is extinct from g=37, and copy
+   * number falls to that point but NOT monotonically — it rises again at five
+   * transitions (g=7->8 110->116, 17->18 19->21, 18->19 21->29, 25->26 3->5,
+   * 27->28 4->6).
+   *
+   * The naive expectation IS directionally visible in this arm, but only as an
+   * early transient: mean r sits below r0 at generations 1..8, bottoming at
+   * 0.09891345273912153 on g=8 (1.09% below r0, 116 copies still alive). It crosses
+   * back above r0 at g=9 (0.10086120785018485, 94 copies) and the last survivor at
+   * g=36 carries 0.11022974342061904.
+   *
+   * That transient does not survive the run and its direction is not stable across
+   * seeds. Seed 202 is below r0 at 13 of its 36 generations with a live copy, seed
+   * 303 at 25 of its 27, and in BOTH the last survivor is below r0 rather than above
+   * it (0.09351345295060659 at g=36; 0.09287402360910908 at g=27), seed 303
+   * bottoming at 0.07721633444374956 on g=23. Once copy number collapses to single
+   * digits the mean is a small-sample statistic over whichever few lineages happened
+   * to survive — which is why no assertion in this file rests on the crush arm.
+   *
+   * The one thing that is NOT selection acting on rate is the large apparent fall
+   * at the end: from the extinction generation (g=37 at seeds 101 and 202, g=28 at
+   * seed 303) `observe` reports meanRate 0 solely because `totalCopies` is 0, with
+   * the population still at 300 genomes. That is extinction reported as a rate, and
+   * it is exactly what the survival assertions below exist to exclude.
    */
   it("host selection retards the rise without reversing it", () => {
     const neutral = arm({ a: 0, b: 0 });
