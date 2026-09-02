@@ -4,6 +4,7 @@ import {
   defaultParams,
   observe,
   type Params,
+  run,
   step,
   type World,
 } from "../../sim/index.js";
@@ -32,8 +33,11 @@ import {
  * HORIZON, N AND OCCUPANCY (all measured in this task, seed 101, N = 300)
  * ------------------------------------------------------------------------------
  * Transposition rejection-samples an empty site, so cost per insertion scales as
- * S / (S - occupied) and explodes near saturation. Exploratory sweep over
- * generations 10..110 in steps of 10, four arms, seeds 101/202/303/404/505:
+ * S / (S - occupied) and explodes near saturation. Two exploratory sweeps, both
+ * committed under `scripts/`, four arms, seeds 101/202/303/404/505:
+ * `scripts/explore-horizon.ts` walks generations 10..110 in steps of 10 to find the
+ * region where the contrasts open up, and `scripts/explore-candidates.ts` then
+ * resolves the candidate marks g=55/60/65 quoted below.
  *
  *   arm      g=55    g=60    g=65    | copies g=60 | occupancy g=60
  *   ON       0.2590  0.3783  0.6261  |      40 789 |  6.80%
@@ -43,7 +47,7 @@ import {
  *
  * Generation 60 is the chosen horizon: it is the smallest decade mark at which
  * BOTH contrasts are unambiguous at every one of the five exploratory seeds
- * (at g=55 the neutral/strong ratio at seed 404 narrows to 0.83, versus 0.61 or
+ * (at g=55 the strong/neutral ratio at seed 404 narrows to 0.83, versus 0.61 or
  * better at g=60), while mean occupancy stays under 9% of S — far below the 50%
  * ceiling where the rejection sampler starts to dominate runtime. N stays at 300.
  * Beyond g=65 the NEUTRAL arm saturates on some seeds (74% occupancy at seed 303,
@@ -92,10 +96,6 @@ const BASE: Params = {
 
 const HORIZON = 60;
 
-function advance(world: World, generations: number): void {
-  for (let i = 0; i < generations; i++) step(world);
-}
-
 function arm(overrides: Partial<Params>): World {
   return createWorld(defaultParams({ ...BASE, ...overrides }));
 }
@@ -112,8 +112,8 @@ describe("guard 5: per-copy transposition rate evolves", () => {
   it("mean rate rises with the variation generator ON and does not move with it OFF", () => {
     const on = arm({ sigmaR: 0.15 });
     const off = arm({ sigmaR: 0 });
-    advance(on, HORIZON);
-    advance(off, HORIZON);
+    run(on, HORIZON);
+    run(off, HORIZON);
 
     const onSnap = observe(on);
     const offSnap = observe(off);
@@ -135,8 +135,11 @@ describe("guard 5: per-copy transposition rate evolves", () => {
 
     // POSITIVE CONTROL for threshold 2: "no movement" must not be extinction.
     // Measured 9361 copies across 300 genomes at g=60 (1.56% occupancy).
+    // Copy count is the only control worth asserting here: `reproduce` refills the
+    // population with an unconditional push in a `for i < p.N` loop, so genome
+    // count is a structural invariant no model behaviour can violate — asserting
+    // it would be an assertion that cannot fail.
     expect(offSnap.totalCopies).toBeGreaterThan(0);
-    expect(off.genomes.length).toBe(BASE.N);
 
     // And the contrast itself, stated directly: the rise requires heritable variation.
     expect(onSnap.meanRate).toBeGreaterThan(offSnap.meanRate);
@@ -193,16 +196,24 @@ describe("guard 5: per-copy transposition rate evolves", () => {
    *
    * Measured at seed 101, g=60: NEUTRAL mean r 0.24461191306928531 versus
    * STRONG mean r 0.14302729174503145 — the strong arm is retarded to 58.5% of the
-   * neutral arm, yet still sits 43% ABOVE r0. Rate falls below r0 only at
-   * a=0.1/b=0.05, an arm that goes EXTINCT (0 copies, meanRate reported as 0) —
-   * extinction masquerading as selection on rate, which is exactly what the
-   * survival assertions below exist to exclude.
+   * neutral arm, yet still sits 43% ABOVE r0.
+   *
+   * Pushing host selection harder does not reverse the direction either, it just
+   * kills the element. Re-derived here at a = 0.1, b = 0.05, same base, same seed,
+   * same horizon (`scripts/explore-crush.ts`): copy number falls monotonically —
+   * 93 copies at g=10, 6 at g=30, 1 at g=36, and 0 from g=37 onward, with the
+   * population still at 300 genomes. The last surviving copy carries r = 0.11023,
+   * ABOVE r0; the arm's mean rate never drops below r0 while any copy is alive.
+   * From g=37 `observe` reports meanRate 0 only because `totalCopies` is 0. So the
+   * one arm where mean rate appears to fall below r0 is not selection on rate at
+   * all — it is extinction reported as a rate, which is exactly what the survival
+   * assertions below exist to exclude.
    */
   it("host selection retards the rise without reversing it", () => {
     const neutral = arm({ a: 0, b: 0 });
     const strong = arm({ a: 0.02, b: 0.002 });
-    advance(neutral, HORIZON);
-    advance(strong, HORIZON);
+    run(neutral, HORIZON);
+    run(strong, HORIZON);
 
     const neutralSnap = observe(neutral);
     const strongSnap = observe(strong);
@@ -212,8 +223,6 @@ describe("guard 5: per-copy transposition rate evolves", () => {
     // 0 when totalCopies is 0). Measured 51 198 copies neutral, 2 237 strong.
     expect(neutralSnap.totalCopies).toBeGreaterThan(0);
     expect(strongSnap.totalCopies).toBeGreaterThan(0);
-    expect(neutral.genomes.length).toBe(BASE.N);
-    expect(strong.genomes.length).toBe(BASE.N);
 
     // THRESHOLD 3 (the retardation): measured ratio strong/neutral = 0.5847.
     // Asserted at 0.75, so it fails if the retardation weakens from a 41.5% gap to
