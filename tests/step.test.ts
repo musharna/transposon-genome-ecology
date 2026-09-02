@@ -125,6 +125,31 @@ describe("observe", () => {
     w.genomes[1]!.repertoire = [2];
     expect(observe(w).fractionWithRepertoire).toBeCloseTo(0.2, 10);
   });
+
+  // ADDITIVE — closes a gap the mutation sweep found: "partitions total into
+  // active, silenced and domesticated" above drives a real run, which at
+  // N=30/10 generations from defaultParams's pDom=0.001 produces zero
+  // domesticated copies almost every time, so a mutant that double-counts a
+  // domesticated copy into the active tally has nothing to double and
+  // survives. This test hand-builds a genome with one guaranteed copy of
+  // each kind so the tally can't accidentally be vacuously true.
+  it("excludes domesticated copies from both the active and silenced tallies", () => {
+    const w = createWorld(defaultParams({ N: 1 }));
+    w.genomes[0]!.repertoire = [0];
+    w.genomes[0]!.copies = [
+      // Would match the repertoire (|0-0|<=theta) but is exempt: domesticated.
+      { id: 0, site: 10, r: 0.1, s: 0, domesticated: true },
+      // Matches the repertoire entry within theta, not domesticated: silenced.
+      { id: 1, site: 20, r: 0.2, s: 0, domesticated: false },
+      // Far outside theta from the only repertoire entry: active.
+      { id: 2, site: 30, r: 0.3, s: 5, domesticated: false },
+    ];
+    const s = observe(w);
+    expect(s.totalCopies).toBe(3);
+    expect(s.domesticatedCopies).toBe(1);
+    expect(s.silencedCopies).toBe(1);
+    expect(s.activeCopies).toBe(1);
+  });
 });
 
 describe("history", () => {
