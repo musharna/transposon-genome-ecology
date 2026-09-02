@@ -78,9 +78,11 @@ TE data is open and abundant, so the model can be checked against reality rather
 than only against itself: Petersen arthropod repertoires, Asparagales,
 **Dfam/Repbase**.
 
-⚠️ Those are pointers from the filing note, not verified facts about current
-contents. Query a live registry before asserting what any of them holds or
-whether a given comparison already exists.
+➡️ **ALL CHECKED LIVE 2026-09-02 — `REFERENCES.md` §8 supersedes this list.**
+**Dfam 4.0** (CC0, open API, 7.6M families / 6,549 taxa) is the usable one.
+**Repbase is CLOSED** and its licence forbids redistribution in a public artifact
+— drop it. **Asparagales resolves** to Hertweck 2013. The widest validation arm is
+Osmanski et al. 2023 (248 mammal genomes, deposited into Dfam, so CC0).
 
 ## Prior grounding that already exists — read before re-running it
 
@@ -150,6 +152,11 @@ live registry and the null stated as "checked HERE", naming where.
       author-scoped lookup found it at once (`REFERENCES.md` §9). ⚠️ Keyword search had
       returned a _plausible substitute_ by different authors — a near-miss reads as
       confirmation, so **use author-scoped lookup before calling any citation missing**.
-- [ ] Verify Dfam / Repbase access terms and the Asparagales pointer
-      (`REFERENCES.md` §8) — both unchecked
+- [x] **DONE 2026-09-02** — Dfam / Repbase access terms and the Asparagales pointer,
+      all checked live (`REFERENCES.md` §8). **Dfam 4.0 is CC0 with an open API and is
+      the one usable option; Repbase is CLOSED and its licence forbids redistribution
+      in a public artifact, so stop naming it.** ⚠️ **The Asparagales entry was a FALSE
+      NULL** — "no corresponding resource located" was a failure to look, not an
+      absence: Hertweck 2013 (`10.1139/gen-2013-0042`) is exactly the pointer. Best
+      validation set is Osmanski et al. 2023, 248 mammal genomes, deposited into Dfam.
 - [ ] First registered question + pre-registration, before any runner exists

@@ -312,12 +312,80 @@ Say that, or say nothing.
   outgroup species.** The roadmap's pointer resolves to an actual usable
   cross-taxon resource. Companion: Gilbert, Peccoud & Cordaux 2020, _Annu Rev
   Entomol_, [10.1146/annurev-ento-070720-074650](https://doi.org/10.1146/annurev-ento-070720-074650), 154 cites.
-- ⬜ **Dfam / Repbase** — **not checked this session.** Both are real, but their
-  current licensing, coverage and access terms were not verified and Repbase in
-  particular has had access changes. Query before asserting anything about
-  contents.
-- ⬜ **Asparagales** — **not checked this session.** No corresponding resource
-  located; treat as an unresolved pointer, not a dataset.
+- ✅ **Dfam 4.0** — released **27 May 2026**, [dfam.org](https://dfam.org/).
+  **7.6 million families across 6,549 taxa** (3.9 was 4.1M / 2,784): curated
+  libraries for five model organisms plus 242 mammals, uncurated de-novo libraries
+  for >4,300 species. **CC0 1.0, whole database, no registration** — relnotes §11,
+  "you can redistribute it and/or modify it as you wish… even for commercial
+  purposes, all without asking permission". Open REST API at `dfam.org/api`, hit
+  live this session, no key, `total_count` on every query, so it is directly usable
+  from a small web project. ⚠️ **Bulk download is family libraries only**
+  (`releases/current/families/`: FamDB 3.0.0 components cc/ch/uc/uh, plus
+  `Dfam-RepeatMasker.lib.gz` and the HMM partitions). **There is no per-genome
+  annotation download** — `releases/current/annotations/` is a 404 in both 4.0 and
+  3.9 — so "a species' TE annotation" means running RepeatMasker yourself.
+  Plant/orchid coverage, queried live: Viridiplantae **300 curated / 1,248,134
+  incl. uncurated**; Orchidaceae **0 curated / 18,947 uncurated** (Phalaenopsis
+  2,056 · Cymbidium 1,964 · Asparagus 1,955 · Gastrodia 1,850 · Vanilla 1,637 ·
+  Apostasia, Platanthera, Allium 0).
+- ⚠️ **Repbase — CLOSED. Stop naming it as an option.** Dfam's own 4.0 relnotes
+  call it "a closed database". Browse/search/archive at girinst.org are gated "For
+  subscribed users only"; licensing moved from Phoenix Bioinformatics to GIRI
+  ("Beginning April 1, Phoenix Bioinformatics will no longer manage Repbase
+  licenses"). The academic agreement forbids making Repbase "available to anyone
+  outside your research group" — **redistribution in a public artifact is
+  prohibited**, which is exactly what this project would be doing. ⚠️ **No current
+  price is published anywhere on girinst.org**; the only figure in circulation is a
+  2019 forum post ($1,395/yr individual academic), 7 years stale — do not repeat it
+  as fact. A real number requires emailing licensing@girinst.org.
+- ✅ **Asparagales — the pointer RESOLVES, and the previous "no corresponding
+  resource located" was a FALSE NULL.** **Hertweck 2013**, "Assembly and
+  comparative analysis of transposable elements from low coverage genomic sequence
+  data in Asparagales", _Genome_ 56(8),
+  [10.1139/gen-2013-0042](https://doi.org/10.1139/gen-2013-0042), 19 cites, OA.
+  Low-coverage single-end Illumina from **11 exemplar Asparagales taxa**, de-novo
+  repeat assembly annotated against a monocot repeat library, tied to genome-size
+  estimates in a phylogeny. Real, but small and 2013 — a comparative _study_, not a
+  downloadable table. Companions: Li et al. 2014, _PLoS ONE_,
+  [10.1371/journal.pone.0097189](https://doi.org/10.1371/journal.pone.0097189) ·
+  Peška et al. 2019, _IJMS_,
+  [10.3390/ijms20030733](https://doi.org/10.3390/ijms20030733).
+  ⭐ **Orchid-specific and the most design-relevant of these: Eriksson et al.
+  2022**, "Repeat Dynamics across Timescales… Sibling Allotetraploid Marsh Orchids
+  (_Dactylorhiza majalis_ s.l.)", _Mol Biol Evol_ 39(8):msac167,
+  [10.1093/molbev/msac167](https://doi.org/10.1093/molbev/msac167), 16 cites —
+  **five allotetraploids formed independently and sequentially from the same two
+  diploid parents between 500 and 100,000 generations ago**, tracking LTR-RT fate
+  after polyploidisation. Replicated natural experiments with a real time axis, in
+  orchids; the same replicated-independent-origin structure that makes the
+  syncytins interesting in §5. Also Hsu et al. 2020, _BMC Genomics_,
+  [10.1186/s12864-020-07221-6](https://doi.org/10.1186/s12864-020-07221-6) · Russo
+  et al. 2024, _Nat Commun_,
+  [10.1038/s41467-024-50622-4](https://doi.org/10.1038/s41467-024-50622-4).
+- ⭐ **Better than any of the above for validating a copy-number model: Osmanski et
+  al. 2023**, "Insights into mammalian TE diversity through the curation of 248
+  genome assemblies", _Science_,
+  [10.1126/science.abn1430](https://doi.org/10.1126/science.abn1430), 137 cites,
+  FWCI 40.3. De-novo TE curation of **248 placental mammal genomes** — per-species
+  TE content, diversity and _recent accumulation_ (multiple independent expansion
+  and quiescence events across the tree; young LINEs drive genome-size increase,
+  DNA transposons track smaller genomes). The 25,676 resulting consensus sequences
+  were deposited **into Dfam**, so unlike Petersen this arrives CC0 and
+  API-accessible. Plant-side supplement: He et al. 2024, _GPB_,
+  [10.1093/gpbjnl/qzae078](https://doi.org/10.1093/gpbjnl/qzae078), 234
+  representative plant genomes. ⚠️ A Zenodo search for `Zoonomia_TEs_Release`
+  returned **0 hits** — the deposit route actually verified is Dfam; do not cite a
+  Zenodo DOI without checking the _Science_ SI.
+
+**Where checked, stated:** dfam.org relnotes, release directory listings, and live
+`/api/taxa` + `/api/families` queries; girinst.org (5 pages), phoenixbioinfo.org
+/repbase, and the Repbase Academic User Agreement; OpenAlex `search_works` and
+`batch_resolve_references` (8/8 DOIs resolved, first-author surname + year + venue
+confirmed against each record, abstracts checked to support the claims made here);
+Zenodo `/api/records`; WebSearch — all 2026-09-02. **Not checked:** a current
+Repbase price (unpublished; requires contacting GIRI), Zenodo/Dryad for an
+Asparagales TE deposit, and Dfam `clade=Asparagales` / `clade=Dendrobium` counts
+(the API returned no result within timeout — **unverified, not zero**).
 
 Background/orientation, if the element taxonomy needs settling:
 **Wells & Feschotte 2020**, "A field guide to eukaryotic transposable elements",
