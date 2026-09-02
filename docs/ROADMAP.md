@@ -5,8 +5,28 @@ one, banner this file and redirect from it in the same commit.
 
 ## Where this stands
 
-**Nothing is designed yet.** Scaffolded 2026-09-01 so development could start;
-no model, no registered question, no measurement.
+➡️➡️ **THE DESIGN IS DONE AND LIVES IN
+[`superpowers/specs/2026-09-02-transposon-genome-ecology-design.md`](superpowers/specs/2026-09-02-transposon-genome-ecology-design.md).**
+That document is now canonical for the model, the verb, the screen, validation and
+layout. **This roadmap is canonical only for what remains unbuilt** (the checklist
+at the bottom). Where the two disagree, the spec wins.
+
+Settled there, and **superseding the two sections immediately below**:
+
+- **The unit is the COPY**, not the family and not the host. Rate is a per-copy
+  heritable trait; "family" is emergent, never declared. The reason is mechanical —
+  it is the only candidate with a **variation generator**, and "rate is heritable"
+  is meaningless without one. See spec §2.
+- **The verb is PERTURBING THE WORLD, never the element.** You do not choose a
+  transposition rate; you change the conditions under which heritable rates are
+  selected. The constraint below stops being an obstacle and becomes the reason the
+  toy works. See spec §4.
+- **Shape:** a poke-and-watch toy, minutes per session, playable-first with
+  scientific correctness as the floor. One TypeScript core, browser UI, node
+  runners. See spec §1 and §7.
+
+~~**Nothing is designed yet.**~~ Superseded 2026-09-02. Scaffolded 2026-09-01;
+still no code, no runner, no measurement — but the design is no longer open.
 
 ## The constraint that shapes everything else
 
@@ -18,7 +38,17 @@ when to copy — because that models something biology does not do. The verb has
 be "carry a strategy and be selected", and finding a verb that is both accurate
 and playable is the central design problem, not a detail to settle later.
 
-## The first decision
+## The first decision — ⛔ CLOSED 2026-09-02: the answer is the COPY
+
+**Kept for the reasoning, not as an open question. Decided in spec §2.**
+
+⚠️ The table below records the framing at filing time, and **its verdict on the
+first row was wrong**. It rejected copy-as-unit because "the strategy is invisible
+at this scale" — but under a poke-and-watch toy the strategy _is_ the distribution
+over copies, and a distribution renders trivially. What is invisible in one copy is
+visible in ten thousand. The row that actually failed was **element FAMILY**: a
+family-level scalar rate has no within-family variation, so rate changes without
+ever evolving, which guts the constraint above.
 
 ⚠️ **What is the individual?** Three candidates, and the choice is not obvious:
 
@@ -89,9 +119,14 @@ live registry and the null stated as "checked HERE", naming where.
 
 ## Not yet done
 
-- [ ] Brainstorm the design (`superpowers:brainstorming`, then `deep-sim-design`)
-- [ ] Settle the unit of individuality and record WHY
-- [ ] Find a player verb that respects "rate is heritable, not chosen"
+- [x] **DONE 2026-09-02** — Brainstorm the design → spec at
+      `superpowers/specs/2026-09-02-transposon-genome-ecology-design.md`
+- [x] **DONE 2026-09-02** — Unit of individuality settled: **the COPY**, because it
+      is the only candidate carrying a variation generator (spec §2)
+- [x] **DONE 2026-09-02** — Player verb settled: **perturb the world, never the
+      element** (spec §4). Rate is never chosen, only selected
+- [ ] Write the implementation plan (`superpowers:writing-plans` from the spec)
+- [ ] Build `sim/` core + guards 1–7, then `web/`
 - [~] `bio-grounding` on piRNA conscription and on domestication, against the
   actual pathways rather than the summary — **literature base built
   (`REFERENCES.md` §3, §5); the pathway mechanics themselves still need
