@@ -33,4 +33,15 @@ describe("makeRng", () => {
     expect(Math.abs(mean)).toBeLessThan(0.05);
     expect(Math.abs(varr - 1)).toBeLessThan(0.05);
   });
+
+  it("normal() is deterministic for a given seed, across the spare-cache boundary", () => {
+    const a = makeRng(4242);
+    const b = makeRng(4242);
+    // Odd count: exercises both the cache-miss branch (computes a fresh pair,
+    // returns one, caches the other) and the cache-hit branch (returns the
+    // cached spare) an unequal number of times, on both instances.
+    const seqA = Array.from({ length: 7 }, () => a.normal());
+    const seqB = Array.from({ length: 7 }, () => b.normal());
+    expect(seqA).toEqual(seqB);
+  });
 });
