@@ -3,12 +3,17 @@ import {
   createWorld,
   defaultParams,
   isSilenced,
-  type Copy,
-  type Genome,
-  type Params,
   silencedCopies,
 } from "../../sim/index.js";
-import { transpose } from "../../sim/phases/transpose.js";
+import {
+  BASE,
+  FOUNDER_ID,
+  GENERATIONS,
+  runArm,
+  SEED_S,
+  SEEDS,
+  transposeOnce,
+} from "./escape-arm.js";
 
 /**
  * GUARD 6 (spec §6) — a sublineage that diverges far enough in s ESCAPES a trap
@@ -61,94 +66,12 @@ import { transpose } from "../../sim/phases/transpose.js";
  */
 
 /**
- * Fully pinned — all 20 fields, nothing inherited from `defaultParams`'
- * provisional values, because a guard's configuration is part of the guard.
- *
- * Ten of the twenty are inert here and are pinned to zero/false so the arm reads
- * as what it is: `v, a, b, d, dTol, t, pDom, wDom, sexual, silencingOn` are read
- * only by `lifecycle`, `select`, `reproduce` and `trap`, none of which this file
- * calls. Note in particular that `silencingOn` is NOT consulted by
- * `isSilenced` — the master switch lives in `trap.ts`, which only governs whether
- * new entries are CAPTURED into a repertoire; a repertoire that already exists
- * silences either way. That was verified rather than assumed: re-running the
- * seed-55 arm with all ten fields at their `defaultParams` values instead
- * reproduces the run bit for bit (identical site/r/s for all 206 copies), as does
- * flipping `silencingOn` to false on its own.
- *
- * `c = 0` and `beta = 0` remove the cluster and beneficial spans so that the
- * hand-placed sites 1000 and 1001 are ordinary sites. `S = 5000` keeps occupancy
- * at most 257/5000 = 5.1%, far from the point where `transpose`'s rejection
- * sampler starts retrying, and far from its `occupied.size >= p.S` break.
+ * The arm — the fully pinned 20-field `BASE`, the seed set, the horizon and the
+ * two runners — lives in `./escape-arm.js`, imported above and shared with
+ * `scripts/explore-escape.ts` so that the guard and the script that derives its
+ * thresholds cannot drift apart. That module carries the rationale for every
+ * pinned field. Nothing here re-declares any of it.
  */
-const BASE: Params = {
-  N: 1,
-  S: 5000,
-  c: 0,
-  r0: 1,
-  rMax: 1,
-  sigmaR: 0,
-  sigmaS: 0.5,
-  theta: 0.1,
-  v: 0,
-  a: 0,
-  b: 0,
-  d: 0,
-  dTol: 0,
-  t: 0,
-  beta: 0,
-  pDom: 0,
-  wDom: 0,
-  sexual: false,
-  silencingOn: true,
-  seed: 55,
-};
-
-/** Eight generations of unchecked doubling: enough for 2^8 = 256 descendants. */
-const GENERATIONS = 8;
-
-/**
- * The seed set every claim below is checked at. 55 is the arm the exact numbers
- * in the comments were read off; 101/202/303/404/505 are the seeds the Guard 5
- * sweeps already use; 1/2/3/7/9 are small values. No claim in this file rests on
- * a single seed.
- */
-const SEEDS = [55, 1, 2, 3, 7, 9, 101, 202, 303, 404, 505] as const;
-
-const FOUNDER_ID = 0;
-/** 2 * theta: outside the silencing window, so the sublineage root is active. */
-const SEED_S = 0.2;
-
-interface Arm {
-  p: Params;
-  g: Genome;
-  founder: Copy;
-  escaped: Copy[];
-}
-
-/**
- * One genome, one silenced founder, one active copy at SEED_S, GENERATIONS rounds
- * of transposition and nothing else.
- */
-function runArm(seed: number, sigmaS: number): Arm {
-  const p = defaultParams({ ...BASE, seed, sigmaS });
-  const w = createWorld(p);
-  const g = w.genomes[0]!;
-  g.copies = [
-    { id: FOUNDER_ID, site: 1000, r: 1, s: 0, domesticated: false },
-    { id: 1, site: 1001, r: 1, s: SEED_S, domesticated: false },
-  ];
-  g.repertoire = [0];
-  w.nextCopyId = 2;
-
-  for (let i = 0; i < GENERATIONS; i++) transpose(w);
-
-  return {
-    p,
-    g,
-    founder: g.copies.find((c) => c.id === FOUNDER_ID)!,
-    escaped: g.copies.filter((c) => !isSilenced(c, g, p)),
-  };
-}
 
 describe("guard 6: escape by divergence", () => {
   /**
@@ -193,19 +116,16 @@ describe("guard 6: escape by divergence", () => {
         `seed ${seed}: only ${escaped.length} of ${g.copies.length} copies escaped`,
       ).toBeGreaterThan(100);
 
-      // Escape MEANS "outside theta of every repertoire entry" — re-derived here
-      // from the copies' own coordinates rather than from `isSilenced`. With the
-      // live model and repertoire [0] this is true by construction; it is not
-      // unfailable, because it goes red for any predicate that stops meaning
-      // "within theta" (an always-false one admits the founder at s = 0, giving
-      // min |s| = 0). Measured min over the escaped set: 0.1003..0.1272.
-      const minAbsS = Math.min(...escaped.map((c) => Math.abs(c.s)));
-      expect(
-        minAbsS,
-        `seed ${seed}: an escaped copy sits at |s|=${minAbsS}, inside theta=${p.theta}`,
-      ).toBeGreaterThan(p.theta);
+      // A `min |s| > theta` check once stood here and was deleted as a tautology:
+      // with repertoire [0], `escaped` is DEFINED as `|s - 0| > theta` at
+      // sim/silencing.ts:15, so recomputing that predicate over the set the
+      // predicate itself produced cannot be false while the set is non-empty. It
+      // was worse than merely redundant — `Math.min(...[])` is +Infinity, which
+      // PASSES `> theta`, so it would also have gone green on an empty escaped
+      // set. A check of that shape only means something if it recomputes
+      // silencing from something other than the filter that built the set.
 
-      // ...and the divergence is not marginal. Measured max |s| 2.36..3.17
+      // The divergence is not marginal. Measured max |s| 2.36..3.17
       // across the eleven seeds (3.0141555526826873 at seed 55). Asserted at
       // 10 * theta = 1.0, which the weakest seed (404, 2.3638) clears by 2.4x;
       // it fails if divergence at that seed collapses by 58%.
@@ -309,22 +229,10 @@ describe("guard 6: escape by divergence", () => {
     for (const seed of SEEDS) {
       const p = defaultParams({ ...BASE, seed });
 
-      const onceWithRepertoire = (repertoire: number[]): Genome => {
-        const w = createWorld(p);
-        const g = w.genomes[0]!;
-        g.copies = [
-          { id: FOUNDER_ID, site: 1000, r: 1, s: 0, domesticated: false },
-        ];
-        g.repertoire = repertoire;
-        w.nextCopyId = 1;
-        transpose(w);
-        return g;
-      };
-
       // POSITIVE CONTROL FIRST. Empty repertoire, so nothing is silenced; r = 1
       // makes transposition certain, so exactly one daughter must appear.
       // Measured: 2 copies at every one of the eleven seeds.
-      const free = onceWithRepertoire([]);
+      const free = transposeOnce(p, []);
       expect(
         free.copies.length,
         `seed ${seed}: an unsilenced copy at r=1 failed to transpose, so this test cannot distinguish anything`,
@@ -332,7 +240,7 @@ describe("guard 6: escape by divergence", () => {
 
       // THE CLAIM. Same copy, same seed, a repertoire that catches it: no
       // daughter. Measured: 1 copy at every one of the eleven seeds.
-      const trapped = onceWithRepertoire([0]);
+      const trapped = transposeOnce(p, [0]);
       expect(
         trapped.copies.length,
         `seed ${seed}: a silenced copy transposed — ${trapped.copies.length} copies where 1 was expected`,
