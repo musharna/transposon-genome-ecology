@@ -1,8 +1,12 @@
 # Reference base — transposons as genome ecology
 
-**Built 2026-09-02.** Every entry below was resolved against **OpenAlex live this
-session**: first-author surname, year, venue and DOI all came back from the
-registry, not from recall. Citation counts are as of 2026-09-02 and will drift.
+**Built 2026-09-02** (37 works / 41 DOIs). Every entry below was resolved against
+**OpenAlex live**: first-author surname, year, venue and DOI all came back from
+the registry, not from recall. Citation counts are as of 2026-09-02 and will drift.
+
+**Status:** §7's registry sweep is **complete** — the interaction-mode gap survives
+GitHub, CRAN, PyPI, itch.io and Steam. §9's failed citation is **resolved**. The
+only rows still unverified are the Dfam / Repbase / Asparagales pointers in §8.
 
 ⚠️ **What this check is and is not.** Byline+year+DOI+venue are registry-confirmed.
 The full `CLAUDE.md` chain (Zotero → PubMed/DOI → CrossRef byline compare) has
@@ -18,16 +22,16 @@ The 2026-07-31 sweep recorded pitching "genome as ecosystem" as an original lens
 and being wrong. That still holds, and the registry makes it worse, not better:
 the framing is the field's own, it is decades old, and it is in review journals.
 
-| work | why it closes the novelty question |
-| --- | --- |
-| **Brookfield 2005**, "The ecology of the genome — mobile DNA elements and their hosts", _Nat Rev Genet_, [10.1038/nrg1524](https://doi.org/10.1038/nrg1524), 231 cites | The exact framing, in the field's flagship review journal, **2005** — note the roadmap implied ~2006/07 via a PMID; the Brookfield paper is 2005. |
-| **Kidwell & Lisch 2001**, "Transposable elements, parasitic DNA, and genome evolution", _Evolution_, [10.1111/j.0014-3820.2001.tb01268.x](https://doi.org/10.1111/j.0014-3820.2001.tb01268.x), 577 cites | Argues "selfish DNA"/"junk DNA" are misleading and that the TE–host relationship is **a continuum from extreme parasitism to mutualism**. The domestication-as-alternate-win mechanic is this paper's thesis, from 2001. |
-| **Stitzer et al. 2021**, "The genomic ecosystem of transposable elements in maize", _PLoS Genet_ 17(10):e1009768, [10.1371/journal.pgen.1009768](https://doi.org/10.1371/journal.pgen.1009768), 144 cites | The literal phrase "genomic ecosystem", applied genome-wide. >85% of maize is past transposition. |
-| **Cosby, Chang & Feschotte 2019**, "Host–transposon interactions: conflict, cooperation, and cooption", _Genes Dev_ 33(17–18):1098, [10.1101/gad.327312.119](https://doi.org/10.1101/gad.327312.119), 332 cites | Explicitly argues TE success **cannot** be explained by evasion alone — commensal and mutualistic strategies included. |
+| work                                                                                                                                                                                                            | why it closes the novelty question                                                                                                                                                                                       |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Brookfield 2005**, "The ecology of the genome — mobile DNA elements and their hosts", _Nat Rev Genet_, [10.1038/nrg1524](https://doi.org/10.1038/nrg1524), 231 cites                                          | The exact framing, in the field's flagship review journal, **2005** — note the roadmap implied ~2006/07 via a PMID; the Brookfield paper is 2005.                                                                        |
+| **Kidwell & Lisch 2001**, "Transposable elements, parasitic DNA, and genome evolution", _Evolution_, [10.1111/j.0014-3820.2001.tb01268.x](https://doi.org/10.1111/j.0014-3820.2001.tb01268.x), 577 cites        | Argues "selfish DNA"/"junk DNA" are misleading and that the TE–host relationship is **a continuum from extreme parasitism to mutualism**. The domestication-as-alternate-win mechanic is this paper's thesis, from 2001. |
+| **Stitzer et al. 2021**, "The genomic ecosystem of transposable elements in maize", _PLoS Genet_ 17(10):e1009768, [10.1371/journal.pgen.1009768](https://doi.org/10.1371/journal.pgen.1009768), 144 cites       | The literal phrase "genomic ecosystem", applied genome-wide. >85% of maize is past transposition.                                                                                                                        |
+| **Cosby, Chang & Feschotte 2019**, "Host–transposon interactions: conflict, cooperation, and cooption", _Genes Dev_ 33(17–18):1098, [10.1101/gad.327312.119](https://doi.org/10.1101/gad.327312.119), 332 cites | Explicitly argues TE success **cannot** be explained by evasion alone — commensal and mutualistic strategies included.                                                                                                   |
 
 **Consequence for the design.** Novelty cannot be claimed on the framing. If this
-project has a contribution it is in the *artifact* (§7) or in a *registered
-question* nobody has asked — not in noticing that genomes look like ecosystems.
+project has a contribution it is in the _artifact_ (§7) or in a _registered
+question_ nobody has asked — not in noticing that genomes look like ecosystems.
 
 ---
 
@@ -47,14 +51,14 @@ the sim would simulate.** Building without reading it means reinventing it badly
 - **Hua-Van, Le Rouzic, Boutin, Filée & Capy 2011**, "The struggle for life of the
   genome's selfish architects", _Biol Direct_ 6:19,
   [10.1186/1745-6150-6-19](https://doi.org/10.1186/1745-6150-6-19), 260 cites.
-  ✅ *Roadmap citation — verified.* The TE-as-organism-under-selection framing.
+  ✅ _Roadmap citation — verified._ The TE-as-organism-under-selection framing.
 - **Bourgeois & Boissinot 2019**, "On the population dynamics of junk", _Genes_
   10(6):419, [10.3390/genes10060419](https://doi.org/10.3390/genes10060419), 144 cites.
-  ✅ *Roadmap citation — verified.* Modern review of what conditions TE abundance.
+  ✅ _Roadmap citation — verified._ Modern review of what conditions TE abundance.
 - **Lü & Clark 2010**, "Population dynamics of PIWI-interacting RNAs (piRNAs) and
   their targets in Drosophila", _Genome Res_ 20(2):212,
   [10.1101/gr.095406.109](https://doi.org/10.1101/gr.095406.109), 98 cites.
-  ✅ *Roadmap citation ("Lü & Clark 2009") — verified, but the issue is **2010***
+  ✅ \*Roadmap citation ("Lü & Clark 2009") — verified, but the issue is **2010\***
   (online 2009-11-30). Quantifies 32 TE families in piRNA-pathway mutants and
   **puts piRNAs inside a population-genetic framework** — the direct precedent for
   coupling the two halves of this sim.
@@ -118,7 +122,7 @@ quantitative support, so there is no excuse for taking it from a summary.
 
 ## §4 Silencing is not free — the host pays too
 
-Load-bearing for the *second* opponent. If host silencing is costless in the sim,
+Load-bearing for the _second_ opponent. If host silencing is costless in the sim,
 the host has no reason not to max it, and the arms race collapses into a solved
 game. Both papers below say silencing is genuinely double-edged, with measurement.
 
@@ -131,8 +135,28 @@ game. Both papers below say silencing is genuinely double-edged, with measuremen
 - **Choi & Lee 2020**, "Double-edged sword: the evolutionary consequences of the
   epigenetic silencing of transposable elements", _PLoS Genet_,
   [10.1371/journal.pgen.1008872](https://doi.org/10.1371/journal.pgen.1008872), 142 cites.
-  Argues epigenetic silencing is an under-recognised *source* of TE harm, distinct
+  Argues epigenetic silencing is an under-recognised _source_ of TE harm, distinct
   from insertional disruption.
+
+### ⭐ And the host has a SECOND strategy the roadmap never names: tolerance
+
+**Meiklejohn & Blumenstiel 2018**, "Invasion of the P elements: tolerance is not
+futile", _PLoS Biol_, [10.1371/journal.pbio.3000036](https://doi.org/10.1371/journal.pbio.3000036)
+(found 2026-09-02 via the §9 author lookup).
+
+Before a host acquires **resistance** (silencing the element), individuals vary in
+their capacity to **tolerate** TE activity — ignoring or repairing the damage while
+the element stays active. This is the standard resistance/tolerance distinction from
+host–parasite ecology, and it applies here.
+
+**Why it matters for the design.** The roadmap frames the second opponent as "host
+silencing", singular. That is one of two host strategies, and they differ in kind:
+resistance suppresses the element (and pays the §4 cost above, damaging neighbouring
+genes); tolerance leaves the element active and absorbs the harm instead. They have
+different costs, different equilibria, and — critically for a game — **tolerance does
+not create a piRNA cluster, so it never triggers the §3 conscription trap.** A host
+that tolerates rather than resists is an opponent the element cannot conscript.
+Modelling only silencing collapses a two-strategy opponent into one.
 
 ---
 
@@ -201,7 +225,7 @@ Confirmed still true:
 
 - **SimulaTE** — Kofler 2018, _Bioinformatics_ 34(8):1419,
   [10.1093/bioinformatics/btx772](https://doi.org/10.1093/bioinformatics/btx772), **7 cites**.
-  ✅ Verified. Simulates *reads* to benchmark TE-detection tools. Not an ecosystem.
+  ✅ Verified. Simulates _reads_ to benchmark TE-detection tools. Not an ecosystem.
 - **VisualTE** — 2015, _BMC Genomics_,
   [10.1186/s12864-015-1351-5](https://doi.org/10.1186/s12864-015-1351-5).
   ✅ Verified as a static Java analysis GUI over annotated genomes.
@@ -228,18 +252,41 @@ Confirmed still true:
   [10.1038/s41467-024-53294-2](https://doi.org/10.1038/s41467-024-53294-2), 27 cites.
   Analysis pipeline, not a sim, but shows the tooling space is active.
 
-**Where I checked, stated as required:** OpenAlex (works search, this session) and
-a live WebSearch dated to 2026-09. **I did not check** GitHub topic search, PyPI,
-CRAN, itch.io, Steam, or a TE-specific software registry. A null over those is not
-yet established and must not be asserted.
+### Registry sweep — COMPLETED 2026-09-02
+
+All five outstanding registries checked. **The interaction-mode gap survives.**
+
+| registry    | what is there                                                                                                                                                                        | ecosystem/playable?              |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------- |
+| **GitHub**  | `MesserLab/SLiM`; `cwb14/PrinTE` (= TESS); `JialiUMassWengLab/TEMP` (polymorphism analysis); `nixonlab/awesome-transposable-elements`, the community's own curated TE-software index | **No.** All batch.               |
+| **CRAN**    | **`TE`** v0.3-0, "Insertion/Deletion Dynamics for Transposable Elements" — estimates insertion/deletion rates and age distributions for TE families                                  | **No.** An estimator, not a sim. |
+| **PyPI**    | TEtranscripts (TE-aware differential expression); Repsc (single-cell TE expression, R)                                                                                               | **No.** Analysis only.           |
+| **itch.io** | Adjacent evolution sandboxes exist — Genomeia, GeneBox, Vilmonic, Genoma Games — but **none is about transposons or selfish DNA**                                                    | **No TE game found.**            |
+| **Steam**   | _Intelligent Design: An Evolutionary Sandbox_ (Pill Bug Interactive) — god-game with simulated genetics and evolving ecosystems, **not TE-specific**                                 | **No TE game found.**            |
+
+Two details worth carrying forward:
+
+- ⚠️ **A limitation of SLiM that partly restores the gap.** The PrinTE/TESS
+  preprint states SLiM "compresses TEs into individual units, precluding modeling
+  of TE sequence mutagenesis and nested insertion." So SLiM is not a drop-in for
+  element-level TE ecology — a point in this project's favour, but it comes from a
+  competing tool's preprint and should be confirmed against SLiM's own docs before
+  being repeated.
+- The `awesome-transposable-elements` list has a **Visualization section that is
+  empty**. Weak evidence for the gap — the list is an admittedly sparse living
+  document, so absence there is thin. Do not lean on it.
+
+**Where checked, stated:** OpenAlex works + author search, WebSearch, and a direct
+fetch of the awesome-list README — all 2026-09-02. **Not checked:** Zenodo,
+SourceForge, Bioconductor, app stores, or non-English sources.
 
 **Honest reading of the null.** Three TE simulators appeared in the 14 months
 since the sweep, and a mature general-purpose forward simulator with a GUI was
 never accounted for. The defensible surviving claim is **narrower** than "no
-running ecosystem exists": every artifact above is a *batch research instrument
-producing files for analysis* — parameters in, dataset out. None is
+running ecosystem exists": every artifact above is a _batch research instrument
+producing files for analysis_ — parameters in, dataset out. None is
 **watchable while it runs, perturbable mid-run, or built to be played.** That is
-a real distinction, but it is a claim about *interaction mode*, not about
+a real distinction, but it is a claim about _interaction mode_, not about
 capability, and it is the only version of the gap the evidence currently supports.
 Say that, or say nothing.
 
@@ -270,15 +317,44 @@ _Genome Biol_, [10.1186/s13059-018-1577-z](https://doi.org/10.1186/s13059-018-15
 
 ---
 
-## §9 ⛔ Failed verification — do not cite
+## §9 ✅ Previously-failed citation — RESOLVED 2026-09-02
 
-- **"Blumenstiel 2019"** — named in the roadmap's prior-grounding section.
-  **Two targeted OpenAlex searches did not surface it.** J. P. Blumenstiel does
-  publish on TE/piRNA conflict, so a real paper probably underlies this, but the
-  specific author-year could not be resolved and **must not be cited until it is**.
-  The nearest thing the registry returned for that slot was Cosby, Chang &
-  Feschotte 2019 (§1) — a different paper by different authors, which is exactly
-  the wrong-author-for-right-slot failure the citation doctrine exists to catch.
+**"Blumenstiel 2019" is real.** Two keyword searches missed it; an author-scoped
+lookup found it immediately (OpenAlex `A5023270559`, ORCID
+[0000-0001-6221-9292](https://orcid.org/0000-0001-6221-9292), Univ. of Kansas).
+
+- **Blumenstiel 2019**, "Birth, school, work, death, and resurrection: the life
+  stages and dynamics of transposable element proliferation", _Genes_ 10(5):336,
+  [10.3390/genes10050336](https://doi.org/10.3390/genes10050336), 66 cites,
+  single-author, gold OA. ✅ **Cleared to cite.**
+
+⚠️ **Method tell worth keeping.** Keyword search returned a _plausible substitute_
+(Cosby, Chang & Feschotte 2019 — right topic, right year, wrong authors) rather
+than nothing. **A near-miss is more dangerous than an empty result**, because it
+reads as confirmation. Author-scoped lookup discriminates; keyword search cannot.
+Run `search_authors` → `get_author_works` before calling any author-year missing.
+
+**And the paper matters for the design**, which is what leaving it unresolved would
+have cost: it traces **the life stages of a TE lineage — birth, proliferation,
+extinction, and "resurrection"** — and the strategies available across them, from
+long-term coexistence to horizontal transfer across species boundaries. That is
+the unit-of-individuality question (task #2) posed as a **lifecycle rather than a
+taxonomy**, and it is the closest thing in the literature to "what does the player
+actually carry, over what span".
+
+Two further Blumenstiel-lab papers surfaced by the same lookup, both load-bearing:
+
+- ⭐ **Meiklejohn & Blumenstiel 2018**, "Invasion of the P elements: tolerance is
+  not futile", _PLoS Biol_, [10.1371/journal.pbio.3000036](https://doi.org/10.1371/journal.pbio.3000036).
+  **The host has TWO counter-strategies, not one.** Before acquiring _resistance_
+  (suppression), individuals vary in their ability to **tolerate** TE activity —
+  ignoring or repairing the damage rather than silencing the element. Tolerance
+  and resistance have different costs and different evolutionary dynamics. A design
+  with only a silencing axis models half the host. See §4.
+- **Kelleher, Barbash & Blumenstiel 2020**, "Taming the turmoil within: new
+  insights on the containment of transposable elements", _Trends Genet_,
+  [10.1016/j.tig.2020.04.007](https://doi.org/10.1016/j.tig.2020.04.007), 51 cites.
+  The containment review to read alongside §3.
 
 ---
 
@@ -293,6 +369,15 @@ _Genome Biol_, [10.1186/s13059-018-1577-z](https://doi.org/10.1186/s13059-018-15
    threshold, plus a three-phase invasion signature.
 4. **§4 fixes an incentive bug before it is written**: host silencing must cost
    the host, or the arms race is a solved game.
-5. **§7 narrows the pitch.** The gap is interaction mode — watchable, perturbable,
-   playable — not capability. Three simulators arrived in 14 months; assume more.
-6. **§9 and §8's unchecked rows are open work**, not background.
+5. **§4 also splits the opponent in two.** Resistance (silence it) and tolerance
+   (absorb the damage) are different host strategies with different costs — and
+   **tolerance never builds a piRNA cluster, so it cannot be conscripted.** The
+   roadmap's "host silencing" is half an opponent.
+6. **§7 survived the full registry sweep.** GitHub, CRAN, PyPI, itch.io and Steam
+   all checked: no watchable, perturbable, playable TE ecosystem exists. The gap is
+   interaction mode, not capability — and four simulators arrived in 14 months, so
+   assume more and re-check before publishing any null.
+7. **§9 gives the lifecycle framing for task #2.** Blumenstiel 2019 poses the unit
+   question as birth → proliferation → extinction → resurrection, which is a more
+   tractable handle than the roadmap's three-way copy/family/host taxonomy.
+8. **§8's unchecked rows are the remaining open work** — Dfam, Repbase, Asparagales.

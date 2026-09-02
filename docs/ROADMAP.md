@@ -96,11 +96,16 @@ live registry and the null stated as "checked HERE", naming where.
   actual pathways rather than the summary — **literature base built
   (`REFERENCES.md` §3, §5); the pathway mechanics themselves still need
   reading past the abstracts.**
-- [~] Prior-art check against live registries, with the null stated as "checked
-  HERE" rather than "not found" — **done for OpenAlex + WebSearch 2026-09-02
-  (`REFERENCES.md` §7). STILL OPEN: GitHub topics, PyPI, CRAN, itch.io, Steam.
-  The null over those is NOT established.**
-- [ ] Resolve or drop the unverified "Blumenstiel 2019" citation (`REFERENCES.md` §9)
+- [x] **DONE 2026-09-02** — Prior-art check against live registries, null stated as
+      "checked HERE". OpenAlex + WebSearch + GitHub + CRAN + PyPI + itch.io + Steam,
+      all named in `REFERENCES.md` §7. **The interaction-mode gap SURVIVES**: no
+      watchable / perturbable / playable TE ecosystem exists on any of them. Not
+      checked: Zenodo, SourceForge, Bioconductor, app stores, non-English sources.
+- [x] **DONE 2026-09-02** — "Blumenstiel 2019" **is real and cleared to cite**:
+      _Genes_ 10(5):336, 10.3390/genes10050336. Keyword search missed it twice;
+      author-scoped lookup found it at once (`REFERENCES.md` §9). ⚠️ Keyword search had
+      returned a _plausible substitute_ by different authors — a near-miss reads as
+      confirmation, so **use author-scoped lookup before calling any citation missing**.
 - [ ] Verify Dfam / Repbase access terms and the Asparagales pointer
       (`REFERENCES.md` §8) — both unchecked
 - [ ] First registered question + pre-registration, before any runner exists
