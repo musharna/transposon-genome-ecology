@@ -10,8 +10,13 @@ import { createWorld, defaultParams, observe, step } from "../sim/index.js";
 import type { Params } from "../sim/index.js";
 import {
   BASE,
+  FRAGILE_R0,
   GENERATIONS,
+  HORIZON_MARKS,
+  HORIZON_SEEDS,
   INVARIANCE_SEEDS,
+  NEGATIVE_CELL,
+  NEGATIVE_CELL_SEEDS,
   runArm,
   SEEDS,
   SIGMA_S_HI,
@@ -198,3 +203,137 @@ for (const seed of INVARIANCE_SEEDS) {
     })`,
   );
 }
+
+// ---------------------------------------------------------------------------
+// ARM 4: THE HORIZON PROBE. The evidence for stopping at GENERATIONS rather
+// than running to a plateau. Steps past the horizon and prints copies per
+// genome for both arms at each mark, so the caveat on `GENERATIONS` in
+// tests/guards/bloat-arm.ts is reproducible rather than remembered. Slow by
+// design — the knockout arm approaches saturation at the far marks, which is
+// itself one of the findings.
+// ---------------------------------------------------------------------------
+console.log(
+  `\n=== ARM 4: horizon probe, marks ${HORIZON_MARKS.join("/")}, seeds ${HORIZON_SEEDS.join(",")} ===`,
+);
+console.log(
+  "seed  silencing   " + HORIZON_MARKS.map((m) => pad(`g${m}`, 12)).join(""),
+);
+interface Mark {
+  seed: number;
+  silencingOn: boolean;
+  g: number;
+  perGenome: number;
+  occupancy: number;
+}
+const horizon: Mark[] = [];
+for (const seed of HORIZON_SEEDS) {
+  for (const silencingOn of [true, false]) {
+    const p = defaultParams({ ...BASE, seed, silencingOn });
+    const w = createWorld(p);
+    const cells: string[] = [];
+    for (let g = 1; g <= Math.max(...HORIZON_MARKS); g++) {
+      step(w);
+      if ((HORIZON_MARKS as readonly number[]).includes(g)) {
+        const snap = observe(w);
+        const perGenome = snap.totalCopies / w.genomes.length;
+        const occupancy = perGenome / p.S;
+        horizon.push({ seed, silencingOn, g, perGenome, occupancy });
+        cells.push(pad(`${perGenome.toFixed(1)}/${(occupancy * 100).toFixed(0)}%`, 12));
+      }
+    }
+    console.log(`${pad(seed, 4)}  ${silencingOn ? "    on" : "   off"}      ${cells.join("")}`);
+  }
+}
+const markRows = HORIZON_MARKS.map((g) => {
+  const at = (silencingOn: boolean, seed: number) =>
+    horizon.find((m) => m.g === g && m.seed === seed && m.silencingOn === silencingOn)!;
+  const ratios = HORIZON_SEEDS.map((seed) => at(false, seed).perGenome / at(true, seed).perGenome);
+  const held = HORIZON_SEEDS.every((seed) => at(false, seed).perGenome > at(true, seed).perGenome);
+  const worstSeed = HORIZON_SEEDS[ratios.indexOf(Math.min(...ratios))]!;
+  const maxOcc = Math.max(...HORIZON_SEEDS.map((seed) => at(false, seed).occupancy));
+  const maxOccSeed = HORIZON_SEEDS.find((seed) => at(false, seed).occupancy === maxOcc)!;
+  return { g, held, minRatio: Math.min(...ratios), worstSeed, maxOcc, maxOccSeed, at };
+});
+for (const r of markRows) {
+  const on = r.at(true, r.worstSeed).perGenome.toFixed(1);
+  const off = r.at(false, r.worstSeed).perGenome.toFixed(1);
+  console.log(
+    `g${pad(r.g, 3)}: direction holds at all ${HORIZON_SEEDS.length} seeds=${r.held}; ` +
+      `narrowest ratio ${r.minRatio.toFixed(2)} at seed ${r.worstSeed} (silenced ${on} vs knockout ${off}); ` +
+      `worst knockout occupancy ${(r.maxOcc * 100).toFixed(0)}% at seed ${r.maxOccSeed} ` +
+      `(${r.at(false, r.maxOccSeed).perGenome.toFixed(0)} copies per genome)`,
+  );
+}
+for (const seed of HORIZON_SEEDS) {
+  for (const silencingOn of [true, false]) {
+    const series = HORIZON_MARKS.map(
+      (g) => horizon.find((m) => m.g === g && m.seed === seed && m.silencingOn === silencingOn)!.perGenome,
+    );
+    const monotone = series.every((x, i) => i === 0 || x >= series[i - 1]!);
+    if (!monotone) {
+      console.log(
+        `NON-MONOTONE across the horizon: seed ${seed}, silencing ${silencingOn ? "on" : "off"} -> ${series
+          .map((x) => x.toFixed(1))
+          .join(" -> ")}`,
+      );
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// ARM 5: THE NEGATIVE RESULT. The one cell of the derivation grid where the
+// direction did NOT hold at every seed. Kept permanently and reproduced here so
+// it cannot be rediscovered the hard way: the direction is a property of the
+// pinned arm, not of the model at every nearby setting.
+// ---------------------------------------------------------------------------
+console.log(
+  `\n=== ARM 5: the grid cell that FAILED — BASE with ${JSON.stringify(NEGATIVE_CELL)} ===`,
+);
+console.log("seed   silenced n/g   knockout n/g   ratio   direction holds");
+const negRows = NEGATIVE_CELL_SEEDS.map((seed) => {
+  const on = runArm({ ...NEGATIVE_CELL, seed, silencingOn: true });
+  const off = runArm({ ...NEGATIVE_CELL, seed, silencingOn: false });
+  const holds = off.perGenome > on.perGenome;
+  console.log(
+    `${pad(seed, 4)}  ${pad(on.perGenome.toFixed(1), 13)}  ${pad(off.perGenome.toFixed(1), 13)}  ${pad(
+      (off.perGenome / on.perGenome).toFixed(2),
+      6,
+    )}  ${pad(holds, 15)}`,
+  );
+  return { seed, on, off, holds };
+});
+const negMeanOn = mean(negRows.map((r) => r.on.perGenome));
+const negMeanOff = mean(negRows.map((r) => r.off.perGenome));
+console.log(
+  `ARM 5: direction holds at every seed: ${negRows.every((r) => r.holds)} ` +
+    `(reversed at ${negRows.filter((r) => !r.holds).map((r) => `seed ${r.seed}`).join(", ") || "no seed"}); ` +
+    `means silenced ${negMeanOn.toFixed(1)} vs knockout ${negMeanOff.toFixed(1)} (ratio ${(negMeanOff / negMeanOn).toFixed(2)}) ` +
+    `— so the MEAN still points the right way while a seed does not`,
+);
+
+// ---------------------------------------------------------------------------
+// ARM 6: SINGLE-KNOB FRAGILITY. BASE with r0 alone moved to the value the guard
+// was originally specified with. Everything else — including sigmaS, theta and
+// the horizon — is untouched.
+// ---------------------------------------------------------------------------
+console.log(
+  `\n=== ARM 6: single-knob fragility — BASE with r0 ${BASE.r0} -> ${FRAGILE_R0} ===`,
+);
+console.log("seed   silenced n/g   knockout n/g   ratio   direction holds");
+const fragRows = SEEDS.map((seed) => {
+  const on = runArm({ seed, r0: FRAGILE_R0, silencingOn: true });
+  const off = runArm({ seed, r0: FRAGILE_R0, silencingOn: false });
+  const holds = off.perGenome > on.perGenome;
+  console.log(
+    `${pad(seed, 4)}  ${pad(on.perGenome.toFixed(1), 13)}  ${pad(off.perGenome.toFixed(1), 13)}  ${pad(
+      (off.perGenome / on.perGenome).toFixed(2),
+      6,
+    )}  ${pad(holds, 15)}`,
+  );
+  return { seed, on, off, holds };
+});
+console.log(
+  `ARM 6: direction holds at every seed: ${fragRows.every((r) => r.holds)} ` +
+    `(reversed at ${fragRows.filter((r) => !r.holds).map((r) => `seed ${r.seed} (silenced ${r.on.perGenome.toFixed(1)} vs knockout ${r.off.perGenome.toFixed(1)})`).join(", ") || "no seed"}); ` +
+    `means silenced ${mean(fragRows.map((r) => r.on.perGenome)).toFixed(1)} vs knockout ${mean(fragRows.map((r) => r.off.perGenome)).toFixed(1)}`,
+);

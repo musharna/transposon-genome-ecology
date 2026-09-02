@@ -22,7 +22,10 @@
  * silenced arm. Re-measured in this task at seed 1: copies per genome fall
  * 6 -> 1 -> 0 at generations 50/100/150 and the arm is extinct (0 copies,
  * 0 silenced) by generation 250, while the knockout arm reaches 1489 copies
- * per genome — 74.4% site occupancy — in 31 seconds for that single run.
+ * per genome — 74.4% site occupancy, where `transpose`'s rejection sampler
+ * needs several draws per insertion and one run costs tens of seconds. (No
+ * wall-clock figure is quoted anywhere in this guard: it is machine-dependent
+ * and does not reproduce. The occupancy is deterministic and does.)
  * A `meanOff > meanOn` comparison in that regime is satisfied by the control
  * arm being DEAD, which is extinction masquerading as the effect.
  *
@@ -37,8 +40,12 @@
  * dying, and the knockout arm at 162.7..276.3 (8.1%..13.8% occupancy),
  * well below the occupancy where `transpose`'s rejection sampler degrades.
  *
- * Every figure above and below was measured in this task by
- * `scripts/explore-bloat.ts`, which prints all of them.
+ * Every figure above and below was measured in this task and is printed by
+ * `scripts/explore-bloat.ts`: ARM 0 the superseded parameters, ARM 1 the guard
+ * arm at every seed, ARM 2 the trajectories, ARM 3 the invariance, ARM 4 the
+ * horizon probe past `GENERATIONS`, ARM 5 the rejected grid cell, ARM 6 the
+ * single-knob fragility probe. No figure in this guard comes from anywhere
+ * else, and none is a wall-clock time.
  */
 import {
   createWorld,
@@ -102,13 +109,60 @@ export const BASE: Params = {
  * in seconds.
  *
  * This is a FIXED-HORIZON comparison, not an equilibrium one — neither arm has
- * plateaued at generation 120. Measured beyond it, the direction still held at
- * every seed and mark checked (140/160/180/200/240) but the margin narrows
- * (at seed 17, generation 200: 184 vs 212 copies per genome) and the knockout
- * arm becomes erratic — at seed 1, generation 240 it reaches 1473 copies per
- * genome, 74% occupancy, where the rejection sampler in `transpose` costs
- * several draws per insertion. The guard therefore pins 120 rather than running
- * to a plateau that this model, at these coefficients, does not reach cheaply.
+ * plateaued at generation 120, and the horizon is load-bearing. ARM 4 of
+ * `scripts/explore-bloat.ts` steps HORIZON_SEEDS to 240 and prints copies per
+ * genome at each of HORIZON_MARKS:
+ *
+ *   seed  arm        g120     g140     g160     g180     g200     g240
+ *      1  silenced   63.3     69.0     65.6     63.6     94.1    143.0
+ *      1  knockout  234.8    246.3    310.7    238.1    212.9   1473.0
+ *      5  silenced   56.9     67.6     75.3     97.2    102.6    124.6
+ *      5  knockout  219.8    222.2    228.3    169.6    196.3    253.4
+ *     17  silenced  105.0    121.2    158.0    175.6    184.1    188.8
+ *     17  knockout  276.3    211.6    205.4    158.5    211.7    621.1
+ *    101  silenced   39.3     56.3     87.1    104.2    124.3    182.0
+ *    101  knockout  169.5    152.8    200.3    234.6    252.6    344.3
+ *
+ * Read that before extending the horizon. The narrowest knockout/silenced ratio
+ * over the four seeds decays 2.63 (g120) -> 1.75 -> 1.30 -> 0.90 -> 1.15 -> 1.89,
+ * and at generation 180 THE DIRECTION REVERSES at seed 17: silenced 175.6
+ * against knockout 158.5. (An earlier version of this comment claimed the
+ * direction held at every seed and mark past the horizon. It does not; that
+ * claim was read off a scratch print-out that showed only the raw numbers, and
+ * ARM 4 exists so the claim is checkable instead.) Meanwhile the knockout arm
+ * becomes erratic and expensive — at seed 1, generation 240 it reaches 1473
+ * copies per genome, 74% occupancy, where `transpose`'s rejection sampler needs
+ * several draws per insertion. Seven of the eight series above are non-monotone
+ * in generation; ARM 4 flags each one.
+ *
+ * So 120 is not "early enough to be cheap"; it is the mark at which the two
+ * arms are cleanly separated at every seed. The guard pins it rather than
+ * running to a plateau that this model, at these coefficients, does not reach
+ * cheaply — and the guard's claim is scoped to it.
+ *
+ * ---------------------------------------------------------------------------
+ * TWO MORE LIMITS ON WHAT THIS ARM LICENSES
+ * ---------------------------------------------------------------------------
+ * 1. A NEGATIVE RESULT FROM THE DERIVATION GRID. `NEGATIVE_CELL` — `BASE` with
+ *    `c: 0.005, sigmaS: 0.2, theta: 0.02` — does NOT hold the direction at
+ *    every seed. Measured by ARM 5 over `NEGATIVE_CELL_SEEDS`: it reverses at
+ *    seed 3 (silenced 184.9 vs knockout 176.5) and at seed 5 (227.6 vs 218.8),
+ *    while the seven-seed means still point the right way (178.3 vs 188.1,
+ *    ratio 1.06). That cell was rejected during derivation; it is kept and
+ *    reproduced so the rejection is evidence rather than memory, and because it
+ *    shows a MEAN-ONLY comparison passing on a parameter set where the effect is
+ *    not reliable — which is why the guard asserts per seed as well.
+ *
+ * 2. SINGLE-KNOB FRAGILITY. Move `r0` alone from 0.1 to `FRAGILE_R0` (0.15, the
+ *    value the guard was originally specified with), changing nothing else, and
+ *    the direction reverses at two of the eleven seeds. Measured by ARM 6:
+ *    seed 11 (silenced 199.1 vs knockout 191.8) and seed 13 (205.0 vs 194.1);
+ *    means still 155.6 vs 228.5. The guard is sound — it asserts at its own
+ *    pinned arm, and the reviewer's independent probe reverting r0, v, a, b, c
+ *    and N to the plan's values one at a time AND all at once found the
+ *    direction intact — but "silencing knockout produces bloat" is a claim
+ *    about THIS arm at THIS horizon, not a property of the model at every
+ *    nearby coefficient. Anyone reading it more broadly is over-reading it.
  */
 export const GENERATIONS = 120;
 
@@ -125,6 +179,36 @@ export const SEEDS = [1, 2, 3, 4, 5, 7, 11, 13, 17, 101, 202] as const;
  * statistical power; three streams at six runs each keeps the file fast.
  */
 export const INVARIANCE_SEEDS = [1, 5, 101] as const;
+
+/**
+ * The horizon probe: the marks and seeds ARM 4 of `scripts/explore-bloat.ts`
+ * steps to, which is where the figures in `GENERATIONS`' docstring above come
+ * from. Defined here rather than in the script so the caveat and the sweep that
+ * evidences it cannot drift apart, the same reason `BASE` lives here.
+ */
+export const HORIZON_MARKS = [120, 140, 160, 180, 200, 240] as const;
+export const HORIZON_SEEDS = [1, 5, 17, 101] as const;
+
+/**
+ * The one cell of the derivation grid where the direction did NOT hold at every
+ * seed, kept as a permanent negative result: `BASE` with these three overrides
+ * (`c` halved, `sigmaS` doubled, `theta` more than halved) reverses at one of
+ * the seven seeds it was swept at. ARM 5 of `scripts/explore-bloat.ts`
+ * reproduces it. See `GENERATIONS`' docstring for what it means.
+ */
+export const NEGATIVE_CELL: Partial<Params> = {
+  c: 0.005,
+  sigmaS: 0.2,
+  theta: 0.02,
+};
+export const NEGATIVE_CELL_SEEDS = [1, 2, 3, 4, 5, 7, 11] as const;
+
+/**
+ * The single-knob fragility probe: `BASE.r0` replaced by the value the guard was
+ * originally specified with, everything else untouched. ARM 6 of
+ * `scripts/explore-bloat.ts` reproduces it.
+ */
+export const FRAGILE_R0 = 0.15;
 
 /** The two `sigmaS` values the invariance test contrasts. `BASE.sigmaS` is LO. */
 export const SIGMA_S_LO = BASE.sigmaS;

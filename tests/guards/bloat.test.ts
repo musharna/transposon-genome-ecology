@@ -49,6 +49,26 @@ import {
  * Means over the eleven seeds: silenced 66.1, knockout 202.4 copies per genome.
  * The two ranges do not overlap — the weakest knockout seed (13, at 162.7) is
  * still 1.55x the strongest silenced seed (17, at 105.0).
+ *
+ * ---------------------------------------------------------------------------
+ * WHAT THIS GUARD DOES NOT CLAIM — READ THE ARM MODULE BEFORE GENERALISING
+ * ---------------------------------------------------------------------------
+ * This is a claim about THIS pinned arm at THIS horizon, not a general property
+ * of the model. Three limits, all measured, all documented in full on
+ * `GENERATIONS` in `./bloat-arm.js` and reproduced by ARMs 4-6 of
+ * `scripts/explore-bloat.ts`:
+ *   - it is a FIXED-HORIZON comparison, not an equilibrium one. Neither arm has
+ *     plateaued at generation 120, the narrowest ratio decays from 2.63 there
+ *     to 1.30 by generation 160, and at generation 180 the direction REVERSES
+ *     at seed 17 (silenced 175.6 vs knockout 158.5) (ARM 4);
+ *   - one rejected cell of the derivation grid (`c: 0.005, sigmaS: 0.2,
+ *     theta: 0.02`) reverses at seeds 3 and 5 while its MEAN still points the
+ *     right way — which is why the direction is asserted per seed below and not
+ *     only on the means (ARM 5);
+ *   - moving `r0` alone from 0.1 to 0.15 reverses the direction at seeds 11 and
+ *     13 (ARM 6).
+ * Anyone reading the title as "silencing knockout produces bloat, generally" is
+ * over-reading it.
  */
 
 describe("guard 4: silencing knockout produces bloat", () => {
@@ -71,8 +91,8 @@ describe("guard 4: silencing knockout produces bloat", () => {
    *     (seed 17), a 2.9x margin. Past roughly 40%, `transpose`'s rejection
    *     sampler needs several draws per insertion and the arm is reporting the
    *     sampler's behaviour as much as the model's; the original
-   *     parameterisation's knockout arm sat at 74.4% and took 34 seconds for a
-   *     single run.
+   *     parameterisation's knockout arm sat at 74.4%. (Occupancy, not wall
+   *     clock: run times are machine-dependent and are quoted nowhere here.)
    *
    * The comparison itself carries no threshold: it is a strict inequality,
    * asserted per seed and then on the means. It goes red if silencing stops
@@ -240,7 +260,15 @@ describe("guard 4: silencing knockout produces bloat", () => {
       differing,
       "the knockout and silenced arms are no longer matched, so a difference between them is no longer attributable to silencing",
     ).toEqual(["silencingOn"]);
-    // And all twenty fields really were compared, not a subset of them.
-    expect(Object.keys(BASE).length, "Params no longer has 20 fields").toBe(20);
+    // And the loop above really ranged over all twenty fields. This does NOT
+    // catch a change to `Params` itself — `BASE` is typed as `Params`, so
+    // adding or removing a field there is a `tsc` error, not a test failure.
+    // What it catches is `BASE` acquiring a key that is not a `Params` field,
+    // which a spread can introduce silently and which the filter above would
+    // then compare as `undefined !== undefined` and quietly ignore.
+    expect(
+      Object.keys(BASE).length,
+      "BASE no longer has exactly the 20 Params fields — an extra key would be compared as undefined on both arms and silently ignored above",
+    ).toBe(20);
   });
 });
