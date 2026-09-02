@@ -10,5 +10,11 @@ export {
   type Genome,
   type World,
 } from "./state.js";
-export { copyNumberLoad, damageLoad, fitness } from "./phases/select.js";
+export {
+  copyNumberLoad,
+  damageLoad,
+  fitness,
+  logFitness,
+  relativeFitness,
+} from "./phases/select.js";
 export { makeRng, type Rng } from "./rng.js";

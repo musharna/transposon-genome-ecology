@@ -58,11 +58,24 @@ export function history(world: World, generations: number): Snapshot[] {
 /**
  * Structural digest of the world, for cross-environment comparison. Deliberately
  * excludes copy ids, which are allocation-order artefacts rather than state.
+ *
+ * `toFixed(9)` is a deliberate tolerance, not incidental precision loss: two
+ * `r` or `s` values differing by less than 5e-10 hash identically. Task 19's
+ * cross-environment (node vs. browser) comparison relies on this.
+ *
+ * Sorts a COPY of `genome.copies` by `site` before hashing rather than trusting
+ * the array's existing order. `Genome.copies` is documented to be kept sorted
+ * by every phase that mutates it, and today it is — but this function is the
+ * project's determinism oracle, and an oracle should not hold an unchecked
+ * assumption about state it did not itself verify: a future phase that pushes
+ * to `copies` without re-sorting would otherwise make two structurally
+ * identical worlds hash differently, with nothing here to catch it.
  */
 export function stateHash(world: World): string {
   const parts: string[] = [];
   for (const genome of world.genomes) {
-    const sites = genome.copies
+    const sortedCopies = [...genome.copies].sort((a, b) => a.site - b.site);
+    const sites = sortedCopies
       .map(
         (c) =>
           `${c.site}:${c.r.toFixed(9)}:${c.s.toFixed(9)}:${c.domesticated ? 1 : 0}`,

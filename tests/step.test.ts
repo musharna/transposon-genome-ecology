@@ -50,12 +50,49 @@ describe("step", () => {
 
   // GOLDEN VALUE — DO NOT UPDATE THE LITERAL TO MAKE THIS PASS.
   //
-  // This pins the exact RNG stream produced by one fixed generation of six
+  // This pins the exact RNG stream produced by 15 generations of the six
   // phases (transpose, trap, domesticate, lose, reproduce's selection +
   // reproduction) run in the order `step` composes them, for a fixed seed,
   // fixed params (spelled out here rather than relying on `defaultParams()`
   // alone, so a future recalibration of the defaults cannot silently
   // invalidate this test), and a fixed generation count.
+  //
+  // The coverage claim below is about THIS pinned configuration, not the
+  // phases in the abstract — a coverage claim that can't be checked against
+  // measured numbers is exactly how an inert guard slips through review.
+  // Measured (by instrumenting `world.rng` around each phase call, for this
+  // exact seed/params/generation-count, node v22.14.0):
+  //
+  //   transpose:   765 next() + 556 normal() draws
+  //   trap:         31 next() draws
+  //   domesticate: 172 next() draws
+  //   lose:       2179 next() draws
+  //   reproduce:  5055 next() draws
+  //
+  // Every one of those five counts is nonzero, which is the property the
+  // first version of this test lacked: under r0: 0.2, no copy ever landed on
+  // a beneficial site in 15 generations, so `domesticate` made zero draws,
+  // and deleting the `domesticate(world)` call from `step`, or swapping it
+  // with either neighbour (trap<->domesticate, domesticate<->lose), left
+  // this hash unchanged — an inert guard for exactly the phase that is the
+  // model's alternate win condition. r0: 0.6 (the smallest change found that
+  // fixes it) was verified, for this seed/params/generation-count, to make
+  // EVERY one of the five single-phase omissions and EVERY one of the four
+  // adjacent-pair swaps change the hash — see task-9-report.md for the full
+  // before/after table.
+  //
+  // End state at generation 15 (also measured, not assumed): 153 total
+  // copies across 24 genomes (0 empty — versus 18 copies/8 empty under the
+  // old r0: 0.2 pinning), 4 domesticated, 149 silenced, 0 active. The
+  // domesticated field of the hashed string is therefore NOT a hardcoded
+  // constant across copies (4 of 153 are 1, not 0 as under the old pinning).
+  // activeCopies is still 0 at this exact generation — every non-domesticated
+  // copy has drifted within `theta` of some repertoire entry by generation
+  // 15, which is expected for a single-founder lineage under a pure-resistance
+  // host (t: 0) with no active-copy-specific behaviour left to distinguish in
+  // the hash anyway (the hash records site/r/s/domesticated, not silenced
+  // status) — flagging so a future param edit that changes this ratio is
+  // visible against a written baseline, not so this test asserts it.
   //
   // It defends against exactly one failure mode: an extra or missing
   // `world.rng.next()`/`world.rng.normal()` call anywhere in any phase, or a
@@ -77,7 +114,7 @@ describe("step", () => {
       N: 24,
       S: 100,
       c: 0.1,
-      r0: 0.2,
+      r0: 0.6,
       rMax: 1,
       sigmaR: 0.1,
       sigmaS: 0.02,
@@ -97,7 +134,7 @@ describe("step", () => {
     });
     const w = createWorld(params);
     run(w, 15);
-    expect(stateHash(w)).toBe("13e0c227");
+    expect(stateHash(w)).toBe("9c15fd28");
   });
 });
 
