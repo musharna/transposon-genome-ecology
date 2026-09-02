@@ -18,3 +18,10 @@ export {
   relativeFitness,
 } from "./phases/select.js";
 export { makeRng, type Rng } from "./rng.js";
+export {
+  detectPhases,
+  detectPhasesDetailed,
+  type PhaseFailure,
+  type PhaseIndices,
+  type PhaseResult,
+} from "./phases-detect.js";
