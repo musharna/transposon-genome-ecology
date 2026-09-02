@@ -37,11 +37,8 @@ export function damageLoad(
 /**
  * Log-fitness: the exponent that `fitness` exponentiates. Selection only ever
  * needs RELATIVE fitness, and this stays finite (modulo IEEE-754 double range)
- * across the whole domain even where `Math.exp` of it would underflow to 0 —
- * so anything that must compare or rank genomes by copy-number load (Task 8's
- * sampler among them) should prefer this over `fitness` once absolute values
- * are no longer needed. The expression is exactly the one `fitness` exponentiates,
- * not restructured.
+ * across the whole domain even where `Math.exp` of it would underflow to 0.
+ * The expression is exactly the one `fitness` exponentiates, not restructured.
  */
 export function logFitness(genome: Genome, p: Params): number {
   const active = activeCopies(genome, p);
@@ -63,8 +60,40 @@ export function logFitness(genome: Genome, p: Params): number {
  * double precision, `Math.exp` of a sufficiently negative `logFitness`
  * underflows to exactly 0 (below roughly -745.13). Callers that need to rank
  * or compare genomes at copy numbers large enough to risk that boundary
- * should use `logFitness` instead, where the ordering survives.
+ * should use `logFitness` or `relativeFitness` instead, where the ordering
+ * survives.
  */
 export function fitness(genome: Genome, p: Params): number {
   return Math.exp(logFitness(genome, p));
+}
+
+/**
+ * Fitness of every genome in a population, relative to the fittest genome in
+ * it (which always maps to exactly 1). Computed via the standard max-shift:
+ * subtract the largest log-fitness before exponentiating, so the result is
+ * mathematically identical to `fitness(g,p) / max(fitness(...))` but cannot
+ * underflow a whole population to all-zero the way naive `fitness` can.
+ *
+ * That failure is not hypothetical: Task 10's Guard 5 runs with
+ * `a: 0.002, b: 0.0002, S: 2000, silencingOn: false, r0: 0.1` for 300
+ * generations specifically to drive unchecked copy-number bloat, and
+ * underflows naive `fitness` to exactly 0 for every genome at n >= 1925
+ * (96% of saturation) — its second arm (`a: 0.02, b: 0.002`) underflows at
+ * n >= 606. Guard 1's `S: 4000`, `silencingOn: false` arm hits the same
+ * failure. A fitness-proportional sampler built on naive `fitness` in that
+ * regime sees `total = 0`, `target = 0`, every `target < cumulative[i]` is
+ * `0 < 0` = false, and silently always returns the last genome — the
+ * population collapses to clones with no error. `relativeFitness` is the
+ * fix that makes that failure structurally impossible rather than a
+ * convention callers must remember to follow.
+ *
+ * Returns `[]` for an empty population — there is no fittest genome to be
+ * relative to, and an empty result composes safely with a sum-then-sample
+ * caller (an empty weights array can't be drawn from either).
+ */
+export function relativeFitness(genomes: Genome[], p: Params): number[] {
+  if (genomes.length === 0) return [];
+  const logs = genomes.map((g) => logFitness(g, p));
+  const max = logs.reduce((m, x) => (x > m ? x : m), -Infinity);
+  return logs.map((x) => Math.exp(x - max));
 }
