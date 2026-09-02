@@ -48,6 +48,16 @@ the sim would simulate.** Building without reading it means reinventing it badly
   individual**, and drift. Shows an equilibrium exists in an infinite population
   where not all sites are occupied. **This is the sim's default null model** — if
   the sim cannot reproduce this equilibrium, the sim is wrong.
+  ➡️ **READ IN FULL 2026-09-02 — see
+  [`charlesworth-1983-equilibrium.md`](charlesworth-1983-equilibrium.md).** Fitness
+  form (eq. 23), balance condition (eq. 29) and the excision answer are recorded
+  there with page numbers. ⚠️ The last sentence above needs qualifying: our model
+  is **haploid** and this one is **diploid**, and our recombination step
+  deduplicates sites shared by both parents — a copy sink with no counterpart in
+  the null model. The paper's _qualitative_ predictions do reproduce (a linear
+  fitness function controls copy number no better than no selection at all); its
+  _numeric_ equilibrium does not transfer, and calibrating one from our own
+  simulation would be circular.
 - **Hua-Van, Le Rouzic, Boutin, Filée & Capy 2011**, "The struggle for life of the
   genome's selfish architects", _Biol Direct_ 6:19,
   [10.1186/1745-6150-6-19](https://doi.org/10.1186/1745-6150-6-19), 260 cites.

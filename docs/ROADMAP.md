@@ -125,8 +125,17 @@ live registry and the null stated as "checked HERE", naming where.
       is the only candidate carrying a variation generator (spec §2)
 - [x] **DONE 2026-09-02** — Player verb settled: **perturb the world, never the
       element** (spec §4). Rate is never chosen, only selected
-- [ ] Write the implementation plan (`superpowers:writing-plans` from the spec)
-- [ ] Build `sim/` core + guards 1–7, then `web/`
+- [x] **DONE 2026-09-02** — Write the implementation plan
+      (`superpowers/plans/2026-09-02-transposon-genome-ecology.md`, 20 tasks)
+- [ ] Build `sim/` core + guards 1–7, then `web/` — **in progress on
+      `impl/sim-core-v1`;** core (tasks 1–9) and guard 5 (task 10) are committed
+- [x] **DONE 2026-09-02** — Read Charlesworth & Charlesworth 1983 in full, not the
+      abstract → [`charlesworth-1983-equilibrium.md`](charlesworth-1983-equilibrium.md).
+      Unblocks guard 1. ⚠️ **Guard 1 is re-specified**: it asserts the paper's
+      qualitative predictions, not a numeric equilibrium. Our haploid recombination
+      deduplicates sites shared by both parents, a copy sink the diploid null model
+      does not have, so the analytic constant does not transfer — measured
+      no-selection 150, linear 124–148, quadratic 3–9, against a predicted 48.
 - [~] `bio-grounding` on piRNA conscription and on domestication, against the
   actual pathways rather than the summary — **literature base built
   (`REFERENCES.md` §3, §5); the pathway mechanics themselves still need
