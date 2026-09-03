@@ -45,6 +45,28 @@ a pointer, not a verified fact about its current contents.
   piRNA-conscription mechanic above is precisely the kind of elegant story that
   needs checking against how the pathway actually works.
 
+## Setup
+
+    npm install
+    npx playwright install chromium     # REQUIRED -- see below
+    npm test
+
+**The second line is not optional.** `tests/layout.test.ts` drives a real
+Chromium against the built page: it is the only thing in the suite that can
+check that the pokes are actually on screen and that the flooded toy still
+answers its own button, and neither of those claims is decidable from Node.
+`vitest.config.ts` includes every `tests/**/*.test.ts`, so that file always
+runs; without the browser binary the suite fails at `chromium.launch()` with
+"Executable doesn't exist", which is the truth and is meant to be visible.
+
+Other commands:
+
+    npm run build      # vite build -> dist/
+    npm run typecheck  # tsc --noEmit
+
+There is no dev server in any of the above and none is needed to verify a
+change.
+
 ## Layout
 
 Mirrors `_pm/`, which is the sibling project furthest along:

@@ -12,7 +12,7 @@
  * than trusting whatever is in `dist/`, because a stale `dist/` would make this
  * guard pass on a page nobody is shipping. Same shape as Task 19's guard 7.
  */
-import { chromium, type Browser } from "@playwright/test";
+import { chromium, type Browser, type Page } from "@playwright/test";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { build, preview, type PreviewServer } from "vite";
 
@@ -44,33 +44,94 @@ interface Panel {
   readoutLines: number;
 }
 
-let server: PreviewServer;
-let browser: Browser;
-let origin: string;
+/**
+ * Page-side snippets are STRINGS, not closures. `tsx` compiles this file with
+ * esbuild's keepNames on, which rewrites a named inner function into a call to
+ * a `__name` helper -- a helper that exists in the test process and not in the
+ * page, so a perfectly ordinary `page.evaluate(() => {...})` dies with
+ * "ReferenceError: __name is not defined".
+ */
+const READOUT_FILLED = `(document.getElementById("readout") || {}).textContent`;
+const COPIES = `(function(){var w=window.__sim.world,c=0;
+  for(var i=0;i<w.genomes.length;i++)c+=w.genomes[i].copies.length;
+  return {generation:w.generation,copies:c,occupancy:c/(w.params.N*w.params.S)};})()`;
+const OCCUPANCY_OVER_90 = `${COPIES}.occupancy > 0.9`;
+const OCCUPANCY_UNDER_10 = `${COPIES}.occupancy < 0.1`;
+
+interface SimState {
+  generation: number;
+  copies: number;
+  occupancy: number;
+}
+
+async function state(page: Page): Promise<SimState> {
+  return (await page.evaluate(COPIES)) as SimState;
+}
+
+/**
+ * Median interval between animation frames, in ms, over `ms` of wall clock.
+ *
+ * The sampler drops a timestamp it has already seen: when a frame takes 266ms
+ * the browser delivers several queued rAF callbacks bearing ONE timestamp, and
+ * counting those as zero-length frames drags the median to 0 and reports
+ * infinite fps on the slowest page in the toy.
+ */
+async function frameTime(page: Page, ms: number): Promise<number> {
+  await page.evaluate(
+    `window.__fps = [];
+     (function loop(t){ var a = window.__fps;
+       if (a.length === 0 || t > a[a.length - 1]) a.push(t);
+       requestAnimationFrame(loop); })(performance.now());`,
+  );
+  await page.waitForTimeout(ms);
+  return (await page.evaluate(
+    `(function(){ var t = window.__fps, d = [];
+       for (var i = 1; i < t.length; i++) d.push(t[i] - t[i - 1]);
+       d.sort(function(a, b){ return a - b; });
+       return d.length ? d[Math.floor(d.length / 2)] : Infinity; })()`,
+  )) as number;
+}
+
+let server: PreviewServer | undefined;
+let browser: Browser | undefined;
+let origin = "";
 
 beforeAll(async () => {
   await build({ logLevel: "warn" });
   server = await preview({ preview: { port: 4319, strictPort: false } });
   origin = server.resolvedUrls!.local[0]!.replace(/\/$/, "");
+  // If this throws, it usually says "Executable doesn't exist" and means
+  // `npx playwright install chromium` has not been run -- see README setup.
   browser = await chromium.launch();
 }, 180_000);
 
+/**
+ * EVERY HANDLE HERE IS OPTIONAL BECAUSE `beforeAll` CAN DIE HALFWAY.
+ *
+ * `chromium.launch()` fails on a machine with no browser binary, which leaves
+ * `server` set and `browser` undefined. An unguarded `server.httpServer` in
+ * teardown then throws a TypeError that REPLACES the real error, and the reader
+ * is told the wrong thing about why their suite failed. The setup failure has
+ * to be the one that surfaces.
+ */
 afterAll(async () => {
   await browser?.close();
+  const http = server?.httpServer;
+  if (!http) return;
   await new Promise<void>((res, rej) =>
-    server.httpServer.close((e?: Error) => (e ? rej(e) : res())),
+    http.close((e?: Error) => (e ? rej(e) : res())),
   );
 });
 
 async function measure(height: number): Promise<Panel> {
-  const page = await browser.newPage({ viewport: { width: W, height } });
+  const page = await browser!.newPage({ viewport: { width: W, height } });
   try {
     await page.goto(origin);
     // The readout is filled by JS after first layout and is 156px of text; the
     // panel's height is not final until it is there. Waiting for it is also
     // what makes this a check on the RUNNING toy rather than on the markup.
     await page.waitForFunction(
-      () => (document.getElementById("readout")?.textContent ?? "").length > 0,
+      READOUT_FILLED,
       undefined,
       { timeout: 30_000 },
     );
@@ -190,9 +251,13 @@ describe("the control panel at the shipped viewport", () => {
     ).toBeGreaterThanOrEqual(140);
 
     const tall = await measure(1440);
+    // PRECONDITION, not the claim. `scrollHeight` is floored at
+    // `clientHeight`, so this can only ever say "the column does not overflow";
+    // it cannot report spare height, and the dead-space assertion below is what
+    // proves the spare height was spent.
     expect(
       tall.scrollHeight,
-      "at 1440px there is spare height to spend",
+      "at 1440px the column does not overflow",
     ).toBe(tall.clientHeight);
     expect(
       tall.deadSpace,
@@ -202,4 +267,83 @@ describe("the control panel at the shipped viewport", () => {
       short.trapHeight,
     );
   }, 180_000);
+});
+
+/**
+ * "GO ASEXUAL LEAVES THE POPULATION RUNNING RATHER THAN COLLAPSING" was the one
+ * claim in this task with no evidence behind it. The headless measurement said
+ * a step goes from 1.8ms to 36ms while flooded, but that harness ran no
+ * `fillRect` and no `fit()`, and `drawField` issues about 59,000 fills per
+ * frame at 98% occupancy -- so "the toy crawls but stays usable" was an
+ * inference about a number nobody had taken. This takes it, in Chromium,
+ * against the built page, by flipping the real button.
+ *
+ * Measured here (median inter-frame interval over a 6-second window, from a
+ * rAF sampler that dedupes coalesced timestamps -- without the dedupe a slow
+ * frame delivers several callbacks at one timestamp and the median reads 0):
+ *
+ *     sexual, 2.4% of sites occupied     16.7 ms   59.9 fps   (vsync-capped)
+ *     asexual, 98.6% occupied           250.0 ms    4.0 fps
+ *     asexual, 98.1% occupied, held     266.6 ms    3.8 fps
+ *     back to sexual                     16.7 ms   59.9 fps
+ *
+ * and clicking back cleared the flood inside a single frame, 0.07s of wall
+ * clock. So: it crawls, it is legible, it still takes a click, and the way out
+ * is instant. The panel note carries the 4 fps figure.
+ *
+ * THE ASSERTIONS BELOW ARE NOT THE FPS TABLE. A frame-time threshold is a
+ * property of the machine running it; what is asserted is the part that is not
+ * -- that a flooded page is still ADVANCING and still ANSWERS ITS OWN BUTTON.
+ * The one timing bound is deliberately two orders of magnitude looser than the
+ * measurement, so it fails for "frozen", not for "busy CI".
+ */
+describe("the page while the genome is flooded", () => {
+  it("keeps running and still answers the button that undoes it", async () => {
+    const page = await browser!.newPage({ viewport: { width: W, height: H } });
+    try {
+      await page.goto(origin);
+      await page.waitForFunction(READOUT_FILLED, undefined, { timeout: 30_000 });
+
+      // Positive control, asserted first: a sexual page advances and is nowhere
+      // near full, so the flooded numbers below are the poke and the "still
+      // advancing" assertion is not trivially true of a frozen page.
+      const before = await state(page);
+      await page.waitForTimeout(500);
+      const moved = await state(page);
+      expect(moved.generation, "the toy is running").toBeGreaterThan(
+        before.generation,
+      );
+      expect(moved.occupancy, "and is not flooded to begin with").toBeLessThan(
+        0.1,
+      );
+
+      await page.click('[data-poke="sexual"]');
+      await page.waitForFunction(OCCUPANCY_OVER_90, undefined, {
+        timeout: 240_000,
+      });
+
+      const flooded = await state(page);
+      expect(flooded.occupancy, "the genome is full").toBeGreaterThan(0.9);
+      const frame = await frameTime(page, 4000);
+      expect(
+        frame,
+        `flooded frame time ${frame.toFixed(0)}ms -- the page is not frozen`,
+      ).toBeLessThan(20_000);
+
+      const held = await state(page);
+      expect(
+        held.generation,
+        "and generations still advance while it is full",
+      ).toBeGreaterThan(flooded.generation);
+
+      await page.click('[data-poke="sexual"]');
+      await page.waitForFunction(OCCUPANCY_UNDER_10, undefined, {
+        timeout: 240_000,
+      });
+      const cleared = await state(page);
+      expect(cleared.occupancy, "and the way out works").toBeLessThan(0.1);
+    } finally {
+      await page.close();
+    }
+  }, 300_000);
 });

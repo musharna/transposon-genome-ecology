@@ -162,21 +162,6 @@
         margin: 2px 0 6px 0;
         display: block;
       }
-      /* The magnified cluster is the section that ABSORBS the column's spare
-         height, which is how the column has no dead space at any viewport
-         rather than at one measured viewport. `flex: 1 1 auto` gives it
-         whatever is left over once every other section has taken what it needs,
-         and `min-height: 0` stops a flex item's auto minimum from re-inflating
-         it; the canvas below then gets a definite height from flex layout, so
-         `drawClusterInset` -- which already reads its size from
-         getBoundingClientRect -- simply draws taller. `min-height` on the
-         canvas is the floor it had as a fixed height, so it never shrinks below
-         what Task 17 measured it at.
-
-         This replaces the old arrangement, in which this panel sat before a
-         bottom-anchored #controls-slot and absorbed the slack by being pushed
-         against it. That worked while the slot held a placeholder and left a
-         ~190px hole under this panel once the slot held real controls. */
       /* THIS PANEL ABSORBS THE COLUMN'S SPARE HEIGHT, so there is no dead space
          at any viewport rather than at one measured viewport. Three of the four
          obvious ways to write that are wrong and were measured wrong in a real
@@ -206,8 +191,13 @@
          panel's real minimum -- 21px of title plus the 140px inset height Task
          17 measured -- because with a zero basis there is nothing else holding
          it open. `tests/layout.test.ts` asserts both ends of this in Chromium:
-         the panel sits at exactly its floor when the column overflows, and the
-         column's scrollHeight equals its clientHeight when it does not. */
+         the panel sits at exactly its floor when the column overflows, and
+         there is NOTHING UNPAINTED below the last section when it does not.
+         That second one is measured as the panel's content-box bottom minus
+         its last child's bottom, NOT as `scrollHeight === clientHeight`, which
+         is how it was written first and could not fail: scrollHeight is floored
+         at clientHeight, so it reads equal whether the column is exactly filled
+         or half empty. */
       #trap-panel {
         display: grid;
         grid-template-rows: auto minmax(140px, 1fr);

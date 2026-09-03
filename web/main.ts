@@ -341,6 +341,11 @@ function reset(overrides: Partial<Params> = {}): void {
   world = rebuildWorld(params, overrides);
   snapshots = [observe(world)];
   traces = [];
+  // A reset can move ANY param -- `__sim.reset({ c: 0.04 })` from the console
+  // is a supported thing to do -- and a control still showing the old number is
+  // a control that lies about what the simulation is reading. The panel's own
+  // buttons repaint themselves; this covers everything else.
+  panel.repaint();
 }
 
 // Exposed for guard 7 and for poking from the console.
@@ -362,6 +367,6 @@ Object.assign(window, {
   },
 });
 
-mountControls(el("controls-slot"), params, reset);
+const panel = mountControls(el("controls-slot"), params, reset);
 
 requestAnimationFrame(frame);

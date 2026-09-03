@@ -28,6 +28,7 @@ import {
   N_FLOOR,
   SLIDERS,
   decimalsFor,
+  hasHeadroom,
   invadeCaption,
   mountControls,
   onSliderGrid,
@@ -35,6 +36,7 @@ import {
   shrinkCaption,
   shrinkTarget,
   sliderCaption,
+  type PokePanel,
 } from "../web/controls.js";
 
 // --------------------------------------------------------------------------
@@ -133,21 +135,28 @@ interface Session {
   host: StubEl;
   params: Params;
   world: World;
+  panel: PokePanel;
   resets: number;
 }
 
 function mount(overrides: Partial<Params> = {}): Session {
   const params = defaultParams({ ...TOY_DEFAULTS, ...overrides });
-  const session: Session = {
+  const session = {
     host: makeHost(),
     params,
     world: createWorld(params),
     resets: 0,
-  };
-  mountControls(session.host as unknown as HTMLElement, params, (o) => {
-    session.world = rebuildWorld(params, o);
-    session.resets++;
-  });
+  } as Session;
+  session.panel = mountControls(
+    session.host as unknown as HTMLElement,
+    params,
+    (o) => {
+      // Exactly what `web/main.ts`'s `reset()` does, repaint included.
+      session.world = rebuildWorld(params, o);
+      session.resets++;
+      session.panel.repaint();
+    },
+  );
   return session;
 }
 
@@ -517,6 +526,74 @@ describe("the panel says what the model is doing", () => {
     );
     expect(shrink.disabled, "so the button stops offering").toBe(true);
     expect(shrink.textContent).toBe(shrinkCaption(N_FLOOR));
+  });
+
+  /**
+   * A control that can only be turned DOWN is half a control. `pDom` shipped
+   * with its `max` equal to the toy's own default, so domestication could be
+   * reduced and never raised, and nothing noticed: `onSliderGrid` passes at
+   * exactly `max`, because sitting at the ceiling is a legal thumb position.
+   *
+   * `t` is the one exemption and it is deliberate -- it is a dial from pure
+   * resistance to pure tolerance and the toy starts at one end of it on
+   * purpose. Every other slider has to have somewhere up to go.
+   */
+  it("leaves every slider room to be turned up from the toy's default", () => {
+    const params = defaultParams(TOY_DEFAULTS);
+    // Positive control, asserted first: the predicate can say no. Without this
+    // a `return true` would pass the loop below and the guard would be inert.
+    const pDom = SLIDERS.find((s) => s.key === "pDom")!;
+    expect(hasHeadroom(pDom.max, pDom), "no room at the ceiling").toBe(false);
+    expect(hasHeadroom(pDom.min, pDom), "room at the floor").toBe(true);
+
+    for (const s of SLIDERS) {
+      if (s.key === "t") continue;
+      expect(
+        hasHeadroom(params[s.key], s),
+        `${s.key} starts at ${params[s.key]} with max ${s.max}`,
+      ).toBe(true);
+    }
+    expect(params.t, "and t starts at the resistant end on purpose").toBe(0);
+  });
+
+  /**
+   * A params change that did not come from the panel still has to reach the
+   * panel. `__sim.reset({ c: 0.04 })` from the console is a supported thing to
+   * do, and before `repaint` existed the cluster slider would have gone on
+   * showing 0.005 while `step` read 0.04 -- a displayed value that is not the
+   * value the simulation uses, which is the defect class this project has now
+   * hit five times.
+   *
+   * The panel was correct before this only by coincidence: its two restart
+   * buttons happened to change exactly the two fields their own painters
+   * redrew.
+   */
+  it("repaints every control from params after an outside change", () => {
+    const s = mount();
+    const cSlider = poke(s.host, "c");
+    const caption = walk(s.host).find(
+      (e) => e.tagName === "label" && e.textContent.startsWith("piRNA cluster"),
+    )!;
+
+    // Positive control, asserted first: the panel is showing the live value
+    // now, so a match after the change is the repaint and not a coincidence.
+    expect(cSlider.value).toBe("0.005");
+    expect(caption.textContent).toContain("0.005");
+
+    // An outside change: not a click, exactly what the console does.
+    s.world = rebuildWorld(s.params, { c: 0.04, silencingOn: false, N: 40 });
+    expect(s.world.params.c, "the model moved").toBe(0.04);
+    expect(cSlider.value, "and the panel has not noticed yet").toBe("0.005");
+
+    s.panel.repaint();
+    expect(cSlider.value, "slider thumb").toBe("0.04");
+    expect(caption.textContent, "slider caption").toContain("0.040");
+    expect(poke(s.host, "silencing").textContent, "toggle caption").toBe(
+      "restore silencing",
+    );
+    expect(poke(s.host, "shrink").textContent, "restart caption").toContain(
+      "N=40",
+    );
   });
 
   /**

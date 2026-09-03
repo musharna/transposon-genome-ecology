@@ -48,12 +48,32 @@ export const SLIDERS: Slider[] = [
   { key: "v", label: "excision rate", min: 0, max: 0.05, stepSize: 0.001 },
   {
     key: "pDom",
+    // max is 0.05, NOT the 0.02 the brief gave it. `web/params.ts` sets the
+    // toy's pDom to exactly 0.02, so a slider whose ceiling was 0.02 started
+    // pinned at its own maximum: domestication could be turned down and never
+    // up. That is the same "a control that can only do nothing in one
+    // direction" defect as the shrink button's floor, and `onSliderGrid`
+    // passes at exactly `max`, so nothing caught it. `hasHeadroom` below is the
+    // guard that would have.
     label: "domestication probability",
     min: 0,
-    max: 0.02,
+    max: 0.05,
     stepSize: 0.0005,
   },
 ];
+
+/**
+ * Whether a slider can be pushed UP from `value`.
+ *
+ * `t` is deliberately exempt and is the only exemption: it is a dial from pure
+ * resistance to pure tolerance and the toy starts at one end of it on purpose,
+ * so 0 is a position on the scale rather than a ceiling the control is jammed
+ * against. Every other slider starts somewhere a visitor can move away from in
+ * both directions.
+ */
+export function hasHeadroom(value: number, s: Slider): boolean {
+  return value <= s.max - s.stepSize;
+}
 
 /**
  * Smallest population "shrink" will go to.
@@ -169,6 +189,25 @@ export function rebuildWorld(
   return createWorld(params);
 }
 
+export interface PokePanel {
+  /**
+   * Redraw every control from the LIVE params.
+   *
+   * Anything that changes params from outside the panel has to call this, or
+   * the panel reports numbers the simulation is no longer reading -- a thumb
+   * and a caption sitting at the old value while `step` uses the new one.
+   * `web/main.ts`'s `reset()` calls it, which is what covers the console:
+   * `__sim.reset({ c: 0.04 })` moves the cluster slider. The panel's own two
+   * restart buttons repaint themselves and do not depend on it.
+   *
+   * Before this existed, the panel was correct only by accident: the two
+   * buttons happened to change exactly the two fields their own repaint
+   * functions redrew, so the first override of anything else -- from the
+   * console, or from a third restarting poke -- would have gone unreported.
+   */
+  repaint(): void;
+}
+
 /**
  * Build the control panel into `host`.
  *
@@ -180,8 +219,13 @@ export function mountControls(
   host: HTMLElement,
   params: Params,
   onReset: (overrides: Partial<Params>) => void,
-): void {
+): PokePanel {
   const doc = host.ownerDocument;
+  const painters: Array<() => void> = [];
+  /** Every control, redrawn from the live params. */
+  const repaintAll = (): void => {
+    for (const paint of painters) paint();
+  };
 
   const title = doc.createElement("div");
   title.className = "panel-title";
@@ -209,12 +253,19 @@ export function mountControls(
     input.value = String(params[s.key]);
     input.dataset["poke"] = s.key;
 
+    // Painted from PARAMS, not from `input.value`: the caption's job is to
+    // report the number the simulation is reading, so it reads it back. The
+    // same painter serves the drag and `repaint`, so there is one definition of
+    // what this control displays.
+    const paint = (): void => {
+      caption.textContent = sliderCaption(s, params[s.key]);
+      input.value = String(params[s.key]);
+    };
     input.addEventListener("input", () => {
       params[s.key] = Number(input.value);
-      // Painted from PARAMS, not from `input.value`: the caption's job is to
-      // report the number the simulation is reading, so it reads it back.
-      caption.textContent = sliderCaption(s, params[s.key]);
+      paint();
     });
+    painters.push(paint);
 
     live.append(caption, input);
   }
@@ -259,6 +310,7 @@ export function mountControls(
     paintSilencing();
   });
   paintSilencing();
+  painters.push(paintSilencing);
 
   /**
    * GOING ASEXUAL FLOODS THE GENOME. It does not collapse the population and it
@@ -281,10 +333,27 @@ export function mountControls(
    *
    * It is fully reversible and reverses fast, which is what makes it worth
    * shipping rather than removing: it is the clearest statement in the toy of
-   * what recombination is actually for. The cost is that while it is flooded a
-   * step goes from about 1.8 ms to about 36 ms on the machine this was measured
-   * on, so the toy crawls until the visitor flips it back — hence the note in
-   * the panel and the wording on the button.
+   * what recombination is actually for.
+   *
+   * WHAT IT COSTS, MEASURED IN THE BROWSER rather than inferred from a step
+   * timing. Median interval between animation frames, headless Chromium, the
+   * built page, this machine (`tests/layout.test.ts` re-measures it):
+   *
+   *     sexual, 2.4% of sites occupied      16.7 ms    59.9 fps  (vsync-capped)
+   *     asexual, the moment it fills       167    ms     6.0 fps
+   *     asexual, held full for ~6 s        250-267 ms   3.8-4.0 fps
+   *     back to sexual                      16.7 ms    59.9 fps
+   *
+   * It gets slower the longer it is held because the cost is
+   * O(copies x repertoire) and the repertoire keeps growing. Clicking back
+   * clears the flood on the very next frame — 0.07 s of wall clock, which at
+   * these frame rates is less than one frame. So it crawls, it stays legible,
+   * and the way out is instant; the panel note carries the numbers.
+   *
+   * The headless figure this replaces was 1.8 ms/step against 36 ms/step, from
+   * a harness that ran no `fillRect` and no `fit()`. It was not wrong, it was
+   * not the question: `drawField` issues about 59,000 fills per frame at this
+   * occupancy, and that is most of the 250 ms.
    */
   const sex = doc.createElement("button");
   sex.className = "poke-btn";
@@ -297,11 +366,12 @@ export function mountControls(
     paintSex();
   });
   paintSex();
+  painters.push(paintSex);
 
   const note = doc.createElement("div");
   note.className = "poke-note";
   note.textContent =
-    "Asexual fills nearly every site within about a hundred generations and the toy crawls until you go sexual again, which clears it in about twenty.";
+    "Asexual fills ~98% of every genome within about a hundred generations, and the toy drops from 60 frames a second to 4–6 while it is full. Going sexual again clears it on the very next frame.";
 
   live.append(silencing, sex, note);
 
@@ -326,9 +396,13 @@ export function mountControls(
   };
   invade.addEventListener("click", () => {
     onReset({ seed: params.seed + 1 });
-    paintInvade();
+    // The panel repaints itself after its OWN pokes rather than trusting the
+    // host to do it, so a caller that forgets cannot leave the panel reporting
+    // a params object the simulation has moved past.
+    repaintAll();
   });
   paintInvade();
+  painters.push(paintInvade);
 
   const shrink = doc.createElement("button");
   shrink.className = "poke-btn";
@@ -339,11 +413,13 @@ export function mountControls(
   };
   shrink.addEventListener("click", () => {
     onReset({ N: shrinkTarget(params.N) });
-    paintShrink();
-    paintInvade();
+    repaintAll();
   });
   paintShrink();
+  painters.push(paintShrink);
 
   restarting.append(restartTitle, invade, shrink);
   host.append(live, restarting);
+
+  return { repaint: repaintAll };
 }
