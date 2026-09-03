@@ -9,7 +9,8 @@
          ADDED to 100vh -- the stage overflowed the viewport by 16px, and the
          third canvas was clipped at the fold with no bottom border while the
          first two closed cleanly. min-height:0 stops a grid item's auto minimum
-         from re-inflating the rows. */
+         from re-inflating the rows. Measured after the fix at an 800px
+         viewport: 8 + 368 + 8 + 180 + 8 + 220 + 8 = 800 exactly. */
       *,
       *::before,
       *::after {
@@ -50,35 +51,80 @@
         background: #14181d;
         border-radius: 4px;
       }
+      /* The side column is a PANEL, not bare page background. It was 320x440 of
+         #0d0f12 with nothing but a dashed placeholder in it, which reads as
+         forgotten rather than as reserved. */
       #controls {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        margin: 8px 8px 8px 0;
         padding: 12px;
-        border-left: 1px solid #232830;
+        background: #14181d;
+        border-radius: 4px;
         overflow-y: auto;
         min-height: 0;
-      }
-      #controls label {
-        display: block;
-        margin: 10px 0 2px;
-        color: #9aa5b1;
-      }
-      #controls input[type="range"] {
-        width: 100%;
       }
       #readout {
         font-variant-numeric: tabular-nums;
         white-space: pre;
         color: #8fbcbb;
         font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        margin: 0;
       }
-      #legend {
-        margin-top: 16px;
+      .panel-title {
+        color: #6b7684;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        font-size: 10px;
+        margin-bottom: 6px;
+      }
+      /* The tally lives HERE, in the side column, not in the field canvas. In
+         the canvas it sat 10px right of the last genome mark inside the same
+         frame and read as one more genome column -- an unlabelled chart abutting
+         the data it was summarising. */
+      #tally .row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 3px 0;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 11px;
+      }
+      #tally .k {
+        width: 78px;
         color: #9aa5b1;
+        flex: none;
+      }
+      #tally .track {
+        width: 150px;
+        height: 9px;
+        background: #0f1216;
+        border-radius: 2px;
+        flex: none;
+      }
+      #tally .bar {
+        display: block;
+        height: 100%;
+        border-radius: 2px;
+      }
+      #tally .n {
+        color: #8fbcbb;
+        font-variant-numeric: tabular-nums;
+        text-align: right;
+        flex: 1;
+      }
+      #tally .note {
+        color: #6b7684;
+        font-size: 10px;
+        margin-top: 6px;
       }
       #legend div {
         display: flex;
         align-items: center;
         gap: 8px;
         margin: 4px 0;
+        color: #9aa5b1;
       }
       #legend i {
         width: 10px;
@@ -87,14 +133,14 @@
         display: inline-block;
         flex: none;
       }
-      /* Task 18's controls land here. Reserved deliberately so the column reads
-         as "not yet built" rather than as an accidental 320x550 hole. */
+      /* Bottom-anchored, so the reserved space reads as deliberate. */
       #controls-slot {
-        margin-top: 18px;
+        margin-top: auto;
         padding: 10px 12px;
         border: 1px dashed #232830;
         border-radius: 4px;
         color: #5b6672;
+        font-size: 11px;
       }
     </style>
   </head>
@@ -106,16 +152,47 @@
         <canvas id="scatter"></canvas>
       </div>
       <div id="controls">
-        <div id="readout"></div>
-        <div id="legend">
-          <div><i style="background: #bf616a"></i> active</div>
-          <div><i style="background: #4c566a"></i> silenced</div>
-          <div><i style="background: #a3be8c"></i> domesticated</div>
-          <div>
-            <i style="background: #4a6f9e"></i> piRNA cluster — the trap
-          </div>
-          <div><i style="background: #8a6d2f"></i> beneficial sites</div>
+        <div>
+          <div class="panel-title">population</div>
+          <div id="readout"></div>
         </div>
+
+        <div id="tally">
+          <div class="panel-title">all copies, by state</div>
+          <div class="row">
+            <span class="k">active</span>
+            <span class="track"><i class="bar" id="bar-active"></i></span>
+            <span class="n" id="n-active">0</span>
+          </div>
+          <div class="row">
+            <span class="k">silenced</span>
+            <span class="track"><i class="bar" id="bar-silenced"></i></span>
+            <span class="n" id="n-silenced">0</span>
+          </div>
+          <div class="row">
+            <span class="k">domesticated</span>
+            <span class="track"><i class="bar" id="bar-domesticated"></i></span>
+            <span class="n" id="n-domesticated">0</span>
+          </div>
+          <div class="note" id="tally-note">
+            linear, shared scale. An outlined bar is below the 3px floor — its
+            length is the floor, not a measurement; read the count.
+          </div>
+        </div>
+
+        <div>
+          <div class="panel-title">legend</div>
+          <div id="legend">
+            <div><i style="background: #bf616a"></i> active</div>
+            <div><i style="background: #4c566a"></i> silenced</div>
+            <div><i style="background: #a3be8c"></i> domesticated</div>
+            <div>
+              <i style="background: #4a6f9e"></i> piRNA cluster — the trap
+            </div>
+            <div><i style="background: #8a6d2f"></i> beneficial sites</div>
+          </div>
+        </div>
+
         <div id="controls-slot">Controls arrive in Task 18.</div>
       </div>
     </div>

@@ -9,7 +9,12 @@ import {
   type World,
 } from "../sim/index.js";
 import { TOY_DEFAULTS } from "./params.js";
-import { drawField } from "./render/field.js";
+import {
+  ACTIVE_COLOUR,
+  DOMESTICATED_COLOUR,
+  SILENCED_COLOUR,
+  drawField,
+} from "./render/field.js";
 
 export { TOY_DEFAULTS };
 
@@ -21,6 +26,7 @@ let speed = 3;
 
 const fieldCanvas = document.getElementById("field") as HTMLCanvasElement;
 const readout = document.getElementById("readout") as HTMLDivElement;
+const el = (id: string) => document.getElementById(id) as HTMLElement;
 
 function fit(canvas: HTMLCanvasElement): CanvasRenderingContext2D {
   const dpr = window.devicePixelRatio || 1;
@@ -51,8 +57,72 @@ function meanRepertoire(w: World): number {
   return n / w.genomes.length;
 }
 
-function pad(label: string, value: string): string {
-  return label.padEnd(14) + value.padStart(7);
+/**
+ * Change in `pick` over the last `gens` generations, or null if the session is
+ * not that old yet.
+ *
+ * `copies`, `active` and `mean rate` all move by only a few percent from one
+ * look to the next -- `active` 1289/1273/1246 and `mean rate` 0.180/0.184/0.186
+ * across a whole session -- so at a glance only the last digit changes and they
+ * read as constants even though they are not. The delta is the cheapest thing
+ * that shows the direction of travel. It is measured over GENERATIONS, not over
+ * frames, so it means the same thing on a fast machine and a slow one.
+ */
+function deltaOver(gens: number, pick: (s: Snapshot) => number): number | null {
+  const now = snapshots[snapshots.length - 1]!;
+  for (let i = snapshots.length - 1; i >= 0; i--) {
+    if (now.generation - snapshots[i]!.generation >= gens) {
+      return pick(now) - pick(snapshots[i]!);
+    }
+  }
+  return null;
+}
+
+function row(
+  label: string,
+  value: string,
+  delta: number | null,
+  digits = 0,
+): string {
+  const d =
+    delta === null || Math.abs(delta) < (digits > 0 ? 5e-4 : 0.5)
+      ? "   ~"
+      : (delta > 0 ? "+" : "-") + Math.abs(delta).toFixed(digits);
+  return label.padEnd(14) + value.padStart(7) + d.padStart(8);
+}
+
+const BARS = {
+  active: { bar: "bar-active", n: "n-active", colour: ACTIVE_COLOUR },
+  silenced: { bar: "bar-silenced", n: "n-silenced", colour: SILENCED_COLOUR },
+  domesticated: {
+    bar: "bar-domesticated",
+    n: "n-domesticated",
+    colour: DOMESTICATED_COLOUR,
+  },
+};
+/** Track width in px, matching `#tally .track` in index.html. */
+const TRACK_PX = 150;
+/** Shortest bar drawn for a non-zero count. A bar AT the floor is outlined
+ *  rather than filled, so the floor reads as a floor: the previous stacked bar
+ *  showed 9px for a 1.4% share and made 3 and 5 copies indistinguishable, an
+ *  8x overstatement with nothing on screen to say the scale had bottomed out. */
+const BAR_FLOOR_PX = 3;
+
+function setBar(
+  key: keyof typeof BARS,
+  count: number,
+  max: number,
+  total: number,
+): void {
+  const spec = BARS[key];
+  const bar = el(spec.bar);
+  const exact = max > 0 ? (count / max) * TRACK_PX : 0;
+  const floored = count > 0 && exact < BAR_FLOOR_PX;
+  bar.style.width = `${count === 0 ? 0 : Math.max(exact, BAR_FLOOR_PX)}px`;
+  bar.style.background = floored ? "transparent" : spec.colour;
+  bar.style.border = floored ? `1px solid ${spec.colour}` : "none";
+  const pct = total > 0 ? ((count / total) * 100).toFixed(1) : "0.0";
+  el(spec.n).textContent = `${count}  ${pct}%`;
 }
 
 function frame(): void {
@@ -64,21 +134,53 @@ function frame(): void {
   const rect = fieldCanvas.getBoundingClientRect();
   drawField(fit(fieldCanvas), world, rect.width, rect.height);
 
-  // Every row here has to be a row that MOVES. `fractionWithRepertoire` used to
-  // sit in this block and read 100.0% at every timepoint of every session --
-  // once the trap has spread it never falls again, so it carried no information
-  // for the whole run. Mean repertoire size is the same quantity's live edge,
-  // and it is also the number the degradation note below is about.
+  // Every row has to be a row that MOVES. `fractionWithRepertoire` used to sit
+  // in this block and read 100.0% at every timepoint of every session -- once
+  // the trap has spread it never falls again, so it carried no information for
+  // the whole run. Mean repertoire size is the same quantity's live edge, and
+  // it is also the number the degradation note below is about.
   readout.textContent = [
-    pad("gen", String(snap.generation)),
-    pad("copies", String(snap.totalCopies)),
-    pad("active", String(snap.activeCopies)),
-    pad("silenced", String(snap.silencedCopies)),
-    pad("domesticated", String(snap.domesticatedCopies)),
-    pad("in cluster", String(copiesInCluster(world))),
-    pad("piRNA entries", meanRepertoire(world).toFixed(1)),
-    pad("mean rate", snap.meanRate.toFixed(3)),
+    row("gen", String(snap.generation), null),
+    row(
+      "copies",
+      String(snap.totalCopies),
+      deltaOver(600, (s) => s.totalCopies),
+    ),
+    row(
+      "active",
+      String(snap.activeCopies),
+      deltaOver(600, (s) => s.activeCopies),
+    ),
+    row(
+      "silenced",
+      String(snap.silencedCopies),
+      deltaOver(600, (s) => s.silencedCopies),
+    ),
+    row(
+      "domesticated",
+      String(snap.domesticatedCopies),
+      deltaOver(600, (s) => s.domesticatedCopies),
+    ),
+    row("in cluster", String(copiesInCluster(world)), null),
+    row("piRNA entries", meanRepertoire(world).toFixed(1), null),
+    row(
+      "mean rate",
+      snap.meanRate.toFixed(3),
+      deltaOver(600, (s) => s.meanRate),
+      3,
+    ),
   ].join("\n");
+
+  const total =
+    snap.activeCopies + snap.silencedCopies + snap.domesticatedCopies;
+  const max = Math.max(
+    snap.activeCopies,
+    snap.silencedCopies,
+    snap.domesticatedCopies,
+  );
+  setBar("active", snap.activeCopies, max, total);
+  setBar("silenced", snap.silencedCopies, max, total);
+  setBar("domesticated", snap.domesticatedCopies, max, total);
 
   requestAnimationFrame(frame);
 }
@@ -113,7 +215,7 @@ function frame(): void {
  *
  * TREAT THAT SECOND TABLE AS A CEILING ON A FLOOR, AND DO NOT QUOTE IT AS THE
  * FRAME RATE. It was produced by a harness that ran the steps, `observe` and the
- * silencing pass but NOT `ctx.fillRect` (1300-2000 calls per frame at these
+ * silencing pass but NOT `ctx.fillRect` (about 1900 calls per frame at these
  * defaults) and NOT `fit()`'s per-frame backing-store reallocation, so real
  * in-browser fps is lower than every figure in it — by an amount nobody has
  * measured yet. It was also taken on a box under unrelated load that timed the

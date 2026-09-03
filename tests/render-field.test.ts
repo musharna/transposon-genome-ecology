@@ -34,17 +34,21 @@ import {
 import { TOY_DEFAULTS } from "../web/params.js";
 import {
   ACTIVE_COLOUR,
+  BENEFICIAL_FILL,
   BENEFICIAL_TINT,
+  CLUSTER_FILL,
   CLUSTER_TINT,
   DOMESTICATED_COLOUR,
   FIELD_BG,
   SILENCED_COLOUR,
+  SPAN_FILL_ALPHA,
   contrastRatio,
   drawField,
   fieldRect,
-  tallyRect,
+  relativeLuminance,
   silencedBySorted,
   sortedRepertoire,
+  spanGeometry,
 } from "../web/render/field.js";
 
 /** Generations at which the world is inspected. Spans an empty repertoire
@@ -122,16 +126,20 @@ function expectedMarkColours(world: World): string[] {
  * Colour alone is not enough to identify one: the tally bar deliberately reuses
  * the same three colours, because it is a second channel for the same states.
  * Position separates them — every mark lands inside the field rect, and the bar
- * is drawn beyond its right edge — and both rects come from `field.ts` itself
- * rather than being restated here, so a layout change cannot quietly turn tally
- * segments back into "marks".
+ * is drawn beyond its right edge -- and the field rect comes from `field.ts`
+ * itself rather than being restated here, so a layout change cannot quietly
+ * reclassify rects.
  */
 function markColoursDrawn(fills: Fill[]): string[] {
   const mark = new Set([ACTIVE_COLOUR, SILENCED_COLOUR, DOMESTICATED_COLOUR]);
   const field = fieldRect(W, H);
-  const bar = tallyRect(W, H);
   return fills
-    .filter((f) => mark.has(f.colour) && f.x < bar.x && f.x >= field.x - 2)
+    .filter(
+      (f) =>
+        mark.has(f.colour) &&
+        f.x >= field.x - 2 &&
+        f.x <= field.x + field.w + 2,
+    )
     .map((f) => f.colour);
 }
 
@@ -244,8 +252,8 @@ describe("drawField: the render accelerator agrees with sim/silencing", () => {
   });
 });
 
-describe("drawField: the marked places are above the visibility floor", () => {
-  it("tints both spans at >= 3:1 against the field background", () => {
+describe("drawField: the marked places are visible AND do not blind their contents", () => {
+  it("marks each span at >= 3:1 against the field background", () => {
     // 3:1 is the WCAG floor for a graphical object. The tint these replaced,
     // #1d2530, measures 1.154:1 -- against a field-to-page ratio of 1.077:1,
     // i.e. about twice as visible as a seam nobody was meant to notice.
@@ -254,37 +262,116 @@ describe("drawField: the marked places are above the visibility floor", () => {
     expect(contrastRatio("#1d2530", FIELD_BG)).toBeLessThan(1.2);
   });
 
-  it("draws both span tints, at no less than the 15px place-marker floor", () => {
+  it("keeps every mark legible INSIDE a span, which the 3:1 test alone does not", () => {
+    // The failure this exists to catch: painting the full-strength tint behind
+    // the data. Both tint luminances sit BETWEEN silenced and active, so a span
+    // that clears 3:1 against the field can still collapse its own contents.
+    // Measured at full opacity: active-on-cluster 1.265:1, silenced-on-cluster
+    // 1.426:1 -- against 4.357:1 and 2.416:1 on plain field.
+    const lTint = relativeLuminance(CLUSTER_TINT);
+    expect(lTint).toBeGreaterThan(relativeLuminance(SILENCED_COLOUR));
+    expect(lTint).toBeLessThan(relativeLuminance(ACTIVE_COLOUR));
+    expect(contrastRatio(ACTIVE_COLOUR, CLUSTER_TINT)).toBeLessThan(1.5);
+
+    // What is actually painted inside a span is the capped wash, and every mark
+    // type must still clear 2:1 on it -- close to its plain-field value.
+    for (const fill of [CLUSTER_FILL, BENEFICIAL_FILL]) {
+      expect(relativeLuminance(fill) - relativeLuminance(FIELD_BG)).toBeLessThanOrEqual(0.01);
+      expect(contrastRatio(ACTIVE_COLOUR, fill)).toBeGreaterThanOrEqual(3.5);
+      expect(contrastRatio(SILENCED_COLOUR, fill)).toBeGreaterThanOrEqual(2);
+      expect(contrastRatio(DOMESTICATED_COLOUR, fill)).toBeGreaterThanOrEqual(7);
+    }
+    expect(SPAN_FILL_ALPHA).toBeLessThanOrEqual(0.1);
+  });
+
+  it("draws both spans at the SAME site scale as the marks", () => {
+    // The failure this exists to catch: the cluster drawn at 3.00 px/site while
+    // the true axis was 0.90 px/site, because its width was floored at 15px
+    // while copies stayed at true scale. ~17 copies were painted as though in
+    // the trap while the readout said `in cluster: 1`.
+    const field = fieldRect(W, H);
+    const { cluster, beneficial } = spanGeometry(PARAMS, field);
+    expect(cluster).not.toBeNull();
+    expect(beneficial).not.toBeNull();
+
+    // The pitch the marks themselves are drawn on.
+    const markW = Math.max(1, field.w / PARAMS.S);
+    const pitch = (field.w - markW) / PARAMS.S;
+    for (const span of [cluster!, beneficial!]) {
+      expect(Math.abs(span.pxPerSite - pitch)).toBeLessThan(1e-9);
+    }
+    // ...so a 5-site span and a 20-site span are on exactly the same scale.
+    expect(cluster!.pxPerSite).toBeCloseTo(beneficial!.pxPerSite, 12);
+  });
+
+  it("puts exactly the in-span sites inside each span's drawn extent", () => {
+    // This is what N2 was really about: ~17 copies were painted inside the blue
+    // block while the readout said `in cluster: 1`, because the block was drawn
+    // at 3.00 px/site and the copies at 0.90. The property that forbids it is
+    // that a site's mark starts inside its span's drawn extent if and only if
+    // the site is IN the span -- so the picture and the readout count the same
+    // copies. Verified at both ends of both spans, including the boundaries.
+    const field = fieldRect(W, H);
+    const { cluster, beneficial } = spanGeometry(PARAMS, field);
+    const markW = Math.max(1, field.w / PARAMS.S);
+    const siteX = (site: number) =>
+      field.x + (site / PARAMS.S) * (field.w - markW);
+    const EPS = 1e-9;
+
+    const check = (
+      span: { x: number; w: number },
+      first: number,
+      count: number,
+    ) => {
+      for (const site of [first, first + 1, first + count - 2, first + count - 1]) {
+        expect(siteX(site), `site ${site} must start inside`).toBeGreaterThanOrEqual(span.x - EPS);
+        expect(siteX(site), `site ${site} must start inside`).toBeLessThan(span.x + span.w + EPS);
+      }
+      if (first > 0) expect(siteX(first - 1)).toBeLessThan(span.x - EPS);
+      if (first + count < PARAMS.S) {
+        expect(
+          siteX(first + count),
+          "the first site OUTSIDE the span must not start inside it",
+        ).toBeGreaterThanOrEqual(span.x + span.w - EPS);
+      }
+      // A mark is floored at 1px while the pitch is ~0.92px, so the last mark
+      // overhangs its own cell -- but by less than one pixel, not by 4.
+      const overhang = siteX(first + count - 1) + markW - (span.x + span.w);
+      expect(overhang).toBeLessThan(markW);
+    };
+
+    check(cluster!, 0, Math.floor(PARAMS.c * PARAMS.S));
+    const benefSites = Math.floor(PARAMS.beta * PARAMS.S);
+    check(beneficial!, PARAMS.S - benefSites, benefSites);
+
+    // And nothing drawn escapes the field horizontally.
+    const world = freshWorld();
+    for (let i = 0; i < 600; i++) step(world);
+    const { ctx, fills } = recordingCtx();
+    drawField(ctx, world, W, H);
+    for (const f of fills) {
+      expect(f.x, "a rect escaped the field's left edge").toBeGreaterThanOrEqual(field.x - EPS);
+      expect(f.x + f.w, "a rect escaped the field's right edge").toBeLessThanOrEqual(field.x + field.w + EPS);
+    }
+  });
+
+  it("paints no full-strength tint behind the data plane", () => {
+    // Only hairline rules (1px) and the capped wash may carry a tint colour
+    // across the field's height. A full-height block in CLUSTER_TINT is the
+    // regression this forbids.
     const world = freshWorld();
     for (let i = 0; i < 300; i++) step(world);
+    const { ctx, fills } = recordingCtx();
+    drawField(ctx, world, W, H);
+    const field = fieldRect(W, H);
 
-    const widths: Record<string, number> = {};
-    let fillStyle = "";
-    const stub = {
-      clearRect(): void {},
-      fillRect(_x: number, _y: number, w: number, h: number): void {
-        // The full-height bands are the only rects spanning the field's height.
-        if (h > 400) widths[fillStyle] = w;
-      },
-      fillText(): void {},
-      set fillStyle(v: string) {
-        fillStyle = v;
-      },
-      get fillStyle(): string {
-        return fillStyle;
-      },
-      font: "",
-      textAlign: "left",
-      textBaseline: "alphabetic",
-    };
-    drawField(stub as unknown as CanvasRenderingContext2D, world, W, H);
-
-    expect(widths[CLUSTER_TINT], "cluster band drawn").toBeGreaterThanOrEqual(
-      15,
-    );
-    expect(
-      widths[BENEFICIAL_TINT],
-      "beneficial band drawn",
-    ).toBeGreaterThanOrEqual(15);
+    for (const f of fills) {
+      if (f.colour !== CLUSTER_TINT && f.colour !== BENEFICIAL_TINT) continue;
+      if (f.h < field.h) continue; // gutter rails and brackets are not in the field
+      expect(f.w, `full-height ${f.colour} rect must be a hairline`).toBeLessThanOrEqual(1);
+    }
+    // ...and the wash that IS full height is the capped composite.
+    const washes = fills.filter((f) => f.h >= field.h && (f.colour === CLUSTER_FILL || f.colour === BENEFICIAL_FILL));
+    expect(washes.length).toBe(2);
   });
 });
