@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Transposons as genome ecology</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      body {
+        margin: 0;
+        background: #0d0f12;
+        color: #d8dee9;
+        font:
+          13px/1.5 system-ui,
+          sans-serif;
+      }
+      #app {
+        display: grid;
+        grid-template-columns: 1fr 320px;
+        height: 100vh;
+      }
+      #stage {
+        display: grid;
+        grid-template-rows: 1fr 180px 220px;
+        gap: 8px;
+        padding: 8px;
+        min-width: 0;
+      }
+      canvas {
+        width: 100%;
+        height: 100%;
+        display: block;
+        background: #14181d;
+        border-radius: 4px;
+      }
+      #controls {
+        padding: 12px;
+        border-left: 1px solid #232830;
+        overflow-y: auto;
+      }
+      #controls label {
+        display: block;
+        margin: 10px 0 2px;
+        color: #9aa5b1;
+      }
+      #controls input[type="range"] {
+        width: 100%;
+      }
+      #readout {
+        font-variant-numeric: tabular-nums;
+        white-space: pre;
+        color: #8fbcbb;
+      }
+      #legend {
+        margin-top: 14px;
+        color: #9aa5b1;
+      }
+      #legend div {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 3px 0;
+      }
+      #legend i {
+        width: 10px;
+        height: 10px;
+        border-radius: 2px;
+        display: inline-block;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <div id="stage">
+        <canvas id="field"></canvas>
+        <canvas id="timeline"></canvas>
+        <canvas id="scatter"></canvas>
+      </div>
+      <div id="controls">
+        <div id="readout"></div>
+        <div id="legend">
+          <div><i style="background: #bf616a"></i> active</div>
+          <div><i style="background: #4c566a"></i> silenced</div>
+          <div><i style="background: #a3be8c"></i> domesticated</div>
+          <div>
+            <i style="background: #1d2530"></i> piRNA cluster (the trap)
+          </div>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
