@@ -243,6 +243,23 @@ export const SEEDS = [1, 2, 3, 4, 5] as const;
  * start at all: approaching from below ALONE is not evidence of an equilibrium,
  * and at these parameters a low reading from below can be pure drift (see
  * `N_SWEEP`).
+ *
+ * ⚠️ AN OPEN ITEM, RECORDED SO IT IS NOT REDISCOVERED AS A SURPRISE. The offset
+ * is DIRECTIONAL, not noise: from-above exceeds from-below at ALL FIVE seeds
+ * (1.074, 1.041, 1.017, 1.102, 1.056; mean 1.057), and the same sign appears in
+ * the NONE arm (1.018) and the LINEAR arm (1.022). Five of five with the same
+ * sign is not what sampling scatter looks like, and the guard's ±30% window
+ * absorbs the whole effect, so the guard is NOT evidence that the offset is
+ * benign — it is only evidence that it is smaller than 30%. It is UNEXPLAINED.
+ * The plausible mechanism, untested here, is the dedup sink documented at the
+ * top of this file: a from-above population starts from 200 IDENTICAL genomes
+ * and carries far more identity by descent than a population grown from
+ * independent founding insertions, so its site sets stay correlated for longer
+ * and the sink's strength — which is relatedness-dependent — takes time to
+ * relax to the from-below level. If that is right, 300 generations is not long
+ * enough for the two histories to forget each other, and the offset should
+ * shrink at a longer horizon. NOBODY HAS MEASURED THAT. Do not treat the
+ * convergence test as having ruled it out.
  */
 export const HIGH_COPY_START = 300;
 
@@ -351,6 +368,17 @@ export function armParams(
  */
 export function seedHighCopy(world: World, k: number): void {
   const p = world.params;
+  // Sites are 0..k-1, so k > S would mint copies at sites the genome does not
+  // have. Nothing downstream would complain: `transpose`'s rejection sampler
+  // draws in [0, S) and would simply never collide with them, `isClusterSite`
+  // and `isBeneficialSite` are false out there, and the run would report a copy
+  // number the genome cannot physically hold. Fail loudly instead. Fine at the
+  // pinned 300 of 2000, and this exists for the caller who changes one of them.
+  if (k > p.S) {
+    throw new Error(
+      `seedHighCopy: ${k} copies per genome exceeds S = ${p.S}; sites 0..${k - 1} would fall outside the genome`,
+    );
+  }
   for (const g of world.genomes) {
     g.copies = Array.from({ length: k }, (_, i) => ({
       id: world.nextCopyId + i,

@@ -112,11 +112,12 @@ were taken on commit `c1bc201`, at an unrecorded `N`, with the Task 10
 unmutated model at `N = 200, S = 2000`, five seeds, generation 300, and the
 no-selection and quadratic arms are both roughly twice the values above:
 
-| arm                     | n̄ (mean of 5 seeds) | per-seed range |
-| ----------------------- | ------------------- | -------------- |
-| `a = 0, b = 0`          | **308.2**           | 299.9 – 314.0  |
-| `a = 0.001, b = 0`      | **299.1**           | 286.8 – 307.2  |
-| `a = 0.001, b = 0.0005` | **26.8**            | 24.7 – 28.4    |
+no-selection **308.2**, linear **299.1**, quadratic **26.8** (means of five
+seeds). The per-seed table, the three ratio rows and the limits on what they
+license are NOT repeated here — they are defined once, on `ARMS` in
+`tests/guards/equilibrium-arm.ts`, and printed by
+`scripts/explore-equilibrium.ts`. A measured table transcribed into three files
+is a table that will stop agreeing with itself.
 
 The N-dependence the table asserts is confirmed and quantified: the quadratic
 arm sits at 19.2 copies per genome at `N = 100`, 26.8 at `N = 200` and 31.3 at
@@ -195,8 +196,36 @@ supplies:
    indistinguishability. (pp. 12–13.)
 3. **The equilibrium is approached from both directions.** A model that reaches a
    value from below but not from above has a bug, not an equilibrium.
-4. **Copy number stabilises far below the point of substantial fitness loss**
-   (p. 16, mean fitness ≈95.5% of copy-free at their Table 2 parameters).
+4. **Copy number stabilises far below saturation** — `0 < n̄ < T`, p. 11. Guard 1
+   asserts this as SITE occupancy, which is the quantity it measures.
+
+⚠️ **What does NOT reproduce: the fitness decrement.** Item 4 above previously
+read "far below the point of substantial fitness loss (p. 16, mean fitness
+≈95.5% of copy-free at their Table 2 parameters)", which reads as though our
+equilibrium lands in the same regime. Measured, it does not, and the gap is
+sevenfold:
+
+| mean fitness at equilibrium, as a fraction of copy-free | ours                         | Charlesworth Table 2, p. 16 |
+| ------------------------------------------------------- | ---------------------------- | --------------------------- |
+|                                                         | **≈0.680** (32.0% decrement) | ≈0.955 (≈4.5% decrement)    |
+
+Arithmetic, at `n̄ = 26.8`, `a = 0.001`, `b = 0.0005`:
+`load = 0.001·26.8 + 0.0005·26.8² = 0.0268 + 0.3591 = 0.3859`, so
+`w = exp(-0.3859) = 0.6798`. Cross-checked against the live `fitness()` on a
+27-copy genome: 0.6760.
+
+Our equilibrium is therefore **not** in the regime the eq. (29) discussion is
+about: the paper's remark that "a small decrement in fitness is sufficient to
+balance the increase in copy number by transposition" (p. 16) is a statement
+about their parameterisation, and ours pays seven times as much. **This is a
+parameterisation difference, not a reproduced result, and it is deliberately not
+tuned away** — `a` and `b` are the `defaultParams` values every other guard in
+the suite is calibrated against, and changing them would move the golden hash
+`9c15fd28` and invalidate every downstream derivation. It is recorded here and
+in the "WHAT THIS GUARD DOES NOT CLAIM" block of
+`tests/guards/equilibrium.test.ts` so that nobody reads Guard 1's
+non-saturation assertion as having reproduced the paper's fitness figure. It has
+not; nothing in Guard 1 measures fitness at all.
 
 Whether to close the haploid/diploid gap in the model itself is a separate
 decision, recorded in the ledger, and is deliberately **not** bundled into

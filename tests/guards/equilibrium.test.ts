@@ -59,30 +59,45 @@ import {
  *      is EXACTLY the independent-effects multiplicative model p. 12 rules out.
  *   3. The QUADRATIC term is what controls it (p. 11: `d2 ln w_n/dn2 < 0` is
  *      necessary for an interior equilibrium, and `d2 ln w/dn2 = -2b` here).
- *   4. Copy number stabilises far below saturation (p. 16: at their Table 2
- *      parameters equilibrium mean fitness is ~95.5% of a copy-free individual).
+ *   4. Copy number stabilises far below saturation: `n_bar << T` (p. 11). That
+ *      is a claim about SITE occupancy, which is the quantity this file
+ *      measures. The paper's companion figure — equilibrium mean fitness ~95.5%
+ *      of a copy-free individual at its Table 2 parameters, p. 16 — is a claim
+ *      about FITNESS, nothing here measures fitness, and ours does not match it.
+ *      See the DOES NOT CLAIM block below.
  *
  * ---------------------------------------------------------------------------
  * WHAT WAS MEASURED
  * ---------------------------------------------------------------------------
- * `scripts/explore-equilibrium.ts` prints every figure quoted in this file and
- * in `./equilibrium-arm.js`, where the arm, the horizon, the seed set, both
- * drift windows and the N sweep are defined once and documented in full.
- * Copies per genome at generation 300, five seeds:
- *
- *   arm        seed1  seed2  seed3  seed4  seed5    mean
- *   NONE       305.0  313.4  314.0  308.5  299.9   308.2
- *   LINEAR     286.8  298.8  300.6  307.2  301.9   299.1
- *   QUADRATIC   24.7   28.4   27.1   25.5   28.1    26.8
+ * The per-seed table of copies per genome at the horizon is NOT transcribed
+ * here. It is defined once, on `ARMS` in `./equilibrium-arm.js`, together with
+ * the three ratio rows the thresholds below are derived from and the limit on
+ * what they license. `scripts/explore-equilibrium.ts` prints all of it. A
+ * measured table copied into two files is a table that will stop agreeing with
+ * itself; each threshold's own margin is quoted on the test that asserts it.
  *
  * ---------------------------------------------------------------------------
  * WHAT THIS GUARD DOES NOT CLAIM
  * ---------------------------------------------------------------------------
- * - Not that NONE exceeds LINEAR at every seed. It does not: at seed 5 LINEAR
- *   is 100.7% of NONE. The per-seed ranges overlap. Only the floor is asserted.
+ * - Not that NONE exceeds LINEAR at every seed. It does not — the arms overlap,
+ *   and one seed reverses. Only a floor is asserted, never an ordering; the
+ *   measured detail is on `ARMS` in `./equilibrium-arm.js`.
  * - Not that the LINEAR arm is "statistically indistinguishable" from no
- *   selection. It is not — the mean ratio is 97.0%, consistently below 100%.
+ *   selection. It is not — the mean ratio is consistently below 100%.
  * - Not any equilibrium VALUE, in any arm, for the reasons above.
+ * - NOT that our equilibrium sits in the paper's "a small decrement in fitness
+ *   is sufficient to balance the increase in copy number by transposition"
+ *   regime (p. 16). It does not, and the gap is large enough to matter. At
+ *   n_bar = 26.8 the load is 0.001*26.8 + 0.0005*26.8^2 = 0.3859, so
+ *   w = exp(-0.3859) = 0.680 — a 32.0% fitness decrement, cross-checked against
+ *   the real `fitness()` on a 27-copy genome (0.6760). Charlesworth's Table 2
+ *   equilibrium is ~95.5% of a copy-free individual, a ~4.5% decrement: ours is
+ *   SEVEN TIMES further from copy-free. That is a parameterisation difference,
+ *   not a reproduced result, and it is deliberately NOT tuned away — `a` and
+ *   `b` are the `defaultParams` values every other guard in the suite is
+ *   calibrated against, and moving them would move the golden hash. The
+ *   `occupancy < 0.4` assertions below are about SITE saturation, a different
+ *   quantity; no assertion in this file rests on fitness at all.
  * - Not that NONE and LINEAR have equilibria at all in the paper's sense. At
  *   these parameters they plateau at the level the haploid dedup sink imposes
  *   (~15.4% site occupancy), which is a property of `reproduce.ts`, not of
@@ -305,7 +320,16 @@ describe("guard 1: Charlesworth equilibrium", () => {
     // three tests in this file together cost 13s. Raising the SUITE timeout to
     // cover one expensive guard would also stop every cheap test in the
     // repository from ever reporting a hang.
-  }, 150_000);
+    //
+    // 100s, not more: that is 2.4x the measured 41.5s, so it absorbs machine
+    // variance, while a 3x regression in `step` or `transpose` still turns this
+    // test red instead of passing silently in the file that should catch it
+    // first. THE REAL MARGIN IS THINNER THAN THIS NUMBER SUGGESTS: the whole
+    // Guard 1 file measured 47.9-55.4s against the task's 60s budget, roughly
+    // 8% headroom, so a slower machine blows that budget with nothing here
+    // reporting it. If this test's duration starts climbing, cut a seed or the
+    // horizon and re-derive — do not raise this timeout.
+  }, 100_000);
 
   /**
    * TEST 3. The horizon reading is an equilibrium, not a snapshot.

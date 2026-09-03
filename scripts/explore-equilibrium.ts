@@ -13,13 +13,7 @@
 //   ARM 6  liveness and occupancy at the horizon, every arm, every seed.
 //
 // Run: npx tsx scripts/explore-equilibrium.ts [arm ...]   (default: all)
-import {
-  createWorld,
-  defaultParams,
-  observe,
-  step,
-  type Params,
-} from "../sim/index.js";
+import { createWorld, observe, step } from "../sim/index.js";
 import {
   ARM_NAMES,
   BASE,
@@ -223,7 +217,7 @@ if (on(4)) {
 if (on(5)) {
   console.log("\n=== ARM 5: sigmaR — the paper's u is a constant, ours is not ===");
   for (const sigmaR of [0, 0.1]) {
-    const p = defaultParams({ ...BASE, ...{ a: 0, b: 0 }, sigmaR, seed: 1 });
+    const p = armParams("NONE", { sigmaR, seed: 1 });
     const w = createWorld(p);
     for (let g = 1; g <= GENERATIONS; g++) {
       step(w);
@@ -253,5 +247,3 @@ if (on(6)) {
     }
   }
 }
-
-void (0 as unknown as Params);
