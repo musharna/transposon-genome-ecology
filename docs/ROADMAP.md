@@ -135,6 +135,17 @@ live registry and the null stated as "checked HERE", naming where.
       tasks of the plan are committed on `impl/sim-core-v1`. `sim/` is 14 files;
       all seven guard files exist under `tests/guards/`; `web/` is 10 files. Suite
       is 20 files / 177 tests, `tsc --noEmit` and `vite build` clean.
+- [x] **DONE 2026-09-03** — Guards **8 (domestication)** and **9 (tolerance)**, the
+      two spec-claimed mechanisms a phase-coverage audit found with NOTHING
+      asserting anything about them. Before this, `pDom = 0` in all six scientific
+      arms and `t = 0` in all seven **and** in `defaultParams` **and** in
+      `TOY_DEFAULTS`, so `domesticate` never fired inside a guard and the tolerance
+      branch of `damageLoad` never executed in a population run anywhere in the
+      repository. `tests/guards/domestication{-arm.ts,.test.ts}` +
+      `scripts/explore-domestication.ts`, `tests/guards/tolerance{-arm.ts,.test.ts}` + `scripts/explore-tolerance.ts`. `sim/` is byte-identical: these are guards
+      over existing behaviour, both golden pins unmoved. ⚠️ Guard 8 shipped with a
+      NEGATIVE finding about the shipped defaults — see the two new open items
+      below.
 - [x] **DONE 2026-09-02** — Read Charlesworth & Charlesworth 1983 in full, not the
       abstract → [`charlesworth-1983-equilibrium.md`](charlesworth-1983-equilibrium.md).
       Unblocks guard 1. ⚠️ **Guard 1 is re-specified**: it asserts the paper's
@@ -221,6 +232,37 @@ worth keeping written down:
       direction only, at a fixed horizon, and says so — but the result must not be
       quoted as a general property of the model. Recorded in the
       "WHAT THIS GUARD DOES NOT CLAIM" block of `tests/guards/bloat.test.ts`.
+- [ ] ⚠️ **THE SHIPPED `wDom` IS BELOW THE PERSISTENCE THRESHOLD, SO THE
+      "ALTERNATE WIN" CANNOT HAPPEN AT THE DEFAULTS.** Spec §3.2 step 3 and §4
+      present domestication as a way for a copy to persist by ceasing to be a
+      parasite. Measured by guard 8 at eleven seeds: at `defaultParams`'
+      `wDom = 0.01` domesticated copies are made, peak (195..595 copies at
+      generation 26..44 in the guard's arm) and are then lost to ZERO at every
+      seed. The threshold at that arm is `0.03 < wDom* <= 0.075` — the shipped
+      value is 3x below the highest all-seeds-lost bonus and 7.5x below the lowest
+      all-seeds-kept one — and `beta = 0.005, pDom = 0.001` make the event rare on
+      top of that. **This is a calibration finding, not a missing mechanism:** the
+      model expresses persistence perfectly well above the threshold, including
+      persistence through the family's total extinction.
+      **NOT FIXED HERE ON PURPOSE.** Moving `wDom` moves every other guard's
+      derivation and the golden hash in `tests/step.test.ts`. Guard 8's
+      below-threshold arm IS the shipped default and asserts equality with
+      `defaultParams().wDom`, so the finding is pinned rather than merely noted,
+      and any recalibration turns that assertion red until the arm is re-derived.
+      Full grid and margins: `tests/guards/domestication-arm.ts`, reproduced by
+      `scripts/explore-domestication.ts` ARM 2.
+- [ ] **Why more domestication bonus gives FEWER domesticated copies above
+      `wDom ~ 0.3` is uncharacterised.** The response is non-monotone at all
+      eleven seeds (mean per genome at generation 1000: 19.71 at `wDom = 0.3`,
+      falling to 10.14 at `wDom = 5`). Established: it is differential
+      ACCUMULATION, not retention — the whole difference is set by generation ~60
+      and every trajectory is flat after. Two candidates move together and NEITHER
+      was isolated: the still-transposing family (the only source of new
+      domestication) dies earlier, and lineage diversity collapses (200/200
+      distinct domesticated-site sets at `wDom = 0.2` against 106/200 at
+      `wDom = 5`). Recorded as an observation, with no mechanism asserted; no guard
+      assertion depends on it. `tests/guards/domestication-arm.ts`,
+      `scripts/explore-domestication.ts` ARM 5.
 
 Still open from the reading list, and unchanged:
 
