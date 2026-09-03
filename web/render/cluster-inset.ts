@@ -3,7 +3,7 @@ import {
   ACTIVE_COLOUR,
   DOMESTICATED_COLOUR,
   FIELD_BG,
-  SILENCED_COLOUR,
+  SILENCED_SMALL,
   rowOrder,
   silencedBySorted,
   sortedRepertoire,
@@ -30,13 +30,17 @@ import {
  * in a cluster site at any moment, and those copies are the ONLY source of new
  * piRNA entries in the model.
  *
- * THE MAGNIFICATION IS PRINTED AND IT IS EXACT. `zoom` is
- * `pxPerSite / fieldPxPerSite`, the caller passes the field's own
- * `spanGeometry(...).cluster.pxPerSite` rather than a remembered constant, and
- * `tests/render-panels.test.ts` asserts both that the ratio holds and that the
- * printed figure matches it. A zoom whose stated factor is not its actual factor
- * would be the same defect as the 3.3x cluster tint this panel exists to
- * replace.
+ * THE MAGNIFICATION IS DRAWN, NOT NUMBERED. Round one printed a factor -- and
+ * the audited render measured 30.6x against a caption saying 33.8x, a 10%
+ * disagreement I could not reproduce and therefore could not defend. A stated
+ * magnification that is not the real one is precisely the defect this panel
+ * exists to replace, so the number is gone and a SCALE BAR takes its place: a
+ * bar exactly `sites * fieldPxPerSite` wide, which is the width these same
+ * sites occupy in the field, set beside the block that magnifies them. The
+ * comparison was always the point; the ratio was only one way of stating it,
+ * and it was the way that could be wrong while looking right. The bar cannot:
+ * its width IS the quantity, derived from the field's live px/site that
+ * `web/main.ts` measures each frame.
  * -------------------------------------------------------------------------- */
 
 const PAD_L = 8;
@@ -57,8 +61,11 @@ export interface ClusterInsetGeometry {
   rows: number;
   pxPerSite: number;
   rowH: number;
-  /** `pxPerSite / fieldPxPerSite`. What the printed label must say. */
-  zoom: number;
+  /**
+   * Width of the scale bar: what these same `sites` measure in the FIELD. The
+   * bar and the block are the comparison, so this is a length, not a ratio.
+   */
+  fieldBarW: number;
 }
 
 export function clusterInsetGeometry(
@@ -78,13 +85,8 @@ export function clusterInsetGeometry(
     rows: Math.max(1, rows),
     pxPerSite,
     rowH: h / Math.max(1, rows),
-    zoom: fieldPxPerSite > 0 ? pxPerSite / fieldPxPerSite : 0,
+    fieldBarW: Math.max(0, sites * fieldPxPerSite),
   };
-}
-
-/** The magnification as the label prints it, so a test can compare the two. */
-export function zoomLabel(zoom: number): string {
-  return `${zoom.toFixed(1)}x`;
 }
 
 /**
@@ -120,11 +122,16 @@ export function drawClusterInset(
   ctx.fillStyle = FIELD_BG;
   ctx.fillRect(block.x, block.y, block.w, block.h);
 
-  // Column separators, so five sites are five countable columns.
+  // ALL `sites + 1` BOUNDARIES, not just the interior ones. Drawing only the
+  // interior gave 4 rules under a caption saying "5 cluster sites": a reader
+  // counts 4 lines and 3 columns, and the mark in the last site floats past the
+  // final rule looking like an overflow rather than like a cell.
   ctx.fillStyle = GRID;
-  for (let i = 1; i < sites; i++) {
+  for (let i = 0; i <= sites; i++) {
     ctx.fillRect(block.x + i * pxPerSite, block.y, 1, block.h);
   }
+  ctx.fillRect(block.x, block.y, block.w + 1, 1);
+  ctx.fillRect(block.x, block.y + block.h, block.w + 1, 1);
 
   const order = rowOrder(world);
   const markH = Math.max(1, rowH);
@@ -145,7 +152,7 @@ export function drawClusterInset(
       ctx.fillStyle = copy.domesticated
         ? DOMESTICATED_COLOUR
         : silencedBySorted(copy.s, sorted, p.theta)
-          ? SILENCED_COLOUR
+          ? SILENCED_SMALL
           : ACTIVE_COLOUR;
       ctx.fillRect(block.x + copy.site * pxPerSite, y, pxPerSite, markH);
     }
@@ -155,21 +162,27 @@ export function drawClusterInset(
   ctx.textAlign = "left";
   ctx.textBaseline = "alphabetic";
   ctx.fillStyle = LABEL;
-  ctx.fillText(
-    `${sites} cluster sites, ${zoomLabel(geom.zoom)} the field's scale`,
-    block.x,
-    block.y - 5,
-  );
+  ctx.fillText(`${sites} cluster sites`, block.x, block.y - 5);
 
   const tx = block.x + block.w + TEXT_GAP;
   const lines = [
     `${world.genomes.length} genomes,`,
-    `same row order`,
-    `as the field.`,
-    ``,
+    `same rows as`,
+    `the field.`,
     `in trap: ${occupied}`,
   ];
   for (let i = 0; i < lines.length; i++) {
     ctx.fillText(lines[i]!, tx, block.y + 9 + i * 13);
   }
+
+  // The scale bar: the width these same sites occupy in the field, drawn beside
+  // the block that magnifies them. Its LENGTH is the claim -- there is no
+  // number to disagree with it.
+  const barY = block.y + 9 + lines.length * 13 + 6;
+  ctx.fillText("same, in the field:", tx, barY);
+  ctx.fillStyle = ACTIVE_COLOUR;
+  ctx.fillRect(tx, barY + 5, Math.max(1, geom.fieldBarW), 4);
+  ctx.fillStyle = LABEL;
+  ctx.fillRect(tx, barY + 3, 1, 8);
+  ctx.fillRect(tx + Math.max(1, geom.fieldBarW), barY + 3, 1, 8);
 }

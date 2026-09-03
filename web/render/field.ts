@@ -14,6 +14,25 @@ export const FIELD_BG = "#14181d";
 export const ACTIVE_COLOUR = "#bf616a";
 export const SILENCED_COLOUR = "#4c566a";
 export const DOMESTICATED_COLOUR = "#a3be8c";
+
+/**
+ * SILENCED, FOR THIN MARKS. One state, two weights, one legend entry.
+ *
+ * `SILENCED_COLOUR` measures 2.416:1 against `FIELD_BG` -- under the 3:1 WCAG
+ * floor for a graphical object. It survives in `drawField` because a mark there
+ * is a filled rect a whole row tall, and area buys back what contrast does not.
+ * Nothing else in this project draws silenced that way: the timeline's 1.5px
+ * polyline, the scatter's 2px dots and the inset's 2px-tall cells are all thin,
+ * and the dots are the stronger case of the two, not the weaker one. So every
+ * thin mark uses this lightened blue -- same hue family, 4.424:1 -- and the
+ * global legend in `web/index.html` carries ONE entry showing both weights with
+ * one label.
+ *
+ * That is the whole rule, and it is deliberately not "two legends". A viewer who
+ * sees the word `silenced` twice, in two colours, in two legends, has been shown
+ * a contradiction and told to live with it.
+ */
+export const SILENCED_SMALL = "#5e81ac";
 /** Drawn under domesticated marks so a 3px glyph still has an edge. */
 const DOMESTICATED_HALO = "#113311";
 

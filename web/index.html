@@ -146,6 +146,22 @@
         display: inline-block;
         flex: none;
       }
+      /* ONE entry, two weights. See SILENCED_SMALL in web/render/field.ts:
+         #4c566a is 2.416:1 against the panel ground, which a row-tall filled
+         mark can carry and a 1.5px line or a 2px dot cannot, so every thin mark
+         is drawn in #5e81ac. Two legends showing one state in two colours would
+         document the contradiction instead of resolving it. */
+      #legend .pair {
+        display: inline-flex;
+        gap: 3px;
+        flex: none;
+      }
+      #legend .note {
+        color: #939eac;
+        font-size: 10px;
+        margin: 2px 0 6px 0;
+        display: block;
+      }
       /* The magnified cluster. It is a flex item placed BEFORE the
          bottom-anchored #controls-slot, so it consumes the column's dead space
          by construction rather than by being positioned at coordinates measured
@@ -209,7 +225,19 @@
           <div class="panel-title">legend</div>
           <div id="legend">
             <div><i style="background: #bf616a"></i> active</div>
-            <div><i style="background: #4c566a"></i> silenced</div>
+            <div>
+              <span class="pair"
+                ><i style="background: #4c566a"></i
+                ><i style="background: #5e81ac"></i></span
+              >
+              silenced
+            </div>
+            <span class="note"
+              >Two weights, one state: the darker blue fills a genome's row in
+              the field; the lighter one draws every thin mark — the timeline
+              line, the scatter dots, the magnified trap — which need the
+              contrast a filled row does not.</span
+            >
             <div><i style="background: #a3be8c"></i> domesticated</div>
             <div>
               <i style="background: #4a6f9e"></i> piRNA cluster — the trap

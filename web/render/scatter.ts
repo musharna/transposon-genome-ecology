@@ -3,11 +3,13 @@ import {
   ACTIVE_COLOUR,
   DOMESTICATED_COLOUR,
   FIELD_BG,
-  SILENCED_COLOUR,
+  SILENCED_SMALL,
+  compositeOver,
   nearestSignedDistance,
   sortedRepertoire,
   type Rect,
 } from "./field.js";
+import { placeLabels } from "./timeline.js";
 
 /* -------------------------------------------------------------------------- *
  * THE HORIZONTAL AXIS IS NOT `s`.
@@ -53,30 +55,82 @@ import {
 /**
  * Half-width of the distance axis, in `s` units.
  *
- * NOT autoscaled -- see the note above. Measured over seeds 1/2/3/5/7 at
- * generations 200/800/2000/4000, 30,722 copies with a non-empty reference: the
- * largest |distance| seen anywhere was 1.126 (seed 5, generation 4000), and
- * 99.8% of copies fall inside 1.0. 1.5 is a 1.33x margin on that worst measured
- * case. Anything beyond it is neither dropped nor silently clamped into the
- * data: it is drawn on the boundary AND counted in the readout, so an off-scale
- * population announces itself instead of piling up invisibly against the edge.
+ * NOT autoscaled -- see the note above -- but SIZED TO THE DATA rather than to
+ * the all-time maximum, which are different things and the first round got the
+ * second one. Measured over seeds 1/2/3/5/7 at generations 200/800/2000/4000,
+ * 30,722 copies with a non-empty reference:
+ *
+ *     |d| > 0.3   11.44%        p95  0.444
+ *     |d| > 0.4    6.53%        p99  0.717
+ *     |d| > 0.5    3.60%        max  1.126
+ *     |d| > 0.6    1.92%
+ *     |d| > 0.75   0.76%
+ *     |d| > 1.0    0.07%
+ *
+ * At the 1.5 this used to be -- a margin on the 1.126 maximum -- the axis was
+ * about twice as wide as its data: binned into thirty tenth-unit bins, 11 of 30
+ * were empty two seconds in and 20 of 30 at thirty seconds, with the cloud in
+ * 250 px of an 847 px axis and the empty half all on one side, so it read as
+ * mis-centred rather than as sparse. 0.6 is still 1.35x p99 and over 4x the
+ * observed spread, and it takes the theta separation from 23 px to about 53 px
+ * -- which matters, because those two rules carry the panel's whole claim.
+ *
+ * The price is 1.92% of copies off-scale at any moment. They are neither dropped
+ * nor drawn as though they were AT the boundary: an off-scale copy is a 1px
+ * TICK rather than a 2px square, flush against the edge, and the count is
+ * printed. A pile at the boundary then reads as a pile at the boundary.
  */
-export const X_LIMIT = 1.5;
+export const X_LIMIT = 0.6;
 
 /** Side of a copy's square mark, px. */
 export const MARK = 2;
+/** Width of an off-scale copy's tick. Narrower than `MARK`, deliberately. */
+export const OFF_SCALE_MARK = 1;
 
 const PAD_L = 44;
 const PAD_R = 12;
 const PAD_T = 22;
 const PAD_B = 32;
-/** The no-reference lane, and the gutter separating it from the data plane. */
+/**
+ * The no-reference lane, and the gutter separating it from the data plane.
+ *
+ * The gutter is 30px, not 14, and the reason is TEXT rather than graphics: the
+ * lane's `none` and the axis' `-0.6` are labels for different things, and at 14
+ * their boxes sat 4px apart -- under one character at a 5.9px advance -- so they
+ * read as one string. At 30 the reservation pass in `placeLabels` fits both with
+ * about five characters of clearance.
+ */
 const LANE_W = 26;
-const LANE_GAP = 14;
+const LANE_GAP = 30;
 
 const AXIS_LABEL = "#939eac";
-/** The theta rules and the rate ceiling. 4.830:1 against `FIELD_BG`. */
+/**
+ * The theta rules and the rate ceiling. 4.830:1 against `FIELD_BG` AS A COLOUR
+ * -- but a 1px rect at a fractional x is painted across two device columns at
+ * partial coverage, and the audited render measured the two drawn rules at
+ * 1.53:1 and 2.97:1 for exactly that reason. `xAt(±theta)` is therefore rounded
+ * to a whole pixel before it is drawn, so a rule paints one full column at its
+ * declared colour. Fractional geometry was the same mechanism behind the field's
+ * knocked-out edge rules; the fix there was to move the rule, and here it is to
+ * land it on the grid.
+ */
 export const THRESHOLD_RULE = "#7286a8";
+/**
+ * The wash between the two theta rules, so `between the rules` reads as a REGION
+ * rather than as two lines with a gap.
+ *
+ * Capped exactly as `field.ts`'s span wash is capped, and for the same reason:
+ * this is the one tint that touches the data plane, so it may not move a mark's
+ * contrast. Measured at alpha 0.10 the composite is #1d232b, dL = 0.0075 over
+ * `FIELD_BG`, and marks inside read 3.867:1 (active), 3.926:1 (silenced) and
+ * 7.760:1 (domesticated) -- all still over the 3:1 floor. Asserted.
+ */
+export const THETA_BAND_ALPHA = 0.1;
+export const THETA_BAND_FILL = compositeOver(
+  THRESHOLD_RULE,
+  FIELD_BG,
+  THETA_BAND_ALPHA,
+);
 const MONO = "10px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
 
 export interface ScatterGeometry {
@@ -117,6 +171,36 @@ export function scatterGeometry(
     xAt: (d) => plot.x + ((d + X_LIMIT) / (2 * X_LIMIT)) * plot.w,
     yAt: (r) =>
       plot.y + plot.h - (Math.min(Math.max(r, 0), p.rMax) / p.rMax) * plot.h,
+  };
+}
+
+/** The drawn threshold geometry, in whole pixels. */
+export interface ThetaRules {
+  /** Left and right theta rules, and the rate ceiling. */
+  lo: number;
+  hi: number;
+  ceiling: number;
+}
+
+/**
+ * Where the three annotation rules are actually painted.
+ *
+ * THIS EXISTS SO THE DRAWN RULES AND THE TESTED RULES ARE ONE EXPRESSION. In
+ * round one they were two: `drawScatter` painted `xAt(±theta)` while the guard
+ * derived its band from `geom.xAt(±theta)` independently and never looked at
+ * the recorded fills, so changing the drawn coordinate to `xAt(d * 2)` left the
+ * whole suite green while the picture asserted a band twice the true silencing
+ * width beside a caption still printing the true theta. That is this project's
+ * signature defect -- a graphic element whose size does not mean the number
+ * beside it -- reintroduced in the very panel built to avoid it.
+ *
+ * Rounded to whole pixels: see the note on `THRESHOLD_RULE`.
+ */
+export function thetaRules(p: Params, geom: ScatterGeometry): ThetaRules {
+  return {
+    lo: Math.round(geom.xAt(-p.theta)),
+    hi: Math.round(geom.xAt(p.theta)),
+    ceiling: Math.round(geom.yAt(p.rMax)),
   };
 }
 
@@ -200,7 +284,7 @@ export function placeCopies(world: World, geom: ScatterGeometry): Placement {
         colour: copy.domesticated
           ? DOMESTICATED_COLOUR
           : Math.abs(d) <= p.theta
-            ? SILENCED_COLOUR
+            ? SILENCED_SMALL
             : ACTIVE_COLOUR,
         d,
         offScale: over,
@@ -242,39 +326,53 @@ export function drawScatter(
   ctx.font = MONO;
   ctx.textBaseline = "alphabetic";
 
-  // The threshold, at exactly +/- theta ON THE DATA PLANE'S OWN SCALE, so the
-  // band between the rules IS the silenced set rather than an emphasis of it.
+  // The threshold. `thetaRules` owns the arithmetic so the drawn geometry and
+  // the tested geometry are the same expression, and the rules land on whole
+  // pixels so each paints one full column at its declared colour.
+  const rules = thetaRules(p, geom);
+  ctx.fillStyle = THETA_BAND_FILL;
+  ctx.fillRect(rules.lo, plot.y, rules.hi - rules.lo + 1, plot.h);
   ctx.fillStyle = THRESHOLD_RULE;
-  for (const d of [-p.theta, p.theta]) ctx.fillRect(xAt(d), plot.y, 1, plot.h);
-  ctx.fillRect(plot.x, yAt(p.rMax), plot.w, 1);
+  ctx.fillRect(rules.lo, plot.y, 1, plot.h);
+  ctx.fillRect(rules.hi, plot.y, 1, plot.h);
+  ctx.fillRect(plot.x, rules.ceiling, plot.w, 1);
 
   const placement = placeCopies(world, geom);
   for (const m of placement.marks) {
     const region = m.d === null ? lane : plot;
+    const w = m.offScale ? OFF_SCALE_MARK : MARK;
     ctx.fillStyle = m.colour;
     ctx.fillRect(
-      Math.min(Math.max(m.x - MARK / 2, region.x), region.x + region.w - MARK),
+      Math.min(Math.max(m.x - w / 2, region.x), region.x + region.w - w),
       Math.min(Math.max(m.y - MARK / 2, plot.y), plot.y + plot.h - MARK),
-      MARK,
+      w,
       MARK,
     );
   }
 
+  // Tick labels, through the timeline's reservation pass, because `none` and
+  // `-0.6` are labels for different things that sat 4px apart -- under one
+  // character -- and read as one string.
   const baseline = plot.y + plot.h + 13;
   ctx.fillStyle = AXIS_LABEL;
+  for (const l of placeLabels([
+    { x: lane.x + lane.w / 2, text: "none", align: "center" },
+    { x: plot.x, text: `-${X_LIMIT}`, align: "left" },
+    { x: plot.x + plot.w, text: `+${X_LIMIT}`, align: "right" },
+    { x: xAt(0), text: "0", align: "center" },
+  ])) {
+    ctx.textAlign = l.align;
+    ctx.fillText(l.text, l.x, baseline);
+  }
   ctx.textAlign = "center";
-  ctx.fillText(`-${X_LIMIT}`, plot.x, baseline);
-  ctx.fillText("0", xAt(0), baseline);
-  ctx.fillText(`+${X_LIMIT}`, plot.x + plot.w, baseline);
-  ctx.fillText("none", lane.x + lane.w / 2, baseline);
   ctx.fillText(
-    `distance to nearest piRNA match, in s -- between the rules (${"±"}${p.theta}) is silenced`,
+    `distance to nearest piRNA match, in s \u2014 inside the band (\u00b1${p.theta}) is silenced`,
     plot.x + plot.w / 2,
     baseline + 12,
   );
 
   ctx.textAlign = "right";
-  ctx.fillText(`r ${p.rMax}`, lane.x - 6, yAt(p.rMax) + 9);
+  ctx.fillText(`r ${p.rMax}`, lane.x - 6, rules.ceiling + 9);
   ctx.fillText("0", lane.x - 6, plot.y + plot.h);
 
   ctx.textAlign = "left";
