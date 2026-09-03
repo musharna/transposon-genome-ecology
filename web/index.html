@@ -146,6 +146,17 @@
         display: inline-block;
         flex: none;
       }
+      /* The magnified cluster. It is a flex item placed BEFORE the
+         bottom-anchored #controls-slot, so it consumes the column's dead space
+         by construction rather than by being positioned at coordinates measured
+         once in one browser at one viewport height. Its own height is fixed
+         because the canvas inside it needs a size the global `canvas { height:
+         100% }` rule cannot give it inside an auto-height flex item. Measured
+         content height of the column above it at an 800px viewport is ~573px of
+         ~784px available, so ~211px is free and this block takes 161. */
+      #cluster-inset {
+        height: 140px;
+      }
       /* Bottom-anchored, so the reserved space reads as deliberate. */
       #controls-slot {
         margin-top: auto;
@@ -205,6 +216,11 @@
             </div>
             <div><i style="background: #8a6d2f"></i> beneficial sites</div>
           </div>
+        </div>
+
+        <div>
+          <div class="panel-title">the trap, magnified</div>
+          <canvas id="cluster-inset"></canvas>
         </div>
 
         <div id="controls-slot">Controls arrive in Task 18.</div>

@@ -15,7 +15,12 @@ import {
   DOMESTICATED_COLOUR,
   SILENCED_COLOUR,
   drawField,
+  fieldRect,
+  spanGeometry,
 } from "./render/field.js";
+import { drawTimeline } from "./render/timeline.js";
+import { drawScatter } from "./render/scatter.js";
+import { drawClusterInset } from "./render/cluster-inset.js";
 
 export { TOY_DEFAULTS };
 
@@ -26,6 +31,11 @@ let snapshots: Snapshot[] = [observe(world)];
 let speed = 3;
 
 const fieldCanvas = document.getElementById("field") as HTMLCanvasElement;
+const timelineCanvas = document.getElementById("timeline") as HTMLCanvasElement;
+const scatterCanvas = document.getElementById("scatter") as HTMLCanvasElement;
+const insetCanvas = document.getElementById(
+  "cluster-inset",
+) as HTMLCanvasElement;
 const readout = document.getElementById("readout") as HTMLDivElement;
 const el = (id: string) => document.getElementById(id) as HTMLElement;
 
@@ -160,18 +170,15 @@ const TRACK_PX = 114;
  * the arithmetic so `tests/render-field.test.ts` can assert that a bar's length
  * and its printed share are the same quantity.
  */
-function setBar(
-  key: keyof typeof BARS,
-  count: number,
-  total: number,
-): void {
+function setBar(key: keyof typeof BARS, count: number, total: number): void {
   const spec = BARS[key];
   const bar = el(spec.bar);
   const { px, floored } = barLength(count, total, TRACK_PX, BAR_FLOOR_PX);
   bar.style.width = `${px}px`;
   bar.style.background = floored ? "transparent" : spec.colour;
   bar.style.border = floored ? `1px solid ${spec.colour}` : "none";
-  el(spec.n).textContent = `${count} · ${sharePercent(count, total).toFixed(1)}%`;
+  el(spec.n).textContent =
+    `${count} · ${sharePercent(count, total).toFixed(1)}%`;
 }
 
 function frame(): void {
@@ -182,6 +189,29 @@ function frame(): void {
 
   const rect = fieldCanvas.getBoundingClientRect();
   drawField(fit(fieldCanvas), world, rect.width, rect.height);
+
+  const tRect = timelineCanvas.getBoundingClientRect();
+  drawTimeline(fit(timelineCanvas), snapshots, tRect.width, tRect.height);
+
+  const sRect = scatterCanvas.getBoundingClientRect();
+  drawScatter(fit(scatterCanvas), world, sRect.width, sRect.height);
+
+  // The inset's magnification is stated on the inset itself, so it is derived
+  // from the field's LIVE px/site rather than from a remembered constant: the
+  // field canvas is `1fr` in a viewport-sized grid, so its scale changes with
+  // the window and a hard-coded factor would be wrong at every size but one.
+  const iRect = insetCanvas.getBoundingClientRect();
+  const cluster = spanGeometry(
+    world.params,
+    fieldRect(rect.width, rect.height),
+  ).cluster;
+  drawClusterInset(
+    fit(insetCanvas),
+    world,
+    iRect.width,
+    iRect.height,
+    cluster ? cluster.pxPerSite : 0,
+  );
 
   const inCluster = copiesInCluster(world);
   const meanRep = meanRepertoire(world);
@@ -199,13 +229,43 @@ function frame(): void {
   // it is also the number the degradation note below is about.
   readout.innerHTML = [
     row("gen", String(snap.generation), null, 0, false),
-    row("copies", String(snap.totalCopies), deltaOver(600, (s) => s.totalCopies)),
-    row("active", String(snap.activeCopies), deltaOver(600, (s) => s.activeCopies)),
-    row("silenced", String(snap.silencedCopies), deltaOver(600, (s) => s.silencedCopies)),
-    row("domesticated", String(snap.domesticatedCopies), deltaOver(600, (s) => s.domesticatedCopies)),
-    row("in cluster", String(inCluster), traceDelta(600, (t) => t.inCluster)),
-    row("piRNA entries", meanRep.toFixed(1), traceDelta(600, (t) => t.meanRepertoire), 1),
-    row("mean rate", snap.meanRate.toFixed(3), deltaOver(600, (s) => s.meanRate), 3),
+    row(
+      "copies",
+      String(snap.totalCopies),
+      deltaOver(600, (s) => s.totalCopies),
+    ),
+    row(
+      "active",
+      String(snap.activeCopies),
+      deltaOver(600, (s) => s.activeCopies),
+    ),
+    row(
+      "silenced",
+      String(snap.silencedCopies),
+      deltaOver(600, (s) => s.silencedCopies),
+    ),
+    row(
+      "domesticated",
+      String(snap.domesticatedCopies),
+      deltaOver(600, (s) => s.domesticatedCopies),
+    ),
+    row(
+      "in cluster",
+      String(inCluster),
+      traceDelta(600, (t) => t.inCluster),
+    ),
+    row(
+      "piRNA entries",
+      meanRep.toFixed(1),
+      traceDelta(600, (t) => t.meanRepertoire),
+      1,
+    ),
+    row(
+      "mean rate",
+      snap.meanRate.toFixed(3),
+      deltaOver(600, (s) => s.meanRate),
+      3,
+    ),
   ].join("\n");
 
   const total =

@@ -154,6 +154,31 @@ export function silencedBySorted(
   sorted: number[],
   theta: number,
 ): boolean {
+  const d = nearestSignedDistance(s, sorted);
+  return d !== null && Math.abs(d) <= theta;
+}
+
+/**
+ * Signed distance from `s` to the NEAREST entry in `sorted`, or null when the
+ * repertoire is empty. Positive means `s` sits above its nearest entry.
+ *
+ * `silencedBySorted` is this predicate's yes/no; `web/render/scatter.ts` plots
+ * the magnitude, so the two are one search rather than two implementations that
+ * can drift apart. The same exhaustiveness argument holds: the nearest entry to
+ * `s` in a sorted array is either the first one >= `s` or the last one < `s`,
+ * for any sorted array of any contents.
+ *
+ * TIES ARE RESOLVED TOWARDS THE LOWER ENTRY, so an exactly-between `s` returns
+ * a POSITIVE distance. Both answers are equally true and `silencedBySorted`
+ * cannot tell them apart, but the scatter puts the mark at `+d` or `-d`
+ * depending on the answer, and a rule nobody wrote down is a rule that differs
+ * between the two neighbours' floating-point paths.
+ */
+export function nearestSignedDistance(
+  s: number,
+  sorted: number[],
+): number | null {
+  if (sorted.length === 0) return null;
   let lo = 0;
   let hi = sorted.length;
   while (lo < hi) {
@@ -161,9 +186,12 @@ export function silencedBySorted(
     if (sorted[mid]! < s) lo = mid + 1;
     else hi = mid;
   }
-  if (lo < sorted.length && Math.abs(sorted[lo]! - s) <= theta) return true;
-  if (lo > 0 && Math.abs(sorted[lo - 1]! - s) <= theta) return true;
-  return false;
+  // `above` is <= 0 (its entry is >= s); `below` is > 0 (its entry is < s).
+  const above = lo < sorted.length ? s - sorted[lo]! : null;
+  const below = lo > 0 ? s - sorted[lo - 1]! : null;
+  if (above === null) return below!;
+  if (below === null) return above;
+  return below <= -above ? below : above;
 }
 
 /**
@@ -191,6 +219,24 @@ export interface Rect {
   y: number;
   w: number;
   h: number;
+}
+
+/**
+ * Indices into `world.genomes`, sorted by copy count descending, stably so that
+ * equal rows do not jitter between frames. NEVER sorts `world.genomes` itself.
+ *
+ * Exported because `web/render/cluster-inset.ts` magnifies five columns of the
+ * SAME rows, and two panels claiming to show the same genome in the same row
+ * must derive that row from one function rather than from two copies of a sort
+ * comparator that can drift apart.
+ */
+export function rowOrder(world: World): number[] {
+  const order = world.genomes.map((_, i) => i);
+  order.sort((i, j) => {
+    const d = world.genomes[j]!.copies.length - world.genomes[i]!.copies.length;
+    return d !== 0 ? d : i - j;
+  });
+  return order;
 }
 
 /** The field's rectangle inside the canvas. */
@@ -301,7 +347,8 @@ function drawSpan(
   // them. `edgeRuleRanges` below lets `drawField` knock the rule out from under
   // any mark that still overlaps one.
   ctx.fillStyle = tint;
-  for (const [rx] of edgeRuleRanges(span)) ctx.fillRect(rx, field.y, 1, field.h);
+  for (const [rx] of edgeRuleRanges(span))
+    ctx.fillRect(rx, field.y, 1, field.h);
 
   // Gutter rails, above and below, at the span's true extent.
   ctx.fillRect(span.x, field.y - 3 - RAIL_H, span.w, RAIL_H);
@@ -430,11 +477,7 @@ export function drawField(
     );
   }
 
-  const order = world.genomes.map((_, i) => i);
-  order.sort((i, j) => {
-    const d = world.genomes[j]!.copies.length - world.genomes[i]!.copies.length;
-    return d !== 0 ? d : i - j; // stable, so equal rows do not jitter
-  });
+  const order = rowOrder(world);
 
   const rowH = Math.max(1, field.h / world.genomes.length);
   const markW = markWidth(p, field);
