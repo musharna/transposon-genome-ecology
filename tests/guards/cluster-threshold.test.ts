@@ -38,9 +38,9 @@ import {
  * reduction" is satisfied by every c killing the family, in which case the
  * onset is the smallest grid point whatever the model does. At the original
  * parameters BOTH of those held: `c = 0` ran to roughly 1.2e5 copies and every
- * non-zero fraction ended at exactly 0. The arm module
- * (`./cluster-threshold-arm.js`) records that measurement and why the
- * parameters were replaced.
+ * non-zero fraction ended at exactly 0. `tools/sweep-cluster-size.ts`, which
+ * defines the canonical arm that `./cluster-threshold-arm.js` re-exports,
+ * records that measurement and why the parameters were replaced.
  *
  * So the liveness controls here are asserted PER SEED and BEFORE the
  * comparisons, inside the same test bodies. A control in a separate `it` cannot
@@ -68,7 +68,7 @@ import {
  *   - NOT that the in-band window of reduction constants is horizon-independent.
  *     It is not: the window is 5%..75% at generation 80, 10%..85% at 100,
  *     20%..85% at 120 (this guard) and 20%..80% at 160. The horizon-robust core
- *     is 20%..75%; see `GENERATIONS` in the arm module.
+ *     is 20%..75%; see `GENERATIONS` in `tools/sweep-cluster-size.ts`.
  *   - NOT that the onset has a stable VALUE at 11 pooled seeds. Only its band
  *     MEMBERSHIP is stable: three disjoint 11-seed blocks disagree on the value
  *     by one grid step at 2 of the 14 asserted constants. See `SEEDS`.
