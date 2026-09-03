@@ -32,9 +32,11 @@ import {
   type World,
 } from "../sim/index.js";
 import { TOY_DEFAULTS } from "../web/params.js";
+import { BAR_FLOOR_PX, barLength, sharePercent } from "../web/tally.js";
 import {
   ACTIVE_COLOUR,
   BENEFICIAL_FILL,
+  edgeRuleRanges,
   BENEFICIAL_TINT,
   CLUSTER_FILL,
   CLUSTER_TINT,
@@ -82,6 +84,10 @@ function recordingCtx(): {
       fills.push({ colour: fillStyle, x, y, w, h });
     },
     fillText(): void {},
+    save(): void {},
+    restore(): void {},
+    translate(): void {},
+    rotate(): void {},
     set fillStyle(v: string) {
       fillStyle = v;
     },
@@ -344,15 +350,87 @@ describe("drawField: the marked places are visible AND do not blind their conten
     const benefSites = Math.floor(PARAMS.beta * PARAMS.S);
     check(beneficial!, PARAMS.S - benefSites, benefSites);
 
-    // And nothing drawn escapes the field horizontally.
+    // No MARK escapes the field, and nothing at all escapes the canvas. The
+    // field-relative bound is on marks only: the row-axis label, its ticks and
+    // a span's outer edge rule legitimately live in the left margin.
     const world = freshWorld();
     for (let i = 0; i < 600; i++) step(world);
     const { ctx, fills } = recordingCtx();
     drawField(ctx, world, W, H);
+    const marks = new Set([ACTIVE_COLOUR, SILENCED_COLOUR, DOMESTICATED_COLOUR]);
     for (const f of fills) {
-      expect(f.x, "a rect escaped the field's left edge").toBeGreaterThanOrEqual(field.x - EPS);
-      expect(f.x + f.w, "a rect escaped the field's right edge").toBeLessThanOrEqual(field.x + field.w + EPS);
+      expect(f.x, "a rect escaped the canvas").toBeGreaterThanOrEqual(0);
+      expect(f.x + f.w, "a rect escaped the canvas").toBeLessThanOrEqual(W + EPS);
+      if (!marks.has(f.colour)) continue;
+      expect(f.x, "a mark escaped the field's left edge").toBeGreaterThanOrEqual(field.x - EPS);
+      expect(f.x + f.w, "a mark escaped the field's right edge").toBeLessThanOrEqual(field.x + field.w + EPS);
     }
+  });
+
+  it("keeps every edge rule off the sites of its own span", () => {
+    // The rules are full-strength tint, so a mark landing on one blends with it
+    // instead of covering it: measured at 1.11-1.26:1, the round-2 blindness
+    // relocated onto sites 0 and 4 of the cluster's five. In one frame the only
+    // copy in the trap in the whole population was on a rule. Each rule now
+    // occupies the 1px immediately OUTSIDE the span's site extent.
+    const field = fieldRect(W, H);
+    const { cluster, beneficial } = spanGeometry(PARAMS, field);
+    const markW = Math.max(1, field.w / PARAMS.S);
+    const siteX = (site: number) =>
+      field.x + (site / PARAMS.S) * (field.w - markW);
+
+    const spans: [typeof cluster, number, number][] = [
+      [cluster, 0, Math.floor(PARAMS.c * PARAMS.S)],
+      [
+        beneficial,
+        PARAMS.S - Math.floor(PARAMS.beta * PARAMS.S),
+        Math.floor(PARAMS.beta * PARAMS.S),
+      ],
+    ];
+    let checkedSites = 0;
+    for (const [span, first, count] of spans) {
+      for (const [a, b] of edgeRuleRanges(span!)) {
+        for (let site = first; site < first + count; site++) {
+          const x = siteX(site);
+          expect(
+            x < b && x + markW > a,
+            `site ${site} of its span must not overlap an edge rule`,
+          ).toBe(false);
+          checkedSites++;
+        }
+      }
+    }
+    expect(checkedSites).toBe(2 * (5 + 20));
+  });
+
+  it("knocks the rule out from under any mark that still overlaps one", () => {
+    // The out-of-span site immediately past a span does sit under that span's
+    // outer rule -- one site, unavoidably, since the field is fully tiled. Such
+    // a mark is backed with FIELD_BG first so it renders against the same
+    // ground as every other mark instead of blending into the rule.
+    const world = freshWorld();
+    for (let i = 0; i < 600; i++) step(world);
+    const field = fieldRect(W, H);
+    const { cluster, beneficial } = spanGeometry(PARAMS, field);
+    const rules = [...edgeRuleRanges(cluster!), ...edgeRuleRanges(beneficial!)];
+    const markW = Math.max(1, field.w / PARAMS.S);
+
+    const { ctx, fills } = recordingCtx();
+    drawField(ctx, world, W, H);
+    const marks = new Set([ACTIVE_COLOUR, SILENCED_COLOUR]);
+    let onRule = 0;
+    for (let i = 0; i < fills.length; i++) {
+      const f = fills[i]!;
+      if (!marks.has(f.colour)) continue;
+      if (!rules.some(([a, b]) => f.x < b && f.x + f.w > a)) continue;
+      onRule++;
+      const prev = fills[i - 1]!;
+      expect(prev.colour, "a mark on a rule must be backed by FIELD_BG").toBe(FIELD_BG);
+      expect(prev.x).toBeLessThanOrEqual(f.x);
+      expect(prev.x + prev.w).toBeGreaterThanOrEqual(f.x + markW);
+    }
+    // Positive control: if no mark ever landed on a rule this would pass empty.
+    expect(onRule).toBeGreaterThan(0);
   });
 
   it("paints no full-strength tint behind the data plane", () => {
@@ -373,5 +451,51 @@ describe("drawField: the marked places are visible AND do not blind their conten
     // ...and the wash that IS full height is the capped composite.
     const washes = fills.filter((f) => f.h >= field.h && (f.colour === CLUSTER_FILL || f.colour === BENEFICIAL_FILL));
     expect(washes.length).toBe(2);
+  });
+});
+
+describe("the tally bar means what its own label says", () => {
+  it("normalises length to TOTAL, so length and printed share agree", () => {
+    // The measured defect: lengths were max-normalised while labels were
+    // percent-of-total. `active` rendered full track in every frame while
+    // labelled 83.1% / 71.1% / 57.4%; `silenced` rendered 18.7% / 40.0% /
+    // 70.7% of track against labels of 15.5% / 28.5% / 40.6%.
+    const TRACK = 114;
+    const frames = [
+      { active: 1289, silenced: 240, domesticated: 22 },
+      { active: 1367, silenced: 548, domesticated: 8 },
+      { active: 813, silenced: 575, domesticated: 28 },
+    ];
+    for (const f of frames) {
+      const total = f.active + f.silenced + f.domesticated;
+      for (const count of [f.active, f.silenced, f.domesticated]) {
+        const { px, floored } = barLength(count, total, TRACK);
+        const share = sharePercent(count, total);
+        if (floored) continue; // the floor is declared as a floor, not a share
+        expect(
+          (px / TRACK) * 100,
+          `bar length must equal the share it prints (${count}/${total})`,
+        ).toBeCloseTo(share, 9);
+      }
+      // ...and no bar is pinned to the full track by construction.
+      const longest = barLength(Math.max(f.active, f.silenced, f.domesticated), total, TRACK);
+      expect(longest.px).toBeLessThan(TRACK);
+    }
+  });
+
+  it("declares the floor rather than overstating a rare state", () => {
+    const TRACK = 114;
+    // 3 and 5 of ~1500 both fall under the floor. Both are marked floored, so
+    // the caller draws them outlined and the reader takes the count, not the
+    // length -- the previous stacked bar showed 9px for a 1.4% share.
+    for (const n of [3, 5]) {
+      const b = barLength(n, 1500, TRACK);
+      expect(b.floored).toBe(true);
+      expect(b.px).toBe(BAR_FLOOR_PX);
+    }
+    expect(barLength(0, 1500, TRACK)).toEqual({ px: 0, floored: false });
+    const big = barLength(900, 1500, TRACK);
+    expect(big.floored).toBe(false);
+    expect(big.px).toBeCloseTo(TRACK * 0.6, 9);
   });
 });

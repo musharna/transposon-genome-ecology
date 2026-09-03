@@ -9,6 +9,7 @@ import {
   type World,
 } from "../sim/index.js";
 import { TOY_DEFAULTS } from "./params.js";
+import { BAR_FLOOR_PX, barLength, sharePercent } from "./tally.js";
 import {
   ACTIVE_COLOUR,
   DOMESTICATED_COLOUR,
@@ -58,6 +59,19 @@ function meanRepertoire(w: World): number {
 }
 
 /**
+ * Quantities the readout shows that `Snapshot` does not carry, kept on the same
+ * ring as the snapshots so they can have deltas too. `in cluster` is the one
+ * number the whole cluster feature exists to make legible, and it was the only
+ * row without one.
+ */
+interface Trace {
+  generation: number;
+  inCluster: number;
+  meanRepertoire: number;
+}
+let traces: Trace[] = [];
+
+/**
  * Change in `pick` over the last `gens` generations, or null if the session is
  * not that old yet.
  *
@@ -69,26 +83,64 @@ function meanRepertoire(w: World): number {
  * frames, so it means the same thing on a fast machine and a slow one.
  */
 function deltaOver(gens: number, pick: (s: Snapshot) => number): number | null {
-  const now = snapshots[snapshots.length - 1]!;
-  for (let i = snapshots.length - 1; i >= 0; i--) {
-    if (now.generation - snapshots[i]!.generation >= gens) {
-      return pick(now) - pick(snapshots[i]!);
-    }
+  return deltaIn(snapshots, gens, pick, (s) => s.generation);
+}
+
+function traceDelta(gens: number, pick: (t: Trace) => number): number | null {
+  return deltaIn(traces, gens, pick, (t) => t.generation);
+}
+
+function deltaIn<T>(
+  ring: T[],
+  gens: number,
+  pick: (x: T) => number,
+  gen: (x: T) => number,
+): number | null {
+  if (ring.length === 0) return null;
+  const now = ring[ring.length - 1]!;
+  for (let i = ring.length - 1; i >= 0; i--) {
+    if (gen(now) - gen(ring[i]!) >= gens) return pick(now) - pick(ring[i]!);
   }
   return null;
 }
 
+/**
+ * One readout line, as HTML so the delta can carry a sign colour.
+ *
+ * THE THREE STATES OF THE DELTA COLUMN ARE DISTINCT, which they were not:
+ *   blank  this row has no delta -- either untracked (`gen`, which is the
+ *          clock and cannot meaningfully have one) or the session is younger
+ *          than the window
+ *   ~      tracked, and genuinely unchanged over the window
+ *   +N/-N  tracked, and changed
+ *
+ * Previously `null` and "unchanged" both rendered `~`, so `gen`, `in cluster`
+ * and `piRNA entries` displayed `~` in every frame of a session in which they
+ * ran 453->4413, 1->14 and 17.4->271.2. Two of those are monotone-increasing
+ * and can never be unchanged, so the glyph was not merely uninformative, it was
+ * false. `in cluster` and `piRNA entries` now have real deltas; only `gen`
+ * blanks, and it blanks rather than tildes.
+ */
 function row(
   label: string,
   value: string,
   delta: number | null,
   digits = 0,
+  tracked = true,
 ): string {
-  const d =
-    delta === null || Math.abs(delta) < (digits > 0 ? 5e-4 : 0.5)
-      ? "   ~"
-      : (delta > 0 ? "+" : "-") + Math.abs(delta).toFixed(digits);
-  return label.padEnd(14) + value.padStart(7) + d.padStart(8);
+  let d: string;
+  let cls = "";
+  if (!tracked || delta === null) {
+    d = "";
+  } else if (Math.abs(delta) < (digits > 0 ? 5e-4 : 0.5)) {
+    d = "~";
+  } else {
+    d = (delta > 0 ? "+" : "-") + Math.abs(delta).toFixed(digits);
+    cls = delta > 0 ? "up" : "dn";
+  }
+  const cell = d.padStart(8);
+  const body = cls ? `<span class="${cls}">${cell}</span>` : cell;
+  return label.padEnd(14) + value.padStart(7) + body;
 }
 
 const BARS = {
@@ -101,28 +153,25 @@ const BARS = {
   },
 };
 /** Track width in px, matching `#tally .track` in index.html. */
-const TRACK_PX = 150;
-/** Shortest bar drawn for a non-zero count. A bar AT the floor is outlined
- *  rather than filled, so the floor reads as a floor: the previous stacked bar
- *  showed 9px for a 1.4% share and made 3 and 5 copies indistinguishable, an
- *  8x overstatement with nothing on screen to say the scale had bottomed out. */
-const BAR_FLOOR_PX = 3;
+const TRACK_PX = 114;
 
+/**
+ * NORMALISED TO TOTAL, NOT TO THE LARGEST BAR -- see `web/tally.ts`, which owns
+ * the arithmetic so `tests/render-field.test.ts` can assert that a bar's length
+ * and its printed share are the same quantity.
+ */
 function setBar(
   key: keyof typeof BARS,
   count: number,
-  max: number,
   total: number,
 ): void {
   const spec = BARS[key];
   const bar = el(spec.bar);
-  const exact = max > 0 ? (count / max) * TRACK_PX : 0;
-  const floored = count > 0 && exact < BAR_FLOOR_PX;
-  bar.style.width = `${count === 0 ? 0 : Math.max(exact, BAR_FLOOR_PX)}px`;
+  const { px, floored } = barLength(count, total, TRACK_PX, BAR_FLOOR_PX);
+  bar.style.width = `${px}px`;
   bar.style.background = floored ? "transparent" : spec.colour;
   bar.style.border = floored ? `1px solid ${spec.colour}` : "none";
-  const pct = total > 0 ? ((count / total) * 100).toFixed(1) : "0.0";
-  el(spec.n).textContent = `${count}  ${pct}%`;
+  el(spec.n).textContent = `${count} · ${sharePercent(count, total).toFixed(1)}%`;
 }
 
 function frame(): void {
@@ -134,53 +183,36 @@ function frame(): void {
   const rect = fieldCanvas.getBoundingClientRect();
   drawField(fit(fieldCanvas), world, rect.width, rect.height);
 
+  const inCluster = copiesInCluster(world);
+  const meanRep = meanRepertoire(world);
+  traces.push({
+    generation: snap.generation,
+    inCluster,
+    meanRepertoire: meanRep,
+  });
+  if (traces.length > 4000) traces = traces.slice(-4000);
+
   // Every row has to be a row that MOVES. `fractionWithRepertoire` used to sit
   // in this block and read 100.0% at every timepoint of every session -- once
   // the trap has spread it never falls again, so it carried no information for
   // the whole run. Mean repertoire size is the same quantity's live edge, and
   // it is also the number the degradation note below is about.
-  readout.textContent = [
-    row("gen", String(snap.generation), null),
-    row(
-      "copies",
-      String(snap.totalCopies),
-      deltaOver(600, (s) => s.totalCopies),
-    ),
-    row(
-      "active",
-      String(snap.activeCopies),
-      deltaOver(600, (s) => s.activeCopies),
-    ),
-    row(
-      "silenced",
-      String(snap.silencedCopies),
-      deltaOver(600, (s) => s.silencedCopies),
-    ),
-    row(
-      "domesticated",
-      String(snap.domesticatedCopies),
-      deltaOver(600, (s) => s.domesticatedCopies),
-    ),
-    row("in cluster", String(copiesInCluster(world)), null),
-    row("piRNA entries", meanRepertoire(world).toFixed(1), null),
-    row(
-      "mean rate",
-      snap.meanRate.toFixed(3),
-      deltaOver(600, (s) => s.meanRate),
-      3,
-    ),
+  readout.innerHTML = [
+    row("gen", String(snap.generation), null, 0, false),
+    row("copies", String(snap.totalCopies), deltaOver(600, (s) => s.totalCopies)),
+    row("active", String(snap.activeCopies), deltaOver(600, (s) => s.activeCopies)),
+    row("silenced", String(snap.silencedCopies), deltaOver(600, (s) => s.silencedCopies)),
+    row("domesticated", String(snap.domesticatedCopies), deltaOver(600, (s) => s.domesticatedCopies)),
+    row("in cluster", String(inCluster), traceDelta(600, (t) => t.inCluster)),
+    row("piRNA entries", meanRep.toFixed(1), traceDelta(600, (t) => t.meanRepertoire), 1),
+    row("mean rate", snap.meanRate.toFixed(3), deltaOver(600, (s) => s.meanRate), 3),
   ].join("\n");
 
   const total =
     snap.activeCopies + snap.silencedCopies + snap.domesticatedCopies;
-  const max = Math.max(
-    snap.activeCopies,
-    snap.silencedCopies,
-    snap.domesticatedCopies,
-  );
-  setBar("active", snap.activeCopies, max, total);
-  setBar("silenced", snap.silencedCopies, max, total);
-  setBar("domesticated", snap.domesticatedCopies, max, total);
+  setBar("active", snap.activeCopies, total);
+  setBar("silenced", snap.silencedCopies, total);
+  setBar("domesticated", snap.domesticatedCopies, total);
 
   requestAnimationFrame(frame);
 }
@@ -250,6 +282,7 @@ Object.assign(window, {
     reset(overrides: Partial<Params> = {}) {
       world = createWorld(defaultParams({ ...params, ...overrides }));
       snapshots = [observe(world)];
+      traces = [];
     },
   },
 });

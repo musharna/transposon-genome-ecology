@@ -38,6 +38,8 @@ export const CLUSTER_TINT = "#4a6f9e";
 export const BENEFICIAL_TINT = "#8a6d2f";
 const CLUSTER_LABEL = "#9ab6d9";
 const BENEFICIAL_LABEL = "#d4b878";
+/** Row-axis label and ticks. 6.56:1 against the field background. */
+const AXIS_LABEL = "#939eac";
 
 /**
  * Alpha of the wash INSIDE a span. The only tint that touches the data plane,
@@ -49,8 +51,21 @@ const BENEFICIAL_LABEL = "#d4b878";
  */
 export const SPAN_FILL_ALPHA = 0.08;
 
-/** Field inset, and the gutters the span annotation lives in. */
-const PAD_L = 12;
+/**
+ * Field inset, and the gutters the span annotation lives in.
+ *
+ * `PAD_L` is 44, not 12, and the reason is a MISREADING rather than a
+ * visibility failure. The cluster's edge rules are legible on their own — a
+ * hairline pair running the field's full height — but flush against the canvas
+ * margin, two thin vertical lines at the extreme left are the universal
+ * signature of a y-axis or a plot border, so a viewer files them as chrome and
+ * never sees a place. The gold beneficial span at 18px reads unmistakably as a
+ * marked band, and that reading does not transfer, because the two look like
+ * different kinds of object. Moving the rules bodily inside the plot removes
+ * the border reading without touching the axis. The margin it opens also
+ * carries the row-order label.
+ */
+const PAD_L = 44;
 const PAD_R = 12;
 const PAD_T = 30;
 const PAD_B = 12;
@@ -196,6 +211,10 @@ export interface SpanGeometry {
   w: number;
   /** `w / sites`. Both spans must agree, or the axis is lying somewhere. */
   pxPerSite: number;
+  /** Drawn width of one mark. Floored at 1px, so it exceeds `pxPerSite`
+   *  whenever the field is narrower than one pixel per site -- which is why
+   *  `edgeRuleRanges` cannot place a rule at the site-cell boundary. */
+  markW: number;
 }
 
 /**
@@ -235,7 +254,7 @@ export function spanGeometry(
     if (count <= 0) return null;
     const x = siteX(first);
     const w = (count / p.S) * (field.w - markW);
-    return { sites: count, x, w, pxPerSite: w / count };
+    return { sites: count, x, w, pxPerSite: w / count, markW };
   };
 
   return {
@@ -268,12 +287,21 @@ function drawSpan(
   label: string,
   align: "left" | "right",
 ): void {
-  // Inside the data plane: a capped wash and two hairline rules. Nothing else.
+  // Inside the data plane: the capped wash, and nothing else.
   ctx.fillStyle = fill;
   ctx.fillRect(span.x, field.y, span.w, field.h);
+
+  // The edge rules sit OUTSIDE the span's site extent, in the 1px immediately
+  // before its first site and immediately after its last. Drawn ON the extent,
+  // as they were, they landed squarely on sites 0 and 4 of the cluster's five:
+  // a 1px mark over a 1px rule at a fractional pixel offset blends rather than
+  // covers, and those marks measured 1.11-1.26:1 -- the same blindness the wash
+  // was introduced to remove, relocated onto 40% of the cluster's sites. In one
+  // measured frame the ONLY copy in the trap in the whole population was one of
+  // them. `edgeRuleRanges` below lets `drawField` knock the rule out from under
+  // any mark that still overlaps one.
   ctx.fillStyle = tint;
-  ctx.fillRect(span.x, field.y, 1, field.h);
-  ctx.fillRect(span.x + span.w - 1, field.y, 1, field.h);
+  for (const [rx] of edgeRuleRanges(span)) ctx.fillRect(rx, field.y, 1, field.h);
 
   // Gutter rails, above and below, at the span's true extent.
   ctx.fillRect(span.x, field.y - 3 - RAIL_H, span.w, RAIL_H);
@@ -291,6 +319,52 @@ function drawSpan(
   ctx.textAlign = align;
   ctx.textBaseline = "alphabetic";
   ctx.fillText(text, align === "left" ? span.x : span.x + span.w, field.y - 20);
+}
+
+/**
+ * The two 1px columns a span's edge rules occupy: the pixel before its first
+ * mark begins, and the pixel after its last mark ends.
+ *
+ * The right-hand one is NOT at the site-cell boundary `span.x + span.w`. A mark
+ * is floored at 1px while the pitch here is ~0.89px, so the last in-span mark
+ * overhangs its own cell by `markW - pxPerSite` and a rule at the cell boundary
+ * still clips it -- which is exactly what the test caught, on the cluster's
+ * site 4, after the rules had already been moved off the cell. Anchoring to the
+ * MARK's right edge removes the overlap by construction.
+ *
+ * Exported so the test can assert no in-span site sits under one.
+ */
+export function edgeRuleRanges(span: SpanGeometry): [number, number][] {
+  const lastMarkEnd = span.x + span.w + (span.markW - span.pxPerSite);
+  return [
+    [span.x - 1, span.x],
+    [lastMarkEnd, lastMarkEnd + 1],
+  ];
+}
+
+/**
+ * The row-order label, written up the left margin `PAD_L` opens.
+ *
+ * Rows are sorted, and until now nothing on screen said so. The vertical
+ * gradient IS the copy-number distribution the toy is about — measured 72 marks
+ * in the top row against 14 in the bottom, with the envelope correlating
+ * 0.91-0.95 across frames — and a viewer with no cue reads sorted rows as
+ * unsorted ones, which turns the single most informative axis into noise.
+ */
+function drawRowAxis(ctx: CanvasRenderingContext2D, field: Rect): void {
+  ctx.fillStyle = AXIS_LABEL;
+  ctx.fillRect(field.x - 6, field.y, 4, 1);
+  ctx.fillRect(field.x - 6, field.y + field.h - 1, 4, 1);
+  ctx.fillRect(field.x - 4, field.y, 1, field.h);
+
+  ctx.save();
+  ctx.translate(field.x - 12, field.y + field.h / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.font = "9px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "alphabetic";
+  ctx.fillText("genomes, sorted by copy number", 0, 0);
+  ctx.restore();
 }
 
 /**
@@ -372,6 +446,20 @@ export function drawField(
   const domX: number[] = [];
   const domY: number[] = [];
 
+  // Any 1px column a full-height edge rule occupies. A mark landing on one
+  // would blend with it rather than cover it -- a 1px rect at a fractional
+  // offset paints two device columns partially -- so such a mark gets a
+  // knockout of field background under it first and renders against the same
+  // ground as every other mark. Data wins over annotation; the rule shows a
+  // small nick where a copy crosses it, which reads correctly as the mark
+  // being in front.
+  const rules: [number, number][] = [];
+  for (const span of [cluster, beneficial]) {
+    if (span) rules.push(...edgeRuleRanges(span));
+  }
+  const onRule = (x: number, w: number): boolean =>
+    rules.some(([a, b]) => x < b && x + w > a);
+
   for (let row = 0; row < order.length; row++) {
     const genome = world.genomes[order[row]!]!;
     const y = field.y + row * rowH;
@@ -390,6 +478,10 @@ export function drawField(
         );
         domY.push(y);
         continue;
+      }
+      if (onRule(x, markW)) {
+        ctx.fillStyle = FIELD_BG;
+        ctx.fillRect(x - 0.5, y, markW + 1, markH);
       }
       ctx.fillStyle = silencedBySorted(copy.s, sorted, p.theta)
         ? SILENCED_COLOUR
@@ -412,4 +504,6 @@ export function drawField(
   for (let i = 0; i < domX.length; i++) {
     ctx.fillRect(domX[i]!, domY[i]!, domW, domH);
   }
+
+  drawRowAxis(ctx, field);
 }
