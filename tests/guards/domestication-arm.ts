@@ -8,15 +8,20 @@
  * `tests/guards/escape-arm.ts`, `bloat-arm.ts` and `three-phases-arm.ts`,
  * reused here for the same reason.
  *
- * This file lives under `tests/` so `tsconfig.json`'s `include` typechecks it,
- * and therefore typechecks `BASE` against `Params`, which `scripts/` is not.
- * It does NOT end in `.test.ts`, and `vitest.config.ts`'s `include` is
- * `["tests/**\/*.test.ts"]`, so vitest never collects it — verified in this task
- * by test-file count (20 files before, 22 after, not 24), not assumed.
+ * This file lives under `tests/` because the guard imports it and the dependency
+ * runs one way: the sweep script imports the guard's arm, never the reverse.
+ * ⚠️ `scripts/` IS typechecked — `tsconfig.json`'s `include` lists it alongside
+ * `tests` — so `BASE` would be checked against `Params` in either location; the
+ * claim to the contrary that stood here was wrong and is corrected across all
+ * six arm modules (2026-09-03). This file does NOT end in `.test.ts`, and
+ * `vitest.config.ts`'s `include` is `["tests/**\/*.test.ts"]`, so vitest never
+ * collects it — verified in this task by test-file count (20 files before, 22
+ * after, not 24), not assumed.
  *
  * Every figure in this file and in the guard was measured in THIS task by
- * `scripts/explore-domestication.ts`, which prints all of them, at all eleven
- * seeds. No figure here is single-seed.
+ * `scripts/explore-domestication.ts`, WHICH COMPUTES EACH ONE — including the
+ * two distinct minima below, which an earlier version of this module conflated.
+ * At all eleven seeds. No figure here is single-seed.
  *
  * ---------------------------------------------------------------------------
  * WHAT THIS ARM EXISTS TO SHOW, AND WHY IT NEEDED DERIVING
@@ -61,6 +66,18 @@
  * (4.00 .. 14.00 copies per genome at generation 600). `sexual` is the only
  * field that differs — the fitness function is untouched, so selection cannot
  * be the difference, and `lose` is untouched, so excision cannot be either.
+ *
+ * ⚠️ BUT `sexual` IS ONE FLAG OVER THREE MECHANISMS, AND THE ARM ALONE CANNOT
+ * SEPARATE THEM. Flipping it changes (a) the 1/2 transmission draw per copy,
+ * (b) inheritance from two parents rather than one, and (c) the dedup of a site
+ * inherited from both (`sim/phases/reproduce.ts:58-77`). The arm establishes
+ * "the loss route is the recombination branch"; it does NOT by itself establish
+ * WHICH of the three. What does is the guard's mutation for this claim — adding
+ * ONLY the 1/2 draw to the clonal branch, leaving one-parent inheritance and the
+ * absent dedup exactly as they are. That single change drops the asexual arm to
+ * 0.00 per genome at seed 1, which is the sharpest available statement that
+ * SEGREGATION SPECIFICALLY is the route. It is recorded on the test that carries
+ * the claim, and the mutation is the discriminator, not the arm.
  *
  * ⚠️ THE ASEXUAL ARM IS NOT AN INDEPENDENT DISCOVERY AND MUST NOT BE READ AS
  * ONE. Under `sexual: false` a daughter is a verbatim clone, so once a lineage
@@ -259,14 +276,48 @@ export const MIN_PEAK_DOMESTICATED = 100;
 
 /**
  * Guard threshold: domesticated copies per genome above the threshold, asserted
- * at every mark in `STABILITY_MARKS`. Measured minimum over all marks and all
- * eleven seeds: 15.85 (seed 101, generation 600 window). A floor of 10 is a
- * 1.58x margin under the weakest measurement — narrower than this guard's other
- * margins, and stated rather than hidden. It separates from a below-threshold
- * arm that is at EXACTLY zero, so the quantity being floored is not close to the
- * quantity it is being distinguished from.
+ * at every mark in `STABILITY_MARKS` and nowhere else.
+ *
+ * ⚠️ TWO DIFFERENT MINIMA LIVE IN THIS ARM AND AN EARLIER VERSION OF THIS
+ * COMMENT CONFLATED THEM. They are both printed by ARM 1 of
+ * `scripts/explore-domestication.ts`, labelled, so the pair cannot drift again:
+ *
+ *   - THE MARGIN THAT BINDS THIS CONSTANT is the minimum over the FOUR ASSERTED
+ *     MARKS: **16.59** per genome (seed 101), because those four values are the
+ *     only ones any assertion reads. A floor of 10 is a **1.66x** margin.
+ *   - The minimum over EVERY GENERATION from 150 to 600 is lower, **15.85**
+ *     (seed 101, 1.58x), and is recorded because it is the stricter statement —
+ *     but no assertion checks it, so quoting it as this constant's margin
+ *     overstated how tight the guard is. Per-seed marks minima: 19.58, 21.11,
+ *     19.16, 20.57, 19.86, 21.38, 21.14, 18.57, 17.74, 16.59, 22.16; per-seed
+ *     every-generation minima: 17.77, 19.55, 18.00, 18.59, 18.71, 21.34, 20.73,
+ *     17.38, 16.84, 15.85, 20.57.
+ *
+ * 1.66x is still this guard's narrowest margin, and it is stated rather than
+ * hidden. It separates from a below-threshold arm at EXACTLY zero, so the
+ * quantity being floored is nowhere near the quantity it is distinguished from.
  */
 export const MIN_DOMESTICATED_PER_GENOME = 10;
+
+/**
+ * Guard threshold: the LARGEST non-domesticated copy count per genome reached at
+ * any point in the above-threshold run — the liveness control for "the family is
+ * dead", asserting that there was a family to die.
+ *
+ * It replaces an earlier control (`domCount > 0`) that was strictly implied by
+ * `MIN_DOMESTICATED_PER_GENOME` above — 10 per genome at N = 200 is 2000 copies,
+ * so the old control could not fire unless the claim also failed, and it
+ * pre-empted: removing `+ p.wDom * nDom` from `logFitness` turned the test red at
+ * the control rather than at the floor. This one is independent of the
+ * domestication bonus entirely.
+ *
+ * Measured peak family per genome in the above arm: 10.76..32.74, reached at
+ * generation 21..41. A floor of 5 is a **2.15x** margin under the weakest seed
+ * (101, at 10.76). It does NOT pre-empt: under the `wDom`-bonus removal the peak
+ * family is still 9.08..21.04, above the floor, so that mutation now fires at the
+ * claim.
+ */
+export const MIN_PEAK_FAMILY_PER_GENOME = 5;
 
 /**
  * Guard threshold: domesticated copies per genome in the asexual control, at the
@@ -292,10 +343,33 @@ export interface ArmResult {
   /** The generation `peakDomCount` was reached at. */
   peakDomGeneration: number;
   /**
+   * Largest non-domesticated ("family") copies per genome seen at any
+   * generation, and the generation it was reached at. The liveness control for
+   * "the family is dead": it establishes there was a family to die, and it is
+   * independent of `wDom`.
+   */
+  peakFamilyPerGenome: number;
+  peakFamilyGeneration: number;
+  /**
    * Domesticated copies per genome at each of `STABILITY_MARKS`, in order.
    * Empty entries are impossible: every mark is <= `GENERATIONS`.
    */
   atMarks: number[];
+  /**
+   * THE QUANTITY THE GUARD'S FLOOR ACTUALLY BINDS: `Math.min(...atMarks)`.
+   * Provided so the guard and the sweep read the same number rather than each
+   * reducing `atMarks` themselves — the two disagreed once already, and the pair
+   * below is the reason.
+   */
+  minAtMarks: number;
+  /**
+   * The minimum over EVERY generation from `STABILITY_MARKS[0]` to the horizon —
+   * a strictly stronger bound than `minAtMarks`, which NO ASSERTION CHECKS. It
+   * exists so the arm module can quote it as the stricter statement without the
+   * sweep having to recompute it by a second, drifting route. Infinity if the
+   * horizon is below the first mark, which the pinned values make impossible.
+   */
+  minAfterFirstMark: number;
 }
 
 /**
@@ -310,10 +384,12 @@ export function armParams(overrides: Partial<Params>): Params {
  * `BASE` with `overrides` applied, stepped to `GENERATIONS`, observing at every
  * generation.
  *
- * It observes every generation rather than only at the marks because two of the
- * guard's quantities are extrema over the whole run — the peak domesticated
- * count, and the last generation at which any domesticated copy exists — and an
- * extremum sampled at marks is not an extremum. `observe` is O(copies) with no
+ * It observes every generation rather than only at the marks because several of
+ * the guard's quantities are extrema over the whole run — the peak domesticated
+ * count, the peak family size, and the every-generation minimum — and an
+ * extremum sampled at marks is not an extremum. That is exactly the confusion
+ * `minAtMarks` and `minAfterFirstMark` exist to keep apart. `observe` is
+ * O(copies) with no
  * randomness (`sim/observe.ts`), so this does not move the RNG stream and the
  * result is identical to a run that never observed.
  */
@@ -321,19 +397,33 @@ export function runArm(overrides: Partial<Params>): ArmResult {
   const p = armParams(overrides);
   const world = createWorld(p);
   const markSet = new Set<number>(STABILITY_MARKS);
+  const firstMark = STABILITY_MARKS[0];
   const atMarks: number[] = [];
   let peakDomCount = 0;
   let peakDomGeneration = 0;
+  let peakFamilyPerGenome = 0;
+  let peakFamilyGeneration = 0;
+  let minAfterFirstMark = Infinity;
 
   for (let g = 1; g <= GENERATIONS; g++) {
     step(world);
     const s = observe(world);
+    const n = world.genomes.length;
+    const domPerGenome = s.domesticatedCopies / n;
+    const familyPerGenome = (s.totalCopies - s.domesticatedCopies) / n;
+
     if (s.domesticatedCopies > peakDomCount) {
       peakDomCount = s.domesticatedCopies;
       peakDomGeneration = g;
     }
-    if (markSet.has(g))
-      atMarks.push(s.domesticatedCopies / world.genomes.length);
+    if (familyPerGenome > peakFamilyPerGenome) {
+      peakFamilyPerGenome = familyPerGenome;
+      peakFamilyGeneration = g;
+    }
+    if (g >= firstMark && domPerGenome < minAfterFirstMark) {
+      minAfterFirstMark = domPerGenome;
+    }
+    if (markSet.has(g)) atMarks.push(domPerGenome);
   }
 
   const snapshot = observe(world);
@@ -345,6 +435,10 @@ export function runArm(overrides: Partial<Params>): ArmResult {
     familyCount: snapshot.totalCopies - snapshot.domesticatedCopies,
     peakDomCount,
     peakDomGeneration,
+    peakFamilyPerGenome,
+    peakFamilyGeneration,
     atMarks,
+    minAtMarks: Math.min(...atMarks),
+    minAfterFirstMark,
   };
 }

@@ -7,8 +7,12 @@
  * the sweep cannot silently stop describing the guard — the Task 11 pattern
  * (`tests/guards/escape-arm.ts`), reused here for the same reason.
  *
- * This file lives under `tests/` so `tsconfig.json`'s `include` typechecks it,
- * and therefore typechecks `BASE` against `Params`, which `scripts/` is not.
+ * This file lives under `tests/` because the guard imports it and the sweep
+ * script imports the guard's arm, never the reverse.
+ * ⚠️ `scripts/` IS typechecked — `tsconfig.json`'s `include` lists it
+ * alongside `tests` — so `BASE` would be checked against `Params` in either
+ * location; the claim to the contrary that stood here was wrong and is
+ * corrected across all six arm modules (2026-09-03).
  * It does NOT end in `.test.ts`, and `vitest.config.ts`'s `include` is
  * `["tests/**\/*.test.ts"]`, so vitest never collects it — verified by test-file
  * count (11 files before this task, 12 after, not 13), not assumed.

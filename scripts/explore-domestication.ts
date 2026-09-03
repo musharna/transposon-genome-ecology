@@ -16,6 +16,7 @@ import {
   MIN_ASEXUAL_DOMESTICATED_PER_GENOME,
   MIN_DOMESTICATED_PER_GENOME,
   MIN_PEAK_DOMESTICATED,
+  MIN_PEAK_FAMILY_PER_GENOME,
   runArm,
   SEEDS,
   STABILITY_MARKS,
@@ -77,18 +78,38 @@ console.log(`\nABOVE wDom = ${WDOM_ABOVE}`);
 console.log(
   `seed  ${STABILITY_MARKS.map((m) => pad(`dom@${m}`, 8)).join("")}  family@600  occupancy`,
 );
-const aboveMins: number[] = [];
+// ⚠️ TWO MINIMA, PRINTED SIDE BY SIDE AND LABELLED. `minAtMarks` is the
+// quantity the guard's floor reads; `minAfterFirstMark` is the stricter
+// every-generation bound that NO assertion checks. Both come from `runArm`, so
+// neither the guard nor this script can compute one and label it the other —
+// which is exactly what happened before 2026-09-03.
+const minAtMarks: number[] = [];
+const minAllGens: number[] = [];
+const peakFamilies: number[] = [];
 for (const seed of SEEDS) {
   const r = runArm({ seed, wDom: WDOM_ABOVE });
-  aboveMins.push(Math.min(...r.atMarks));
+  minAtMarks.push(r.minAtMarks);
+  minAllGens.push(r.minAfterFirstMark);
+  peakFamilies.push(r.peakFamilyPerGenome);
   const occ = r.snapshot.totalCopies / BASE.N / BASE.S;
   console.log(
-    `${pad(seed, 4)}  ${r.atMarks.map((x) => f2(x, 8)).join("")}  ${pad(r.familyCount, 10)}  ${(occ * 100).toFixed(2)}%`,
+    `${pad(seed, 4)}  ${r.atMarks.map((x) => f2(x, 8)).join("")}  ${pad(r.familyCount, 10)}  ${(occ * 100).toFixed(2)}%` +
+      `  min@marks ${f2(r.minAtMarks, 6)}  min@allGens ${f2(r.minAfterFirstMark, 6)}` +
+      `  peakFamily ${f2(r.peakFamilyPerGenome, 6)} @g${r.peakFamilyGeneration}`,
   );
 }
 console.log(
-  `ABOVE: minimum over all marks and seeds ${Math.min(...aboveMins).toFixed(2)} per genome; ` +
-    `MIN_DOMESTICATED_PER_GENOME = ${MIN_DOMESTICATED_PER_GENOME}, margin ${(Math.min(...aboveMins) / MIN_DOMESTICATED_PER_GENOME).toFixed(2)}x`,
+  `ABOVE, THE ASSERTED QUANTITY: minimum over the ${STABILITY_MARKS.length} marks and ${SEEDS.length} seeds ` +
+    `${Math.min(...minAtMarks).toFixed(2)} per genome; MIN_DOMESTICATED_PER_GENOME = ${MIN_DOMESTICATED_PER_GENOME}, ` +
+    `margin ${(Math.min(...minAtMarks) / MIN_DOMESTICATED_PER_GENOME).toFixed(2)}x`,
+);
+console.log(
+  `ABOVE, the stricter bound NOTHING ASSERTS: minimum over EVERY generation from ${STABILITY_MARKS[0]} to ${GENERATIONS} ` +
+    `${Math.min(...minAllGens).toFixed(2)} per genome (would be ${(Math.min(...minAllGens) / MIN_DOMESTICATED_PER_GENOME).toFixed(2)}x)`,
+);
+console.log(
+  `ABOVE, the liveness control: peak family ${Math.min(...peakFamilies).toFixed(2)}..${Math.max(...peakFamilies).toFixed(2)} per genome; ` +
+    `MIN_PEAK_FAMILY_PER_GENOME = ${MIN_PEAK_FAMILY_PER_GENOME}, margin ${(Math.min(...peakFamilies) / MIN_PEAK_FAMILY_PER_GENOME).toFixed(2)}x`,
 );
 
 console.log(`\nASEXUAL CONTROL, wDom = ${WDOM_BELOW}, sexual = false`);

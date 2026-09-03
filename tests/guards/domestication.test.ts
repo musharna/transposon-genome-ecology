@@ -7,6 +7,7 @@ import {
   MIN_ASEXUAL_DOMESTICATED_PER_GENOME,
   MIN_DOMESTICATED_PER_GENOME,
   MIN_PEAK_DOMESTICATED,
+  MIN_PEAK_FAMILY_PER_GENOME,
   runArm,
   SEEDS,
   STABILITY_MARKS,
@@ -64,11 +65,22 @@ import {
  *   dom@600     0    0    0    0    0    0    0    0    0    0    0
  *
  *   ABOVE, wDom = 0.3
- *   seed          1     2     3     4     5     7    11    13    17   101   202
- *   dom/gen@600 20.5  21.1  19.2  21.4  19.9  21.4  21.1  18.6  19.8  17.8  22.2
- *   min over marks 17.8 19.6 18.0 18.6 18.7 21.3 20.7 17.4 16.8 15.9 20.6
- *   family dies@ 118   145    87   110   102   158   131   116   119   121   104
- *   family@600     0     0     0     0     0     0     0     0     0     0     0
+ *   seed           1     2     3     4     5     7    11    13    17   101   202
+ *   dom/gen@600  20.5  21.1  19.2  21.4  19.9  21.4  21.1  18.6  19.8  17.8  22.2
+ *   min@4 marks  19.6  21.1  19.2  20.6  19.9  21.4  21.1  18.6  17.7  16.6  22.2
+ *   min@all gens 17.8  19.6  18.0  18.6  18.7  21.3  20.7  17.4  16.8  15.9  20.6
+ *   peak family  15.7  22.1  10.9  14.4  15.6  27.4  31.1  16.3  12.6  10.8  32.7
+ *   family dies@  118   145    87   110   102   158   131   116   119   121   104
+ *   family@600      0     0     0     0     0     0     0     0     0     0     0
+ *
+ *   ⚠️ THE TWO MINIMUM ROWS ARE DIFFERENT QUANTITIES AND ONLY THE FIRST IS
+ *   ASSERTED. `min@4 marks` is the minimum over generations 150/300/450/600 —
+ *   the four values the floor below actually reads — and its worst seed is
+ *   16.59, a 1.66x margin over the floor of 10. `min@all gens` is the minimum
+ *   over every generation from 150 to 600 (worst seed 15.85, 1.58x); it is the
+ *   stricter bound, nothing checks it, and an earlier version of this guard
+ *   printed it under the first row's label. Both are now computed by `runArm`
+ *   and printed side by side by ARM 1 of `scripts/explore-domestication.ts`.
  *
  *   ASEXUAL CONTROL, wDom = 0.01, sexual = false
  *   seed          1     2     3     4     5     7    11    13    17   101   202
@@ -159,26 +171,40 @@ describe("guard 8: domestication is an alternate win, above a benefit threshold"
    * THAN GUESSED. Deleting `c.domesticated ||` from `sim/phases/lifecycle.ts`'s
    * `lose` filter — making domesticated copies excisable at rate `v` like
    * everything else — LEAVES THIS TEST GREEN. Measured at all eleven seeds: the
-   * count at the four marks becomes 15.49..26.54 per genome against 15.85..22.16
+   * count at the four marks becomes 15.49..26.54 per genome against 16.59..22.16
    * unmutated. At `wDom = 0.3` selection replaces excision losses as fast as
    * `v = 0.005` inflicts them, so the excision exemption is not load-bearing at
-   * THIS arm. It is load-bearing elsewhere: the same mutation turns test 3 red
-   * (the asexual arm falls to 1.18 per genome at seed 2), because there no
-   * selection differential exists to replace what excision takes. Nothing in
-   * this guard should be read as asserting the exemption in `lose`; the
-   * assertion that covers it is test 3's.
+   * THIS arm. It is load-bearing in test 3's asexual arm, which the same
+   * mutation turns red (falling to 1.18 per genome at seed 2) — and the reason
+   * is that ONCE THE CLONE HAS FIXED there is no variation left for selection to
+   * act on, so nothing can replace what excision takes. It is NOT that selection
+   * is absent from the asexual arm: selection does substantial work there,
+   * choosing WHICH clone fixes. Measured, asexual per genome at generation 600 —
+   * `wDom = 0`: 1.17 0.00 1.00 2.00 1.67 2.72 1.00 0.00 2.00 0.00 1.00, against
+   * `wDom = 0.01`: 13.00 13.00 4.00 6.00 9.00 4.00 8.00 4.00 5.00 5.00 14.00.
+   * Nothing in this guard should be read as asserting the exemption in `lose`;
+   * the assertion that covers it is test 3's.
    */
   it("above the threshold, domesticated copies outlive the family: the transposing copies reach zero and the domesticated ones stay", () => {
     for (const seed of SEEDS) {
       const above = runArm({ seed, wDom: WDOM_ABOVE });
 
-      // CONTROL, asserted before the claim: the domesticated copies exist at
-      // all. A world where the whole population died would satisfy "the family
-      // is dead" below on its own.
+      // CONTROL, asserted before the claim: THERE WAS A FAMILY TO DIE. "The
+      // transposing copies reached zero" is satisfied by a world where they
+      // never got anywhere, so the control is the peak family size, which is
+      // independent of `wDom` and of everything the claim asserts.
+      //
+      // (This replaces an earlier control, `above.domCount > 0`, which was
+      // strictly IMPLIED by the floor below — 10 per genome at N = 200 is 2000
+      // copies — so it could not fire unless the claim also failed, and it
+      // pre-empted: removing `+ p.wDom * nDom` from `logFitness` turned this
+      // test red at that control rather than at the floor, hiding which
+      // assertion had actually caught the mutation. Same defect as the one fixed
+      // in test 3, one test up.)
       expect(
-        above.domCount,
-        `seed ${seed}: no domesticated copies at generation ${GENERATIONS} at wDom ${WDOM_ABOVE}`,
-      ).toBeGreaterThan(0);
+        above.peakFamilyPerGenome,
+        `seed ${seed}: the family never exceeded ${above.peakFamilyPerGenome.toFixed(2)} copies per genome, so it did not die — it never lived`,
+      ).toBeGreaterThan(MIN_PEAK_FAMILY_PER_GENOME);
 
       // THE CLAIM, first half: the parasitic family is EXTINCT. Not "reduced" —
       // exactly zero non-domesticated copies in the whole population. Measured

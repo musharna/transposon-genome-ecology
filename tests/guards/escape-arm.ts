@@ -9,9 +9,13 @@
  * different model while still printing confident numbers. A derivation script
  * that cannot notice it has gone stale is worse than no script.
  *
- * This file is under `tests/` so `tsconfig.json`'s `include` typechecks it (and
- * therefore typechecks `BASE` against `Params`, which `scripts/` is not). It does
- * NOT end in `.test.ts`, and vitest's `include` in `vitest.config.ts` matches only
+ * This file is under `tests/` because the guard imports it and the sweep script
+ * imports the guard's arm, never the reverse.
+ * ⚠️ `scripts/` IS typechecked — `tsconfig.json`'s `include` lists it
+ * alongside `tests` — so `BASE` would be checked against `Params` in either
+ * location; the claim to the contrary that stood here was wrong and is
+ * corrected across all six arm modules (2026-09-03).
+ * It does NOT end in `.test.ts`, and vitest's `include` in `vitest.config.ts` matches only
  * files that do, so it is never collected as a test file — verified by test-file
  * count before and after, not assumed.
  */

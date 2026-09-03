@@ -216,8 +216,9 @@ UNREACHABLE ONE AT THE SHIPPED DEFAULTS.** Guard 8
 (`tests/guards/domestication.test.ts`) measured it at eleven seeds after this row
 was written. Above a bonus threshold the win is exactly as described, and
 stronger than described: domesticated copies persist through the total extinction
-of the still-transposing family, holding ~18-22 copies per genome at generation
-600 and still ~17-20 at generation 2000 with zero parasitic copies left. **Below
+of the still-transposing family, holding 17.84–22.16 copies per genome at
+generation 600 and still 16.98–19.57 at generation 2000 (three-seed probe) with
+zero parasitic copies left. **Below
 the threshold they are made and then lost to zero at every seed, and
 `defaultParams`' `wDom = 0.01` is below it** — the measured band at that guard's
 arm is `0.03 < wDom* <= 0.075`, so the shipped value is 7.5x under the lowest

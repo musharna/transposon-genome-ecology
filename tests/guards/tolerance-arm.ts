@@ -7,10 +7,14 @@
  * pattern of `escape-arm.ts`, `bloat-arm.ts`, `three-phases-arm.ts` and
  * `domestication-arm.ts`, reused for the same reason.
  *
- * This file lives under `tests/` so `tsconfig.json`'s `include` typechecks it,
- * and therefore typechecks `BASE` against `Params`, which `scripts/` is not.
- * It does NOT end in `.test.ts`, and `vitest.config.ts`'s `include` is
- * `["tests/**\/*.test.ts"]`, so vitest never collects it.
+ * This file lives under `tests/` because the guard imports it and the dependency
+ * runs one way: the sweep script imports the guard's arm, never the reverse.
+ * ⚠️ `scripts/` IS typechecked — `tsconfig.json`'s `include` lists it alongside
+ * `tests` — so `BASE` would be checked against `Params` in either location; the
+ * claim to the contrary that stood here was wrong and is corrected across all
+ * six arm modules (2026-09-03). This file does NOT end in `.test.ts`, and
+ * `vitest.config.ts`'s `include` is `["tests/**\/*.test.ts"]`, so vitest never
+ * collects it.
  *
  * Every figure in this file and in the guard was measured in THIS task by
  * `scripts/explore-tolerance.ts`, at all eleven seeds.

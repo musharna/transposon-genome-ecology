@@ -35,13 +35,21 @@ import {
  *      discontinuity, not the end of a slope: a host that resists one time in a
  *      hundred (`t = 0.99`) still ends up with every genome carrying a
  *      repertoire.
- *   B. THE FITNESS ORDERING BETWEEN TWO GENOMES FLIPS WITH `t`. `damageLoad`
- *      swaps which population the cost scales with, so of two genomes with equal
- *      copy number and opposite composition, the active-heavy one is fitter at
- *      `t = 0` and the silenced-heavy one is fitter at `t = 1`. An ordering that
- *      REVERSES is a far stronger assertion than a number that moves: no single
- *      arm can produce it by accident, and no rescaling of `d` or `dTol` can
- *      manufacture it.
+ *   B. `damageLoad` CHARGES A DIFFERENT POPULATION AT EACH END OF THE DIAL, and
+ *      the visible consequence is that the fitness ORDERING between two genomes
+ *      of equal copy number and opposite composition REVERSES: the active-heavy
+ *      one is fitter at `t = 0`, the silenced-heavy one at `t = 1`.
+ *
+ *      ⚠️ WHICH ASSERTION CARRIES THIS, precisely, because the reversal is the
+ *      memorable part and is NOT the discriminating part. Test 3 asserts four
+ *      hand-computed log-fitness VALUES first (−0.05 / −0.40 / −0.40 / −0.05,
+ *      one multiplication each from spec §3.2 step 5), and those four pin the
+ *      whole shape. The reversal and the `t = 0.5` crossing that follow them are
+ *      ARITHMETICALLY ENTAILED by those values — they cannot fail while the four
+ *      pass, and the mutation for this claim fires at the third VALUE, not at
+ *      the ordering. They are kept because they state the claim in the form the
+ *      spec states it and their messages name the mechanism at the failure site;
+ *      they add no coverage and must not be counted as separate checks.
  *
  * Before this task neither was asserted anywhere: `t = 0` in all seven
  * scientific arms and in both parameter defaults, so `damageLoad`'s tolerance
@@ -161,9 +169,14 @@ describe("guard 9: resistance and tolerance differ in kind, not in degree", () =
         `seed ${seed}: at t = ${T_TOLERATE} a repertoire existed at ${tolerant.generationsWithAnyRepertoire} of ${GENERATIONS} generations`,
       ).toBe(0);
 
-      // AND ITS CONSEQUENCE: with no repertoire, nothing is silenced. This is
-      // the property the spec's "cannot be conscripted" is about — the trap is
-      // made of the element itself, so with no capture there is no suppression.
+      // AND ITS CONSEQUENCE. ⚠️ ENTAILED, NOT INDEPENDENT: `isSilenced`
+      // (`sim/silencing.ts:82`) searches the repertoire and returns false for an
+      // empty one, so an empty repertoire at every generation ALREADY forces
+      // zero silenced copies — this cannot fail while the assertion above
+      // passes, and it must not be counted as a second check. It is kept because
+      // it names the property the spec's "cannot be conscripted" is actually
+      // about (the trap is made of the element itself, so with no capture there
+      // is no suppression) and because its message says so at the failure site.
       expect(
         tolerant.snapshot.silencedCopies,
         `seed ${seed}: ${tolerant.snapshot.silencedCopies} copies are silenced at t = ${T_TOLERATE} with an empty repertoire`,
@@ -201,6 +214,13 @@ describe("guard 9: resistance and tolerance differ in kind, not in degree", () =
 
       // POSITIVE CONTROL, asserted first: `t` is live below the endpoint. A
       // hundredfold cut in capture probability DOES reduce the repertoire.
+      //
+      // ⚠️ DO NOT DELETE THIS AS REDUNDANT. It is the ONLY assertion in either
+      // guard file that catches a build where `t` is read solely at its
+      // endpoint — an implementation that special-cases `t === 1` and ignores
+      // every intermediate value passes every other assertion in both files,
+      // including the discontinuity claim below (which only needs `t = 0.99` to
+      // behave like `t = 0`). Confirmed by review, not assumed.
       expect(
         nearBoundary.repertoirePerGenome,
         `seed ${seed}: t = ${T_NEAR_BOUNDARY} holds ${nearBoundary.repertoirePerGenome.toFixed(2)} repertoire entries per genome against ${resistant.repertoirePerGenome.toFixed(2)} at t = ${T_RESIST}, so the dial is inert below the endpoint`,
@@ -274,7 +294,9 @@ describe("guard 9: resistance and tolerance differ in kind, not in degree", () =
       "the two genomes no longer have equal copy number, so a copy-number difference could produce the ordering below",
     ).toBe(silencedHeavy.copies.length);
 
-    // THE VALUES, hand-computed from the spec's rule.
+    // THE VALUES, hand-computed from the spec's rule. THESE FOUR ARE THE CLAIM:
+    // everything below them is entailed by them, and the mutation for this
+    // claim fires on the third of them.
     const at = (t: number) => FITNESS_PARAMS(t);
     const why = (who: string, t: number, rule: string) =>
       `${who} at t = ${t}: spec §3.2 step 5 gives (1-t)*d*nSilenced + t*dTol*nActive = ${rule}, so log-fitness must be its negation`;
@@ -295,9 +317,11 @@ describe("guard 9: resistance and tolerance differ in kind, not in degree", () =
       why("silenced-heavy", 1, `0.01 * ${LIGHT} = 0.05`),
     ).toBeCloseTo(-0.05, 12);
 
-    // THE CLAIM: the ORDERING, and that it reverses. Strict inequalities, no
-    // threshold — this goes red the moment the two branches stop charging
-    // different populations.
+    // THE ORDERING, and that it reverses. ⚠️ ENTAILED, NOT INDEPENDENT: −0.05 >
+    // −0.40 and −0.40 < −0.05 follow from the four values above by arithmetic,
+    // so neither of these can fail while those pass. Kept because the spec
+    // states the claim as a reversal and because these messages name the
+    // mechanism at the failure site — not because they add coverage.
     expect(
       logFitness(activeHeavy, at(0)),
       "under pure resistance the active-heavy genome is not the fitter one, so the cost is not being charged per silenced copy",
@@ -311,7 +335,9 @@ describe("guard 9: resistance and tolerance differ in kind, not in degree", () =
     // exactly equal at t = 0.5 — the dial's effect on the ORDERING is
     // continuous even though the conscription property of test 1 is binary, and
     // this is the one place in the guard where a mid-dial claim is made,
-    // because here it is arithmetic rather than a population measurement.
+    // because here it is arithmetic rather than a population measurement. The
+    // difference is entailed by the value below it; the value is the real check,
+    // and it is a fifth hand-computed number, not a restatement of the four.
     expect(
       logFitness(activeHeavy, at(0.5)) - logFitness(silencedHeavy, at(0.5)),
       "the ordering does not cross at t = 0.5 where the interpolation is symmetric",
