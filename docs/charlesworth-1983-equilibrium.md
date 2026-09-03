@@ -1,7 +1,7 @@
 # The Charlesworth null model — read from the source
 
 Charlesworth, B. & Charlesworth, D. (1983). "The population dynamics of
-transposable elements." *Genetical Research* **42**(1):1–27.
+transposable elements." _Genetical Research_ **42**(1):1–27.
 doi:[10.1017/S0016672300021455](https://doi.org/10.1017/S0016672300021455)
 
 Read 2026-09-02 from the full OA PDF, not from an abstract or a summary. Page and
@@ -13,7 +13,7 @@ Task 15 and the ROADMAP checklist item "Read Charlesworth 1983 fitness form".
 ### 1. The exact fitness function
 
 > "In our simulation work we used functions of the form
-> **w_n = 1 − s·n^t.**  (23)"  — p. 13
+> **w_n = 1 − s·n^t.** (23)" — p. 13
 
 `n` is copy number per individual; `s` scales the strength of selection; `t`
 controls curvature. Figure 3 (p. 12) explores `t ∈ {1, 1.2, 1.3, 1.5, 2}` at
@@ -36,7 +36,7 @@ Two conditions, both stated on p. 11:
 
 - **For copy number to increase from zero:** `f(0) < u − v`.
 - **Necessary for a biologically meaningful `n̄`:** `∂² ln w_n / ∂n² < 0` — the
-  *log* fitness must be strictly concave in copy number.
+  _log_ fitness must be strictly concave in copy number.
 
 The paper draws the consequence directly: "fitness must fall off more steeply
 with n than does a multiplicative function `w_n = (1 − s)^n` corresponding to
@@ -46,7 +46,7 @@ reached the same conclusion by another route.
 The balance condition in the regime that matters — p. 16, eq. (29), "If n is
 small compared with T":
 
-> **−∂ ln w_n / ∂n ≈ u − v**   (29)
+> **−∂ ln w_n / ∂n ≈ u − v** (29)
 
 The paper notes this is Haldane's (1937) mutation–selection load result, and that
 it means "a small decrement in fitness is sufficient to balance the increase in
@@ -73,15 +73,15 @@ ln w_n            = -(a·n + b·n²)          [+ wDom·nDom, zero in the null re
 w_n               = exp(-(a·n + b·n²))
 ```
 
-This is a *different functional family* from eq. (23) — exponential-of-polynomial
+This is a _different functional family_ from eq. (23) — exponential-of-polynomial
 rather than one-minus-power — so it has to be checked against the paper's
 **conditions**, not pattern-matched to its formula. On the conditions it passes:
 
-| Paper's condition | Our form | Verdict |
-| --- | --- | --- |
-| `∂² ln w_n/∂n² < 0` (p. 11) | `∂² ln w/∂n² = -2b` | satisfied **iff `b > 0`** |
-| steeper than multiplicative `(1-s)^n` (p. 12) | at `b = 0`, `w = (e^{-a})^n` — *exactly* the multiplicative model | the `b` term is what clears the bar |
-| `f(0) < u - v` | `f(0) = a`, so need `r > v + a` | a parameter constraint, not a form defect |
+| Paper's condition                             | Our form                                                          | Verdict                                   |
+| --------------------------------------------- | ----------------------------------------------------------------- | ----------------------------------------- |
+| `∂² ln w_n/∂n² < 0` (p. 11)                   | `∂² ln w/∂n² = -2b`                                               | satisfied **iff `b > 0`**                 |
+| steeper than multiplicative `(1-s)^n` (p. 12) | at `b = 0`, `w = (e^{-a})^n` — _exactly_ the multiplicative model | the `b` term is what clears the bar       |
+| `f(0) < u - v`                                | `f(0) = a`, so need `r > v + a`                                   | a parameter constraint, not a form defect |
 
 Our form is also better-behaved than theirs: `1 - s·n^t` goes negative for large
 `n` and needs truncation, while `exp(-(an + bn²))` is positive everywhere and
@@ -100,11 +100,11 @@ Measured on the live model (`silencingOn: false, pDom: 0, c: 0, beta: 0,
 sigmaR: 0, d: 0, dTol: 0, r0: 0.05, v: 0.001, S: 2000`, sexual, approached from a
 high-copy start so that early drift cannot dominate):
 
-| arm | predicted | observed n̄ |
-| --- | --- | --- |
-| `a = 0, b = 0` — no host selection at all | ∞ (runaway) | **~150** |
-| `a = 0.001, b = 0` — linear/multiplicative | ∞ (runaway) | **~124–148** |
-| `a = 0.001, b = 0.0005` — quadratic | 48 | **~3–9**, and N-dependent |
+| arm                                        | predicted   | observed n̄                |
+| ------------------------------------------ | ----------- | ------------------------- |
+| `a = 0, b = 0` — no host selection at all  | ∞ (runaway) | **~150**                  |
+| `a = 0.001, b = 0` — linear/multiplicative | ∞ (runaway) | **~124–148**              |
+| `a = 0.001, b = 0.0005` — quadratic        | 48          | **~3–9**, and N-dependent |
 
 Two things follow, and they point in opposite directions.
 
@@ -145,7 +145,7 @@ model is not Charlesworth's model — it carries an extra sink. Calibrating the
 constant from our own simulation instead would be circular: a constant read off
 the artifact under test cannot falsify that artifact.
 
-What Guard 1 *can* assert, and what makes it a real external check, are the
+What Guard 1 _can_ assert, and what makes it a real external check, are the
 paper's qualitative predictions, each with the negative control the paper itself
 supplies:
 
@@ -153,8 +153,16 @@ supplies:
    stable, finite, non-saturating value; with `b = 0` control is lost and copy
    number rises to the recombination-limited ceiling. (p. 11 condition
    `∂² ln w_n/∂n² < 0`; p. 12 "more steeply than multiplicative".)
-2. **A linear fitness function is not sufficient.** `a > 0, b = 0` must be
-   statistically indistinguishable from `a = 0, b = 0`. (pp. 12–13.)
+2. **A linear fitness function is not sufficient.** ⚠️ An earlier draft of this
+   file said `a > 0, b = 0` must be "statistically indistinguishable" from
+   `a = 0, b = 0`. **Measured, that is false** and it is corrected here: linear
+   selection has a small but consistent effect. At `N = 200, S = 2000`, five seeds,
+   generation 800, the linear arm sits at **97.2%** of the no-selection arm
+   (per-seed minimum 95.4%) — the two ranges do not overlap. The claim the paper
+   actually supports is comparative, and the separation is an order of magnitude:
+   linear stays within a few percent of no selection at all, while the quadratic
+   arm falls to **9.1%** of it (per-seed maximum 9.4%). Assert that shape, not
+   indistinguishability. (pp. 12–13.)
 3. **The equilibrium is approached from both directions.** A model that reaches a
    value from below but not from above has a bug, not an equilibrium.
 4. **Copy number stabilises far below the point of substantial fitness loss**
@@ -170,7 +178,7 @@ hash and every guard calibration downstream.
 Both are conditions the brief's `pre` block omits, and both would break the
 comparison rather than merely loosen it.
 
-1. **`sigmaR` must be 0.** Charlesworth's `u` is a *constant*. Ours is a heritable
+1. **`sigmaR` must be 0.** Charlesworth's `u` is a _constant_. Ours is a heritable
    per-copy trait, and it does not sit still: measured on the live model, mean `r`
    climbs 0.1 → 0.85 in ~100 generations with no host selection at all. With
    `sigmaR > 0` there is no fixed `r` to compare a balance condition against.
