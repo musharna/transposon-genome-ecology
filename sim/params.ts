@@ -42,8 +42,21 @@ export interface Params {
 
 /**
  * Provisional defaults. These have NOT been calibrated against any published
- * equilibrium; Task 15 sets them from Charlesworth & Charlesworth 1983.
- * They are chosen only to keep the model numerically well-behaved in early tasks.
+ * equilibrium, and nothing is scheduled to calibrate them. They are chosen only
+ * to keep the model numerically well-behaved.
+ *
+ * Task 15 deliberately DECLINED to set them from Charlesworth & Charlesworth
+ * 1983, and the reason is structural rather than a matter of scheduling: that
+ * paper's model is diploid and ours is haploid with a recombination dedup sink
+ * it has no counterpart for, so its analytic constant does not transfer. See
+ * `sim/phases/select.ts:47-49` and spec §10; the full derivation is in
+ * `docs/charlesworth-1983-equilibrium.md`.
+ *
+ * Moving any value here would also move the golden hash in `tests/step.test.ts`
+ * and every guard derivation at once, so this is not a cheap change.
+ *
+ * NOTE: the toy does NOT run at these values — see `TOY_DEFAULTS` in
+ * `web/params.ts`, which overrides ten of them.
  */
 export function defaultParams(overrides: Partial<Params> = {}): Params {
   return {

@@ -84,13 +84,38 @@ import {
  * generation 300 (earliest generation 205, seeds 4 and 202); the other three
  * are down to 5, 21 and 25 copies at 300.
  *
- * Real silenced TE insertions largely persist as genomic fossils, so this is a
- * genuine divergence from the biology. It is NOT fixed here: changing `lose`
- * would alter the RNG draw stream and invalidate every calibration in the
- * suite, and it is flagged for the spec instead. It is the direct reason
- * `detectPhases` conjoins `totalCopies > 0` and `silencedCopies > activeCopies`
- * onto the crossing — without them, this arm run far enough reports a
- * spike-and-crash to extinction as Kofler's invasion.
+ * WHY THIS IS A DIVERGENCE FROM BIOLOGY, SPLIT INTO THE PART THAT IS CITED AND
+ * THE PART THAT IS AN ASSUMPTION. An earlier version of this comment asserted
+ * "real silenced TE insertions largely persist as genomic fossils" with nothing
+ * behind it, while resting the whole divergence claim on it. Separated:
+ *
+ *   CITED. Inactive TE copies persist in genomes in overwhelming numbers rather
+ *   than being purged. Brouha et al. 2003, PNAS 100(9):5280-5285,
+ *   10.1073/pnas.0831042100 (registry-verified 2026-09-03 against CrossRef:
+ *   first author Brouha, 2003, PNAS): LINE-1 makes up 17% of the human genome,
+ *   an exhaustive search of the draft sequence found only 90 L1s with intact
+ *   ORFs, and they estimate 80-100 retrotransposition-competent L1s per person.
+ *   Hundreds of thousands of copies, of order a hundred able to move. Whatever
+ *   removes TE copies from a genome, it is far too slow to have removed those.
+ *
+ *   ASSUMPTION, NOT A FACT ABOUT BIOLOGY. That piRNA-SILENCED copies
+ *   specifically persist, i.e. that silencing and removal are decoupled. This
+ *   model applies one excision rate `v` to every copy regardless of silencing
+ *   state, so a fully silenced family is excised to zero. Note also that Brouha's
+ *   L1 is a RETROtransposon and copies by copy-and-paste — it has no excision
+ *   mechanism at all, so its persistence is partly structural and does not
+ *   transfer wholesale to a cut-and-paste element. The right reading is that
+ *   `lose`'s uniform `v` is a simplification whose consequence (guaranteed
+ *   extinction after full silencing) is visible and known, not that biology has
+ *   been measured and contradicted here.
+ *
+ * It is NOT fixed here: changing `lose` would alter the RNG draw stream and
+ * invalidate every calibration in the suite. It is flagged in the spec, at
+ * §10 "Open items carried into planning" — a bullet that exists as of
+ * 2026-09-03; before that this sentence pointed at nothing. It is the direct
+ * reason `detectPhases` conjoins `totalCopies > 0` and
+ * `silencedCopies > activeCopies` onto the crossing — without them, this arm run
+ * far enough reports a spike-and-crash to extinction as Kofler's invasion.
  */
 export const BASE: Params = {
   N: 300,

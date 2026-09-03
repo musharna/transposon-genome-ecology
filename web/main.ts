@@ -303,8 +303,14 @@ function frame(): void {
  *     copies 1096   1494   1750    782   1893   1550   1512
  *
  * Copy number has no trend across that whole range; the growth is entirely the
- * repertoire's, and the cost of a pass rises about 125x while the population it
- * scans does not change size.
+ * repertoire's. NAME THE QUANTITY BEFORE QUOTING A MULTIPLE — the two in the
+ * table above differ:
+ *
+ *   - the REPERTOIRE grows 94x, 7 to 660 entries per genome (gen 250 -> 11000);
+ *   - the COST OF ONE PASS is copies x repertoire, and rises 130x, 7 672 to
+ *     997 920 comparisons (1096 x 7 -> 1512 x 660).
+ *
+ * ("about 125x" stood here and named neither.)
  *
  * What that costs in practice, on the machine this was derived on, at
  * `speed = 3` (fps at wall-clock marks, seed 1):
@@ -332,8 +338,21 @@ function frame(): void {
  *
  * The unbounded cost is a real defect in the core and is deliberately NOT fixed
  * here. The obvious fix — keep `repertoire` sorted and binary-search it —
- * changes that array's ORDER, which `reproduce`'s dedup and `stateHash` both
- * read, so it needs its own task and a check against golden hash `9c15fd28`.
+ * changes that array's ORDER, and `stateHash` (`sim/observe.ts:101`) reads it:
+ * it joins `genome.repertoire` positionally, so a reordered repertoire digests
+ * differently even though the SET is identical. That needs its own task and a
+ * check against golden hash `9c15fd28`.
+ *
+ * ⚠️ CORRECTION, 2026-09-03. This note previously said the order is read by
+ * "`reproduce`'s dedup and `stateHash`". THE FIRST HALF WAS WRONG and it was
+ * restated from here into two other places. `reproduce`'s dedup
+ * (`sim/phases/reproduce.ts:70-73`) is a `Set` over `c.site` and it operates on
+ * COPIES, not on the repertoire; the repertoire is copied wholesale at
+ * `sim/phases/reproduce.ts:79` (`repertoire: [...mother.repertoire]`) with no
+ * dedup and no order-sensitive read at all. `stateHash` is the ONLY consumer of
+ * repertoire order. The conclusion is unchanged — one consumer is still enough
+ * to block the change — but the mechanism named here now matches the code.
+ *
  * `drawField` gets the same speedup without that risk by sorting a per-frame
  * COPY; see `web/render/field.ts`.
  */

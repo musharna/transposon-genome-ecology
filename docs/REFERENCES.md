@@ -1,8 +1,11 @@
 # Reference base — transposons as genome ecology
 
-**Built 2026-09-02** (37 works / 41 DOIs). Every entry below was resolved against
-**OpenAlex live**: first-author surname, year, venue and DOI all came back from
-the registry, not from recall. Citation counts are as of 2026-09-02 and will drift.
+**Built 2026-09-02** (37 works / 41 DOIs); **extended 2026-09-03 to 38 works / 42
+DOIs** — Brouha et al. 2003 added to §4 to ground a claim that was standing
+uncited in `tests/guards/three-phases-arm.ts`. Every entry below was resolved
+against **OpenAlex live**: first-author surname, year, venue and DOI all came
+back from the registry, not from recall. Citation counts are as of the date the
+entry was added and will drift.
 
 **Status:** §7's registry sweep is **complete** — the interaction-mode gap survives
 GitHub, CRAN, PyPI, itch.io and Steam. §9's failed citation is **resolved**. The
@@ -147,12 +150,38 @@ game. Both papers below say silencing is genuinely double-edged, with measuremen
   [10.1371/journal.pgen.1008872](https://doi.org/10.1371/journal.pgen.1008872), 142 cites.
   Argues epigenetic silencing is an under-recognised _source_ of TE harm, distinct
   from insertional disruption.
+- **Brouha et al. 2003**, "Hot L1s account for the bulk of retrotransposition in
+  the human population", _PNAS_ 100(9):5280-5285,
+  [10.1073/pnas.0831042100](https://doi.org/10.1073/pnas.0831042100), 1110 cites.
+  **Added 2026-09-03**, registry-verified against OpenAlex and CrossRef (first
+  author Brouha, 2003, PNAS). LINE-1 is 17% of the human genome, but an
+  exhaustive search of the draft sequence found only 90 L1s with intact ORFs, and
+  they estimate **80–100 retrotransposition-competent L1s per person**. This is
+  the citation behind the claim that inactive TE copies PERSIST rather than being
+  purged — the divergence recorded on `tests/guards/three-phases-arm.ts`, where
+  our uniform excision rate `v` drives a fully silenced family to zero. ⚠️ L1 is
+  a retrotransposon with no excision mechanism, so its persistence is partly
+  structural; this supports "inactive copies accumulate", not "silencing and
+  removal are decoupled", which remains a modelling assumption.
 
 ### ⭐ And the host has a SECOND strategy the roadmap never names: tolerance
 
 **Meiklejohn & Blumenstiel 2018**, "Invasion of the P elements: tolerance is not
-futile", _PLoS Biol_, [10.1371/journal.pbio.3000036](https://doi.org/10.1371/journal.pbio.3000036)
+futile", _PLoS Biol_ 16(10):e3000036,
+[10.1371/journal.pbio.3000036](https://doi.org/10.1371/journal.pbio.3000036)
 (found 2026-09-02 via the §9 author lookup).
+
+⚠️ **THIS IS A PRIMER, NOT A PRIMARY RESULT, AND IT CARRIES THE ENTIRE §4
+TOLERANCE BRANCH.** Verified 2026-09-03 against the PLOS search API, which
+returns `article_type: "Primer"` for this DOI. A PLOS Biology Primer is
+commissioned commentary explaining a research article published in the same
+issue — so the resistance/tolerance framing below is this piece's synthesis of
+someone else's data, not a measurement it made. That does not make it wrong, and
+the framing is standard host–parasite ecology independent of this article. But
+the `t` dial in spec §4 is the only poke whose grounding rests on a single
+secondary source, and **the primary study it comments on has not been read**.
+Read it before quoting a number, and do not cite this Primer for a quantitative
+claim.
 
 Before a host acquires **resistance** (silencing the element), individuals vary in
 their capacity to **tolerate** TE activity — ignoring or repairing the damage while

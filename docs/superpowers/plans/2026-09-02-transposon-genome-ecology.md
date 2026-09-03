@@ -27,8 +27,8 @@ and every line of it must be inspectable.
 - **Iteration order must be deterministic.** Copies live in ordered arrays. Never
   `Set`, never `Map` traversal, never `Object.keys` over numeric keys, in any code
   path that affects simulation state. Seeded RNG alone does not give reproducibility.
-- **Every guard runs against a deliberately broken model first** and must fail *for
-  the stated reason* before it counts as passing.
+- **Every guard runs against a deliberately broken model first** and must fail _for
+  the stated reason_ before it counts as passing.
 - **Every negative assertion carries a positive control in the same test.**
 - **All randomness flows through the `Rng` passed in `World`.** No `Math.random()`
   anywhere in `sim/`.
@@ -40,36 +40,38 @@ and every line of it must be inspectable.
 
 ## File Structure
 
-| file | responsibility |
-| --- | --- |
-| `sim/rng.ts` | Seeded deterministic PRNG; uniform and normal draws |
-| `sim/params.ts` | `Params` interface and `defaultParams()` |
-| `sim/state.ts` | `Copy`, `Genome`, `World` types; `createWorld()` |
-| `sim/silencing.ts` | Derived silencing predicates — the one place `θ` is applied |
-| `sim/phases/transpose.ts` | Phase 1 |
-| `sim/phases/trap.ts` | Phase 2 |
-| `sim/phases/lifecycle.ts` | Phases 3 and 4 — domestication and excision |
-| `sim/phases/select.ts` | Phase 5 — fitness, incl. the one unconfirmed form |
-| `sim/phases/reproduce.ts` | Phase 6 — sexual/asexual, maternal repertoire |
-| `sim/step.ts` | Composes the six phases into `step(world)` |
-| `sim/observe.ts` | Read-only derived measures for tests, runners and UI |
-| `sim/index.ts` | Public barrel — the only import surface for `web/` and `experiments/` |
-| `tests/*.test.ts` | Unit tests, one per phase |
-| `tests/guards/*.test.ts` | The seven guards from spec §6 |
-| `web/index.html`, `web/main.ts`, `web/render/*.ts` | The toy |
-| `experiments/001-per-copy-vs-family-rate.ts` | The registered question |
-| `tools/sweep-cluster-size.ts` | Guard 3's sweep, reusable |
+| file                                               | responsibility                                                        |
+| -------------------------------------------------- | --------------------------------------------------------------------- |
+| `sim/rng.ts`                                       | Seeded deterministic PRNG; uniform and normal draws                   |
+| `sim/params.ts`                                    | `Params` interface and `defaultParams()`                              |
+| `sim/state.ts`                                     | `Copy`, `Genome`, `World` types; `createWorld()`                      |
+| `sim/silencing.ts`                                 | Derived silencing predicates — the one place `θ` is applied           |
+| `sim/phases/transpose.ts`                          | Phase 1                                                               |
+| `sim/phases/trap.ts`                               | Phase 2                                                               |
+| `sim/phases/lifecycle.ts`                          | Phases 3 and 4 — domestication and excision                           |
+| `sim/phases/select.ts`                             | Phase 5 — fitness, incl. the one unconfirmed form                     |
+| `sim/phases/reproduce.ts`                          | Phase 6 — sexual/asexual, maternal repertoire                         |
+| `sim/step.ts`                                      | Composes the six phases into `step(world)`                            |
+| `sim/observe.ts`                                   | Read-only derived measures for tests, runners and UI                  |
+| `sim/index.ts`                                     | Public barrel — the only import surface for `web/` and `experiments/` |
+| `tests/*.test.ts`                                  | Unit tests, one per phase                                             |
+| `tests/guards/*.test.ts`                           | The seven guards from spec §6                                         |
+| `web/index.html`, `web/main.ts`, `web/render/*.ts` | The toy                                                               |
+| `experiments/001-per-copy-vs-family-rate.ts`       | The registered question                                               |
+| `tools/sweep-cluster-size.ts`                      | Guard 3's sweep, reusable                                             |
 
 ---
 
 ## Task 1: Scaffold and seeded RNG
 
 **Files:**
+
 - Create: `package.json`, `tsconfig.json`, `vitest.config.ts`
 - Create: `sim/rng.ts`
 - Test: `tests/rng.test.ts`
 
 **Interfaces:**
+
 - Consumes: nothing
 - Produces: `interface Rng { next(): number; normal(): number }`, `makeRng(seed: number): Rng`
 
@@ -245,10 +247,12 @@ git commit -m "feat(sim): seeded deterministic RNG"
 ## Task 2: Parameters and world construction
 
 **Files:**
+
 - Create: `sim/params.ts`, `sim/state.ts`
 - Test: `tests/state.test.ts`
 
 **Interfaces:**
+
 - Consumes: `makeRng` from Task 1
 - Produces:
   - `interface Params` (all fields below)
@@ -472,7 +476,9 @@ export function createWorld(params: Params): World {
   for (let i = 0; i < params.N; i++) {
     const site = firstOrdinary + Math.floor(rng.next() * span);
     genomes.push({
-      copies: [{ id: nextCopyId++, site, r: params.r0, s: 0, domesticated: false }],
+      copies: [
+        { id: nextCopyId++, site, r: params.r0, s: 0, domesticated: false },
+      ],
       repertoire: [],
     });
   }
@@ -502,10 +508,12 @@ repertoire on demand; there is no stored flag. That is what makes
 escape-by-divergence automatic rather than a coded special case.
 
 **Files:**
+
 - Create: `sim/silencing.ts`
 - Test: `tests/silencing.test.ts`
 
 **Interfaces:**
+
 - Consumes: `Copy`, `Genome`, `Params` from Task 2
 - Produces:
   - `isSilenced(copy: Copy, genome: Genome, p: Params): boolean`
@@ -523,7 +531,12 @@ import type { Copy, Genome } from "../sim/state.js";
 import { activeCopies, isSilenced, silencedCopies } from "../sim/silencing.js";
 
 const copy = (over: Partial<Copy> = {}): Copy => ({
-  id: 0, site: 100, r: 0.05, s: 0, domesticated: false, ...over,
+  id: 0,
+  site: 100,
+  r: 0.05,
+  s: 0,
+  domesticated: false,
+  ...over,
 });
 
 describe("isSilenced", () => {
@@ -575,7 +588,10 @@ describe("activeCopies / silencedCopies", () => {
   });
 
   it("treats every copy as active when the repertoire is empty", () => {
-    const g: Genome = { copies: [copy({ id: 1 }), copy({ id: 2 })], repertoire: [] };
+    const g: Genome = {
+      copies: [copy({ id: 1 }), copy({ id: 2 })],
+      repertoire: [],
+    };
     expect(activeCopies(g, p)).toHaveLength(2);
     expect(silencedCopies(g, p)).toHaveLength(0);
   });
@@ -613,12 +629,16 @@ export function isSilenced(copy: Copy, genome: Genome, p: Params): boolean {
 
 /** Copies that can still transpose: not silenced, not domesticated. */
 export function activeCopies(genome: Genome, p: Params): Copy[] {
-  return genome.copies.filter((c) => !c.domesticated && !isSilenced(c, genome, p));
+  return genome.copies.filter(
+    (c) => !c.domesticated && !isSilenced(c, genome, p),
+  );
 }
 
 /** Copies suppressed by the genome's own piRNAs. Excludes domesticated copies. */
 export function silencedCopies(genome: Genome, p: Params): Copy[] {
-  return genome.copies.filter((c) => !c.domesticated && isSilenced(c, genome, p));
+  return genome.copies.filter(
+    (c) => !c.domesticated && isSilenced(c, genome, p),
+  );
 }
 ```
 
@@ -639,10 +659,12 @@ git commit -m "feat(sim): derived silencing by sequence similarity"
 ## Task 4: Transpose phase
 
 **Files:**
+
 - Create: `sim/phases/transpose.ts`
 - Test: `tests/transpose.test.ts`
 
 **Interfaces:**
+
 - Consumes: `World`, `Copy`, `activeCopies`, `Rng`
 - Produces: `transpose(world: World): void` — mutates `world.genomes` and `world.nextCopyId` in place
 
@@ -677,14 +699,18 @@ describe("transpose", () => {
   });
 
   it("mutates the daughter's r away from the parent's", () => {
-    const w = createWorld(defaultParams({ N: 200, r0: 1, sigmaR: 0.2, rMax: 10 }));
+    const w = createWorld(
+      defaultParams({ N: 200, r0: 1, sigmaR: 0.2, rMax: 10 }),
+    );
     transpose(w);
     const daughters = w.genomes.map((g) => g.copies[1]!);
     expect(daughters.some((c) => c.r !== 1)).toBe(true);
   });
 
   it("clips r to [0, rMax]", () => {
-    const w = createWorld(defaultParams({ N: 200, r0: 1, sigmaR: 3, rMax: 1.5 }));
+    const w = createWorld(
+      defaultParams({ N: 200, r0: 1, sigmaR: 3, rMax: 1.5 }),
+    );
     transpose(w);
     for (const g of w.genomes) {
       for (const c of g.copies) {
@@ -702,7 +728,9 @@ describe("transpose", () => {
   });
 
   it("never places two copies at the same site in one genome", () => {
-    const w = createWorld(defaultParams({ N: 20, S: 50, r0: 1, c: 0, beta: 0 }));
+    const w = createWorld(
+      defaultParams({ N: 20, S: 50, r0: 1, c: 0, beta: 0 }),
+    );
     for (let i = 0; i < 5; i++) transpose(w);
     for (const g of w.genomes) {
       const sites = g.copies.map((c) => c.site);
@@ -776,9 +804,18 @@ export function transpose(world: World): void {
       } while (occupied.has(site));
       occupied.add(site);
 
-      const r = Math.min(p.rMax, Math.max(0, parent.r * Math.exp(world.rng.normal() * p.sigmaR)));
+      const r = Math.min(
+        p.rMax,
+        Math.max(0, parent.r * Math.exp(world.rng.normal() * p.sigmaR)),
+      );
       const s = parent.s + world.rng.normal() * p.sigmaS;
-      newborns.push({ id: world.nextCopyId++, site, r, s, domesticated: false });
+      newborns.push({
+        id: world.nextCopyId++,
+        site,
+        r,
+        s,
+        domesticated: false,
+      });
     }
 
     if (newborns.length > 0) {
@@ -809,10 +846,12 @@ git commit -m "feat(sim): transposition with heritable rate and sequence mutatio
 ## Task 5: Trap phase
 
 **Files:**
+
 - Create: `sim/phases/trap.ts`
 - Test: `tests/trap.test.ts`
 
 **Interfaces:**
+
 - Consumes: `World`, `isClusterSite`, `isSilenced`
 - Produces: `trap(world: World): void`
 
@@ -831,7 +870,9 @@ describe("trap", () => {
   it("captures the s of a copy sitting in a cluster site", () => {
     const p = defaultParams({ N: 1, S: 1000, c: 0.01, t: 0 });
     const w = createWorld(p);
-    w.genomes[0]!.copies = [{ id: 0, site: 5, r: 0.1, s: 1.25, domesticated: false }];
+    w.genomes[0]!.copies = [
+      { id: 0, site: 5, r: 0.1, s: 1.25, domesticated: false },
+    ];
     trap(w);
     expect(w.genomes[0]!.repertoire).toEqual([1.25]);
   });
@@ -839,7 +880,9 @@ describe("trap", () => {
   it("ignores copies outside cluster sites", () => {
     const p = defaultParams({ N: 1, S: 1000, c: 0.01 });
     const w = createWorld(p);
-    w.genomes[0]!.copies = [{ id: 0, site: 500, r: 0.1, s: 1.25, domesticated: false }];
+    w.genomes[0]!.copies = [
+      { id: 0, site: 500, r: 0.1, s: 1.25, domesticated: false },
+    ];
     trap(w);
     expect(w.genomes[0]!.repertoire).toEqual([]);
   });
@@ -861,7 +904,9 @@ describe("trap", () => {
   it("does not capture the same s twice", () => {
     const p = defaultParams({ N: 1, S: 1000, c: 0.01, theta: 0.1 });
     const w = createWorld(p);
-    w.genomes[0]!.copies = [{ id: 0, site: 5, r: 0.1, s: 1.25, domesticated: false }];
+    w.genomes[0]!.copies = [
+      { id: 0, site: 5, r: 0.1, s: 1.25, domesticated: false },
+    ];
     trap(w);
     trap(w);
     expect(w.genomes[0]!.repertoire).toEqual([1.25]);
@@ -870,7 +915,9 @@ describe("trap", () => {
   it("captures nothing when silencing is switched off", () => {
     const p = defaultParams({ N: 1, S: 1000, c: 0.01, silencingOn: false });
     const w = createWorld(p);
-    w.genomes[0]!.copies = [{ id: 0, site: 5, r: 0.1, s: 1.25, domesticated: false }];
+    w.genomes[0]!.copies = [
+      { id: 0, site: 5, r: 0.1, s: 1.25, domesticated: false },
+    ];
     trap(w);
     expect(w.genomes[0]!.repertoire).toEqual([]);
   });
@@ -878,7 +925,9 @@ describe("trap", () => {
   it("captures nothing under pure tolerance — a tolerating host builds no clusters", () => {
     const p = defaultParams({ N: 1, S: 1000, c: 0.01, t: 1 });
     const w = createWorld(p);
-    w.genomes[0]!.copies = [{ id: 0, site: 5, r: 0.1, s: 1.25, domesticated: false }];
+    w.genomes[0]!.copies = [
+      { id: 0, site: 5, r: 0.1, s: 1.25, domesticated: false },
+    ];
     trap(w);
     expect(w.genomes[0]!.repertoire).toEqual([]);
   });
@@ -898,7 +947,9 @@ describe("trap", () => {
   it("does not capture a domesticated copy", () => {
     const p = defaultParams({ N: 1, S: 1000, c: 0.01 });
     const w = createWorld(p);
-    w.genomes[0]!.copies = [{ id: 0, site: 5, r: 0.1, s: 1.25, domesticated: true }];
+    w.genomes[0]!.copies = [
+      { id: 0, site: 5, r: 0.1, s: 1.25, domesticated: true },
+    ];
     trap(w);
     expect(w.genomes[0]!.repertoire).toEqual([]);
   });
@@ -961,10 +1012,12 @@ git commit -m "feat(sim): piRNA trap capture, gated by the tolerance dial"
 ## Task 6: Domestication and excision
 
 **Files:**
+
 - Create: `sim/phases/lifecycle.ts`
 - Test: `tests/lifecycle.test.ts`
 
 **Interfaces:**
+
 - Consumes: `World`, `isBeneficialSite`
 - Produces: `domesticate(world: World): void`, `lose(world: World): void`
 
@@ -1033,7 +1086,11 @@ describe("lose", () => {
   it("removes roughly the expected fraction", () => {
     const w = createWorld(defaultParams({ N: 1, S: 5000, v: 0.2, seed: 11 }));
     w.genomes[0]!.copies = Array.from({ length: 2000 }, (_, i) => ({
-      id: i, site: i, r: 0.1, s: 0, domesticated: false,
+      id: i,
+      site: i,
+      r: 0.1,
+      s: 0,
+      domesticated: false,
     }));
     lose(w);
     const remaining = w.genomes[0]!.copies.length;
@@ -1105,10 +1162,12 @@ Charlesworth & Charlesworth 1983 actually specifies. Keep it in one function so
 that task touches one place.
 
 **Files:**
+
 - Create: `sim/phases/select.ts`
 - Test: `tests/select.test.ts`
 
 **Interfaces:**
+
 - Consumes: `Genome`, `Params`, `activeCopies`, `silencedCopies`
 - Produces:
   - `copyNumberLoad(n: number, p: Params): number`
@@ -1127,7 +1186,11 @@ import { copyNumberLoad, damageLoad, fitness } from "../sim/phases/select.js";
 
 const genomeWith = (n: number, repertoire: number[] = []): Genome => ({
   copies: Array.from({ length: n }, (_, i) => ({
-    id: i, site: i, r: 0.1, s: 0, domesticated: false,
+    id: i,
+    site: i,
+    r: 0.1,
+    s: 0,
+    domesticated: false,
   })),
   repertoire,
 });
@@ -1228,7 +1291,11 @@ export function copyNumberLoad(n: number, p: Params): number {
  * instead, absorbing the damage rather than suppressing the element. The two costs
  * scale with different quantities, so they are different shapes, not one knob.
  */
-export function damageLoad(nActive: number, nSilenced: number, p: Params): number {
+export function damageLoad(
+  nActive: number,
+  nSilenced: number,
+  p: Params,
+): number {
   const resistance = p.d * nSilenced;
   const tolerance = p.dTol * nActive;
   return (1 - p.t) * resistance + p.t * tolerance;
@@ -1238,10 +1305,14 @@ export function damageLoad(nActive: number, nSilenced: number, p: Params): numbe
 export function fitness(genome: Genome, p: Params): number {
   const active = activeCopies(genome, p);
   const silenced = silencedCopies(genome, p);
-  const nDom = genome.copies.reduce((acc, c) => acc + (c.domesticated ? 1 : 0), 0);
+  const nDom = genome.copies.reduce(
+    (acc, c) => acc + (c.domesticated ? 1 : 0),
+    0,
+  );
   const n = active.length + silenced.length;
 
-  const load = copyNumberLoad(n, p) + damageLoad(active.length, silenced.length, p);
+  const load =
+    copyNumberLoad(n, p) + damageLoad(active.length, silenced.length, p);
   return Math.exp(-load + p.wDom * nDom);
 }
 ```
@@ -1263,10 +1334,12 @@ git commit -m "feat(sim): fitness with tolerance-shaped damage term"
 ## Task 8: Reproduction
 
 **Files:**
+
 - Create: `sim/phases/reproduce.ts`
 - Test: `tests/reproduce.test.ts`
 
 **Interfaces:**
+
 - Consumes: `World`, `Genome`, `Copy`, `fitness`
 - Produces: `reproduce(world: World): void`
 
@@ -1303,7 +1376,9 @@ describe("reproduce", () => {
     );
     reproduce(w);
     for (const g of w.genomes) {
-      expect(parentSignatures.has(g.copies.map((c) => c.site).join(","))).toBe(true);
+      expect(parentSignatures.has(g.copies.map((c) => c.site).join(","))).toBe(
+        true,
+      );
     }
   });
 
@@ -1316,7 +1391,9 @@ describe("reproduce", () => {
         { id: i * 2 + 1, site: 300 + i, r: 0.1, s: 0, domesticated: false },
       ];
     });
-    const before = new Set(w.genomes.map((g) => g.copies.map((c) => c.site).join(",")));
+    const before = new Set(
+      w.genomes.map((g) => g.copies.map((c) => c.site).join(",")),
+    );
     reproduce(w);
     const novel = w.genomes.filter(
       (g) => !before.has(g.copies.map((c) => c.site).join(",")),
@@ -1325,12 +1402,23 @@ describe("reproduce", () => {
   });
 
   it("favours fitter genomes — low-copy genomes come to dominate", () => {
-    const p = defaultParams({ N: 200, sexual: false, S: 2000, a: 0.05, b: 0.001, seed: 8 });
+    const p = defaultParams({
+      N: 200,
+      sexual: false,
+      S: 2000,
+      a: 0.05,
+      b: 0.001,
+      seed: 8,
+    });
     const w = createWorld(p);
     w.genomes.forEach((g, i) => {
       const n = i < 100 ? 1 : 40;
       g.copies = Array.from({ length: n }, (_, k) => ({
-        id: i * 100 + k, site: k + 10, r: 0.1, s: 0, domesticated: false,
+        id: i * 100 + k,
+        site: k + 10,
+        r: 0.1,
+        s: 0,
+        domesticated: false,
       }));
     });
     for (let i = 0; i < 5; i++) reproduce(w);
@@ -1427,7 +1515,9 @@ export function reproduce(world: World): void {
       }
       // A site inherited from both parents would appear twice; keep one.
       const seen = new Set<number>();
-      copies = copies.filter((c) => (seen.has(c.site) ? false : (seen.add(c.site), true)));
+      copies = copies.filter((c) =>
+        seen.has(c.site) ? false : (seen.add(c.site), true),
+      );
       copies.sort((x, y) => x.site - y.site);
     } else {
       copies = mother.copies.map((c) => cloneCopy(c));
@@ -1457,10 +1547,12 @@ git commit -m "feat(sim): reproduction with recombination and maternal piRNA dep
 ## Task 9: Compose the step, and the observables
 
 **Files:**
+
 - Create: `sim/step.ts`, `sim/observe.ts`, `sim/index.ts`
 - Test: `tests/step.test.ts`
 
 **Interfaces:**
+
 - Consumes: every phase from Tasks 4–8
 - Produces:
   - `step(world: World): void`, `run(world: World, generations: number): void`
@@ -1475,7 +1567,15 @@ git commit -m "feat(sim): reproduction with recombination and maternal piRNA dep
 
 ```ts
 import { describe, expect, it } from "vitest";
-import { createWorld, defaultParams, history, observe, run, stateHash, step } from "../sim/index.js";
+import {
+  createWorld,
+  defaultParams,
+  history,
+  observe,
+  run,
+  stateHash,
+  step,
+} from "../sim/index.js";
 
 describe("step", () => {
   it("advances the generation counter", () => {
@@ -1509,7 +1609,9 @@ describe("step", () => {
   });
 
   it("never exceeds S copies in a genome", () => {
-    const w = createWorld(defaultParams({ N: 20, S: 60, r0: 0.8, v: 0, a: 0, b: 0 }));
+    const w = createWorld(
+      defaultParams({ N: 20, S: 60, r0: 0.8, v: 0, a: 0, b: 0 }),
+    );
     run(w, 40);
     expect(w.genomes.every((g) => g.copies.length <= 60)).toBe(true);
   });
@@ -1528,7 +1630,9 @@ describe("observe", () => {
     const w = createWorld(defaultParams({ N: 30 }));
     run(w, 10);
     const s = observe(w);
-    expect(s.activeCopies + s.silencedCopies + s.domesticatedCopies).toBe(s.totalCopies);
+    expect(s.activeCopies + s.silencedCopies + s.domesticatedCopies).toBe(
+      s.totalCopies,
+    );
   });
 
   it("reports the fraction of genomes carrying a repertoire", () => {
@@ -1571,11 +1675,11 @@ import type { World } from "./state.js";
  * false and pDom zero, which disables exactly phases 2 and 3.
  */
 export function step(world: World): void {
-  transpose(world);   // 1
-  trap(world);        // 2
+  transpose(world); // 1
+  trap(world); // 2
   domesticate(world); // 3
-  lose(world);        // 4
-  reproduce(world);   // 5 selection, 6 reproduction
+  lose(world); // 4
+  reproduce(world); // 5 selection, 6 reproduction
   world.generation++;
 }
 
@@ -1654,7 +1758,10 @@ export function stateHash(world: World): string {
   const parts: string[] = [];
   for (const genome of world.genomes) {
     const sites = genome.copies
-      .map((c) => `${c.site}:${c.r.toFixed(9)}:${c.s.toFixed(9)}:${c.domesticated ? 1 : 0}`)
+      .map(
+        (c) =>
+          `${c.site}:${c.r.toFixed(9)}:${c.s.toFixed(9)}:${c.domesticated ? 1 : 0}`,
+      )
       .join(",");
     const rep = genome.repertoire.map((x) => x.toFixed(9)).join(",");
     parts.push(`${sites}|${rep}`);
@@ -1718,9 +1825,11 @@ copy as the unit: that per-copy heritable rate gives selection something to act 
 If this fails, the design decision was wrong and later tasks are wasted work.
 
 **Files:**
+
 - Create: `tests/guards/rate-evolves.test.ts`
 
 **Interfaces:**
+
 - Consumes: `createWorld`, `defaultParams`, `run`, `observe`
 
 - [ ] **Step 1: Write the guard**
@@ -1741,8 +1850,16 @@ import { createWorld, defaultParams, observe, run } from "../../sim/index.js";
  */
 describe("guard 5: rate evolves", () => {
   const base = {
-    N: 300, S: 2000, r0: 0.1, sigmaR: 0.15, v: 0.02,
-    a: 0.002, b: 0.0002, silencingOn: false, pDom: 0, sexual: true,
+    N: 300,
+    S: 2000,
+    r0: 0.1,
+    sigmaR: 0.15,
+    v: 0.02,
+    a: 0.002,
+    b: 0.0002,
+    silencingOn: false,
+    pDom: 0,
+    sexual: true,
   };
 
   it("POSITIVE CONTROL: mean rate moves when copies mutate", () => {
@@ -1764,7 +1881,9 @@ describe("guard 5: rate evolves", () => {
   });
 
   it("selection against copy number pushes the mean rate DOWN", () => {
-    const w = createWorld(defaultParams({ ...base, a: 0.02, b: 0.002, seed: 202 }));
+    const w = createWorld(
+      defaultParams({ ...base, a: 0.02, b: 0.002, seed: 202 }),
+    );
     const before = observe(w).meanRate;
     run(w, 400);
     const after = observe(w).meanRate;
@@ -1784,7 +1903,7 @@ describe("guard 5: rate evolves", () => {
 Temporarily edit `sim/phases/transpose.ts` so the daughter's rate is not mutated:
 
 ```ts
-      const r = parent.r; // BROKEN ON PURPOSE — no mutation
+const r = parent.r; // BROKEN ON PURPOSE — no mutation
 ```
 
 Run: `npx vitest run tests/guards/rate-evolves.test.ts`
@@ -1797,7 +1916,10 @@ message names those two tests.** A guard never observed failing is not evidence.
 Revert `sim/phases/transpose.ts` to:
 
 ```ts
-      const r = Math.min(p.rMax, Math.max(0, parent.r * Math.exp(world.rng.normal() * p.sigmaR)));
+const r = Math.min(
+  p.rMax,
+  Math.max(0, parent.r * Math.exp(world.rng.normal() * p.sigmaR)),
+);
 ```
 
 - [ ] **Step 4: Run the guard and verify it passes**
@@ -1817,6 +1939,7 @@ git commit -m "test(guard5): rate evolves, with the variation generator as contr
 ## Task 11: Guard 6 — escape by divergence
 
 **Files:**
+
 - Create: `tests/guards/escape.test.ts`
 
 - [ ] **Step 1: Write the guard**
@@ -1836,7 +1959,15 @@ import { transpose } from "../../sim/phases/transpose.js";
 describe("guard 6: escape by divergence", () => {
   it("a diverged daughter escapes a repertoire its parent is caught by", () => {
     const p = defaultParams({
-      N: 1, S: 5000, c: 0, theta: 0.1, sigmaS: 0.5, r0: 1, rMax: 1, sigmaR: 0, seed: 55,
+      N: 1,
+      S: 5000,
+      c: 0,
+      theta: 0.1,
+      sigmaS: 0.5,
+      r0: 1,
+      rMax: 1,
+      sigmaR: 0,
+      seed: 55,
     });
     const w = createWorld(p);
     const g = w.genomes[0]!;
@@ -1857,7 +1988,15 @@ describe("guard 6: escape by divergence", () => {
 
   it("POSITIVE CONTROL: with no sequence drift, nothing escapes", () => {
     const p = defaultParams({
-      N: 1, S: 5000, c: 0, theta: 0.1, sigmaS: 0, r0: 1, rMax: 1, sigmaR: 0, seed: 55,
+      N: 1,
+      S: 5000,
+      c: 0,
+      theta: 0.1,
+      sigmaS: 0,
+      r0: 1,
+      rMax: 1,
+      sigmaR: 0,
+      seed: 55,
     });
     const w = createWorld(p);
     const g = w.genomes[0]!;
@@ -1868,7 +2007,14 @@ describe("guard 6: escape by divergence", () => {
   });
 
   it("a silenced copy cannot transpose at all", () => {
-    const p = defaultParams({ N: 1, S: 5000, c: 0, theta: 0.1, r0: 1, seed: 9 });
+    const p = defaultParams({
+      N: 1,
+      S: 5000,
+      c: 0,
+      theta: 0.1,
+      r0: 1,
+      seed: 9,
+    });
     const w = createWorld(p);
     const g = w.genomes[0]!;
     g.copies = [{ id: 0, site: 1000, r: 1, s: 0, domesticated: false }];
@@ -1885,7 +2031,7 @@ Temporarily edit `sim/silencing.ts` so `isSilenced` ignores `theta` and matches
 anything once a repertoire exists:
 
 ```ts
-  return genome.repertoire.length > 0; // BROKEN ON PURPOSE
+return genome.repertoire.length > 0; // BROKEN ON PURPOSE
 ```
 
 Run: `npx vitest run tests/guards/escape.test.ts`
@@ -1910,6 +2056,7 @@ git commit -m "test(guard6): escape by sequence divergence"
 ## Task 12: Guard 4 — silencing knockout produces bloat
 
 **Files:**
+
 - Create: `tests/guards/bloat.test.ts`
 
 - [ ] **Step 1: Write the guard**
@@ -1927,8 +2074,19 @@ import { createWorld, defaultParams, observe, run } from "../../sim/index.js";
  */
 describe("guard 4: silencing knockout produces bloat", () => {
   const base = {
-    N: 200, S: 2000, c: 0.02, r0: 0.15, sigmaR: 0.05, sigmaS: 0.01,
-    theta: 0.1, v: 0.01, a: 0.0005, b: 0.00002, pDom: 0, t: 0, sexual: true,
+    N: 200,
+    S: 2000,
+    c: 0.02,
+    r0: 0.15,
+    sigmaR: 0.05,
+    sigmaS: 0.01,
+    theta: 0.1,
+    v: 0.01,
+    a: 0.0005,
+    b: 0.00002,
+    pDom: 0,
+    t: 0,
+    sexual: true,
   };
 
   const finalCopies = (silencingOn: boolean, seed: number): number => {
@@ -1947,7 +2105,9 @@ describe("guard 4: silencing knockout produces bloat", () => {
   });
 
   it("POSITIVE CONTROL: the silenced arm actually silences something", () => {
-    const w = createWorld(defaultParams({ ...base, silencingOn: true, seed: 1 }));
+    const w = createWorld(
+      defaultParams({ ...base, silencingOn: true, seed: 1 }),
+    );
     run(w, 250);
     expect(observe(w).silencedCopies).toBeGreaterThan(0);
   });
@@ -1993,10 +2153,12 @@ git commit -m "test(guard4): silencing knockout produces bloat, direction only"
 ## Task 13: Guard 2 — the three-phase invasion
 
 **Files:**
+
 - Create: `sim/phases-detect.ts`
 - Create: `tests/guards/three-phases.test.ts`
 
 **Interfaces:**
+
 - Consumes: `Snapshot[]`
 - Produces: `detectPhases(h: Snapshot[]): { amplification: number; plateau: number; inactivation: number } | null`
 
@@ -2017,9 +2179,20 @@ import { detectPhases } from "../../sim/phases-detect.js";
  */
 describe("guard 2: three-phase invasion", () => {
   const invasion = {
-    N: 300, S: 3000, c: 0.02, r0: 0.2, sigmaR: 0.02, sigmaS: 0.005,
-    theta: 0.15, v: 0.005, a: 0.0004, b: 0.00001,
-    pDom: 0, t: 0, silencingOn: true, sexual: true,
+    N: 300,
+    S: 3000,
+    c: 0.02,
+    r0: 0.2,
+    sigmaR: 0.02,
+    sigmaS: 0.005,
+    theta: 0.15,
+    v: 0.005,
+    a: 0.0004,
+    b: 0.00001,
+    pDom: 0,
+    t: 0,
+    silencingOn: true,
+    sexual: true,
   };
 
   it("passes through amplification, plateau and inactivation in order", () => {
@@ -2041,7 +2214,9 @@ describe("guard 2: three-phase invasion", () => {
   });
 
   it("POSITIVE CONTROL: with the trap off there is no inactivation phase", () => {
-    const w = createWorld(defaultParams({ ...invasion, silencingOn: false, seed: 7 }));
+    const w = createWorld(
+      defaultParams({ ...invasion, silencingOn: false, seed: 7 }),
+    );
     const h = history(w, 600);
     expect(detectPhases(h)).toBeNull();
   });
@@ -2140,10 +2315,12 @@ git commit -m "test(guard2): three-phase invasion ordering"
 ## Task 14: Guard 3 — the cluster-size threshold
 
 **Files:**
+
 - Create: `tools/sweep-cluster-size.ts`
 - Create: `tests/guards/cluster-threshold.test.ts`
 
 **Interfaces:**
+
 - Produces: `sweepClusterSize(fractions: number[], seeds: number[], generations: number): { c: number; meanFinalCopies: number }[]`
 
 - [ ] **Step 1: Write the failing test**
@@ -2225,9 +2402,21 @@ export function sweepClusterSize(
     for (const seed of seeds) {
       const w = createWorld(
         defaultParams({
-          N: 200, S: 3000, c, r0: 0.2, sigmaR: 0.02, sigmaS: 0.005,
-          theta: 0.15, v: 0.005, a: 0.0004, b: 0.00001,
-          pDom: 0, t: 0, silencingOn: true, sexual: true, seed,
+          N: 200,
+          S: 3000,
+          c,
+          r0: 0.2,
+          sigmaR: 0.02,
+          sigmaS: 0.005,
+          theta: 0.15,
+          v: 0.005,
+          a: 0.0004,
+          b: 0.00001,
+          pDom: 0,
+          t: 0,
+          silencingOn: true,
+          sexual: true,
+          seed,
         }),
       );
       run(w, generations);
@@ -2263,6 +2452,7 @@ the unblock and must be done first. Every other task in this plan can proceed
 without it; nothing depends on this one.
 
 **Files:**
+
 - Modify: `sim/phases/select.ts` (the `copyNumberLoad` function only)
 - Modify: `sim/params.ts` (calibrated defaults)
 - Modify: `docs/superpowers/specs/2026-09-02-transposon-genome-ecology-design.md` §3.4 and §10
@@ -2271,7 +2461,7 @@ without it; nothing depends on this one.
 - [ ] **Step 1: UNBLOCK — read the source, not the abstract**
 
 Obtain Charlesworth & Charlesworth 1983, "The population dynamics of transposable
-elements", *Genetics Research* 42(1):1–27, `10.1017/s0016672300021455`. Extract:
+elements", _Genetics Research_ 42(1):1–27, `10.1017/s0016672300021455`. Extract:
 
 1. The exact fitness function of copy number used in the analytic treatment.
 2. The transposition–selection balance condition that gives equilibrium copy number.
@@ -2315,7 +2505,13 @@ const TOLERANCE = 0.3; // fractional
 
 describe("guard 1: Charlesworth equilibrium", () => {
   const pre = {
-    N: 400, S: 4000, silencingOn: false, pDom: 0, c: 0, beta: 0, sexual: true,
+    N: 400,
+    S: 4000,
+    silencingOn: false,
+    pDom: 0,
+    c: 0,
+    beta: 0,
+    sexual: true,
   };
 
   it("settles near the analytic prediction", () => {
@@ -2323,8 +2519,9 @@ describe("guard 1: Charlesworth equilibrium", () => {
     run(w, 2000);
     const perGenome = observe(w).totalCopies / w.genomes.length;
     expect(PREDICTED_EQUILIBRIUM).toBeGreaterThan(0); // fails loudly if Step 2 was skipped
-    expect(Math.abs(perGenome - PREDICTED_EQUILIBRIUM) / PREDICTED_EQUILIBRIUM)
-      .toBeLessThan(TOLERANCE);
+    expect(
+      Math.abs(perGenome - PREDICTED_EQUILIBRIUM) / PREDICTED_EQUILIBRIUM,
+    ).toBeLessThan(TOLERANCE);
   });
 
   it("is stable — the last quarter of the run does not drift", () => {
@@ -2353,13 +2550,18 @@ describe("guard 1: Charlesworth equilibrium", () => {
     const w = createWorld(defaultParams({ ...pre, seed: 5 }));
     for (const g of w.genomes) {
       g.copies = Array.from({ length: 200 }, (_, i) => ({
-        id: 100000 + i, site: i, r: defaultParams().r0, s: 0, domesticated: false,
+        id: 100000 + i,
+        site: i,
+        r: defaultParams().r0,
+        s: 0,
+        domesticated: false,
       }));
     }
     run(w, 2000);
     const perGenome = observe(w).totalCopies / w.genomes.length;
-    expect(Math.abs(perGenome - PREDICTED_EQUILIBRIUM) / PREDICTED_EQUILIBRIUM)
-      .toBeLessThan(TOLERANCE);
+    expect(
+      Math.abs(perGenome - PREDICTED_EQUILIBRIUM) / PREDICTED_EQUILIBRIUM,
+    ).toBeLessThan(TOLERANCE);
   });
 });
 ```
@@ -2393,10 +2595,12 @@ git commit -m "test(guard1): Charlesworth equilibrium, calibrated from the 1983 
 ## Task 16: The browser toy — field render and run loop
 
 **Files:**
+
 - Modify: `package.json` (add `vite`, add `dev`/`build`/`preview` scripts)
 - Create: `vite.config.ts`, `web/index.html`, `web/main.ts`, `web/render/field.ts`
 
 **Interfaces:**
+
 - Consumes: `createWorld`, `defaultParams`, `step`, `observe`, `isSilenced` from `sim/`
 - Produces: `drawField(ctx: CanvasRenderingContext2D, world: World, w: number, h: number): void`
 
@@ -2434,15 +2638,54 @@ Run `npm install`.
     <meta charset="utf-8" />
     <title>Transposons as genome ecology</title>
     <style>
-      :root { color-scheme: dark; }
-      body { margin: 0; background: #0d0f12; color: #d8dee9; font: 13px/1.5 system-ui, sans-serif; }
-      #app { display: grid; grid-template-columns: 1fr 320px; height: 100vh; }
-      #stage { display: grid; grid-template-rows: 1fr 180px 220px; gap: 8px; padding: 8px; min-width: 0; }
-      canvas { width: 100%; height: 100%; display: block; background: #14181d; border-radius: 4px; }
-      #controls { padding: 12px; border-left: 1px solid #232830; overflow-y: auto; }
-      #controls label { display: block; margin: 10px 0 2px; color: #9aa5b1; }
-      #controls input[type="range"] { width: 100%; }
-      #readout { font-variant-numeric: tabular-nums; white-space: pre; color: #8fbcbb; }
+      :root {
+        color-scheme: dark;
+      }
+      body {
+        margin: 0;
+        background: #0d0f12;
+        color: #d8dee9;
+        font:
+          13px/1.5 system-ui,
+          sans-serif;
+      }
+      #app {
+        display: grid;
+        grid-template-columns: 1fr 320px;
+        height: 100vh;
+      }
+      #stage {
+        display: grid;
+        grid-template-rows: 1fr 180px 220px;
+        gap: 8px;
+        padding: 8px;
+        min-width: 0;
+      }
+      canvas {
+        width: 100%;
+        height: 100%;
+        display: block;
+        background: #14181d;
+        border-radius: 4px;
+      }
+      #controls {
+        padding: 12px;
+        border-left: 1px solid #232830;
+        overflow-y: auto;
+      }
+      #controls label {
+        display: block;
+        margin: 10px 0 2px;
+        color: #9aa5b1;
+      }
+      #controls input[type="range"] {
+        width: 100%;
+      }
+      #readout {
+        font-variant-numeric: tabular-nums;
+        white-space: pre;
+        color: #8fbcbb;
+      }
     </style>
   </head>
   <body>
@@ -2507,8 +2750,13 @@ export function drawField(
 
 ```ts
 import {
-  createWorld, defaultParams, observe, step,
-  type Params, type Snapshot, type World,
+  createWorld,
+  defaultParams,
+  observe,
+  step,
+  type Params,
+  type Snapshot,
+  type World,
 } from "../sim/index.js";
 import { drawField } from "./render/field.js";
 
@@ -2556,9 +2804,15 @@ function frame(): void {
 // Exposed for guard 7 and for poking from the console.
 Object.assign(window, {
   __sim: {
-    get world() { return world; },
-    get snapshots() { return snapshots; },
-    setSpeed(n: number) { speed = n; },
+    get world() {
+      return world;
+    },
+    get snapshots() {
+      return snapshots;
+    },
+    setSpeed(n: number) {
+      speed = n;
+    },
     reset(overrides: Partial<Params> = {}) {
       world = createWorld(defaultParams({ ...params, ...overrides }));
       snapshots = [observe(world)];
@@ -2587,10 +2841,12 @@ git commit -m "feat(web): field render and run loop"
 ## Task 17: Timeline and scatter
 
 **Files:**
+
 - Create: `web/render/timeline.ts`, `web/render/scatter.ts`
 - Modify: `web/main.ts` (draw both each frame)
 
 **Interfaces:**
+
 - Produces:
   - `drawTimeline(ctx, snapshots: Snapshot[], width: number, height: number): void`
   - `drawScatter(ctx, world: World, width: number, height: number): void`
@@ -2675,7 +2931,10 @@ export function drawScatter(
     }
   }
   if (!Number.isFinite(sMin)) return;
-  if (sMax - sMin < 1e-9) { sMin -= 0.5; sMax += 0.5; }
+  if (sMax - sMin < 1e-9) {
+    sMin -= 0.5;
+    sMax += 0.5;
+  }
 
   const xAt = (s: number) => ((s - sMin) / (sMax - sMin)) * width;
   const yAt = (r: number) => height - (Math.min(r, p.rMax) / p.rMax) * height;
@@ -2692,7 +2951,11 @@ export function drawScatter(
   }
 
   ctx.fillStyle = "#6b7684";
-  ctx.fillText(`s ∈ [${sMin.toFixed(2)}, ${sMax.toFixed(2)}]   r ∈ [0, ${p.rMax}]`, 6, 12);
+  ctx.fillText(
+    `s ∈ [${sMin.toFixed(2)}, ${sMax.toFixed(2)}]   r ∈ [0, ${p.rMax}]`,
+    6,
+    12,
+  );
 }
 ```
 
@@ -2710,11 +2973,11 @@ const scatterCanvas = document.getElementById("scatter") as HTMLCanvasElement;
 ```
 
 ```ts
-  const tRect = timelineCanvas.getBoundingClientRect();
-  drawTimeline(fit(timelineCanvas), snapshots, tRect.width, tRect.height);
+const tRect = timelineCanvas.getBoundingClientRect();
+drawTimeline(fit(timelineCanvas), snapshots, tRect.width, tRect.height);
 
-  const sRect = scatterCanvas.getBoundingClientRect();
-  drawScatter(fit(scatterCanvas), world, sRect.width, sRect.height);
+const sRect = scatterCanvas.getBoundingClientRect();
+drawScatter(fit(scatterCanvas), world, sRect.width, sRect.height);
 ```
 
 - [ ] **Step 4: Verify**
@@ -2735,10 +2998,12 @@ git commit -m "feat(web): timeline and the s-by-r scatter"
 ## Task 18: The pokes
 
 **Files:**
+
 - Create: `web/controls.ts`
 - Modify: `web/main.ts` (mount the controls)
 
 **Interfaces:**
+
 - Produces: `mountControls(host: HTMLElement, params: Params, onReset: (o: Partial<Params>) => void): void`
 
 - [ ] **Step 1: Implement the controls**
@@ -2758,10 +3023,28 @@ interface Slider {
 
 /** Continuous pokes. These take effect MID-RUN — that is the session shape. */
 const SLIDERS: Slider[] = [
-  { key: "c", label: "piRNA cluster size (fraction of genome)", min: 0, max: 0.05, stepSize: 0.001 },
-  { key: "t", label: "resistance ← → tolerance", min: 0, max: 1, stepSize: 0.01 },
+  {
+    key: "c",
+    label: "piRNA cluster size (fraction of genome)",
+    min: 0,
+    max: 0.05,
+    stepSize: 0.001,
+  },
+  {
+    key: "t",
+    label: "resistance ← → tolerance",
+    min: 0,
+    max: 1,
+    stepSize: 0.01,
+  },
   { key: "v", label: "excision rate", min: 0, max: 0.05, stepSize: 0.001 },
-  { key: "pDom", label: "domestication probability", min: 0, max: 0.02, stepSize: 0.0005 },
+  {
+    key: "pDom",
+    label: "domestication probability",
+    min: 0,
+    max: 0.02,
+    stepSize: 0.0005,
+  },
 ];
 
 /**
@@ -2792,7 +3075,9 @@ export function mountControls(
 
   const silencing = document.createElement("button");
   const paintSilencing = () => {
-    silencing.textContent = params.silencingOn ? "knock out silencing" : "restore silencing";
+    silencing.textContent = params.silencingOn
+      ? "knock out silencing"
+      : "restore silencing";
   };
   silencing.addEventListener("click", () => {
     params.silencingOn = !params.silencingOn;
@@ -2813,14 +3098,19 @@ export function mountControls(
   // Restarts, because they change the founding condition rather than the world.
   const invade = document.createElement("button");
   invade.textContent = "seed a fresh invasion";
-  invade.addEventListener("click", () => onReset({ seed: Math.floor(Math.random() * 1e9) }));
+  invade.addEventListener("click", () =>
+    onReset({ seed: Math.floor(Math.random() * 1e9) }),
+  );
 
   const small = document.createElement("button");
   small.textContent = "shrink the population (more drift)";
-  small.addEventListener("click", () => onReset({ N: Math.max(40, Math.floor(params.N / 2)) }));
+  small.addEventListener("click", () =>
+    onReset({ N: Math.max(40, Math.floor(params.N / 2)) }),
+  );
 
   for (const b of [silencing, sex, invade, small]) {
-    b.style.cssText = "display:block;width:100%;margin-top:8px;padding:6px;cursor:pointer;";
+    b.style.cssText =
+      "display:block;width:100%;margin-top:8px;padding:6px;cursor:pointer;";
     host.append(b);
   }
 }
@@ -2838,15 +3128,20 @@ In `web/main.ts`:
 ```ts
 import { mountControls } from "./controls.js";
 
-mountControls(document.getElementById("controls") as HTMLElement, params, (o) => {
-  world = createWorld(defaultParams({ ...params, ...o }));
-  snapshots = [observe(world)];
-});
+mountControls(
+  document.getElementById("controls") as HTMLElement,
+  params,
+  (o) => {
+    world = createWorld(defaultParams({ ...params, ...o }));
+    snapshots = [observe(world)];
+  },
+);
 ```
 
 - [ ] **Step 3: Verify each poke by hand**
 
 Run: `npm run dev`, then confirm:
+
 - Dragging cluster size from 0 upward makes silenced (grey) marks appear.
 - "knock out silencing" makes copy count climb; restoring it bends the curve back.
 - Pushing tolerance to 1 stops new silencing appearing — no repertoire forms.
@@ -2867,6 +3162,7 @@ Proves the claim that the artifact played is the artifact validated. Without thi
 "one implementation" is an assertion in a design document.
 
 **Files:**
+
 - Modify: `package.json` (add `@playwright/test`)
 - Create: `web/hash-harness.html`, `web/hash-harness.ts`
 - Create: `tests/guards/one-implementation.test.ts`
@@ -2883,8 +3179,13 @@ Add `"@playwright/test": "^1.48.0"` to `devDependencies`, run `npm install`, the
 ```html
 <!doctype html>
 <html lang="en">
-  <head><meta charset="utf-8" /><title>hash harness</title></head>
-  <body><script type="module" src="./hash-harness.ts"></script></body>
+  <head>
+    <meta charset="utf-8" />
+    <title>hash harness</title>
+  </head>
+  <body>
+    <script type="module" src="./hash-harness.ts"></script>
+  </body>
 </html>
 ```
 
@@ -2951,7 +3252,9 @@ afterAll(async () => {
  */
 describe("guard 7: one implementation", () => {
   it("browser and node agree on the state hash", async () => {
-    const nodeWorld = createWorld(defaultParams({ N: 120, S: 1500, seed: 31337 }));
+    const nodeWorld = createWorld(
+      defaultParams({ N: 120, S: 1500, seed: 31337 }),
+    );
     run(nodeWorld, 120);
     const nodeHash = stateHash(nodeWorld);
 
@@ -2959,8 +3262,12 @@ describe("guard 7: one implementation", () => {
     try {
       const page = await browser.newPage();
       await page.goto(`${origin}/hash-harness.html`);
-      await page.waitForFunction(() => "__stateHash" in window, undefined, { timeout: 60_000 });
-      const browserHash = await page.evaluate(() => (window as never as { __stateHash: string }).__stateHash);
+      await page.waitForFunction(() => "__stateHash" in window, undefined, {
+        timeout: 60_000,
+      });
+      const browserHash = await page.evaluate(
+        () => (window as never as { __stateHash: string }).__stateHash,
+      );
       expect(browserHash).toBe(nodeHash);
     } finally {
       await browser.close();
@@ -3008,6 +3315,7 @@ Registers the question before the runner exists, per the `_pm` convention record
 in `README.md`.
 
 **Files:**
+
 - Create: `docs/pre-registrations/2026-09-02-per-copy-vs-family-rate.md`
 - Create: `experiments/001-per-copy-vs-family-rate.ts`
 - Create: `docs/analysis/theme.R`, `docs/analysis/plot-001.R`
@@ -3079,7 +3387,12 @@ git commit -m "docs: pre-register the per-copy vs family-level rate question"
 ```ts
 import { writeFileSync } from "node:fs";
 import {
-  createWorld, defaultParams, detectPhases, history, makeRng, observe,
+  createWorld,
+  defaultParams,
+  detectPhases,
+  history,
+  makeRng,
+  observe,
 } from "../sim/index.js";
 
 /**
@@ -3089,9 +3402,19 @@ import {
 const SEEDS = Array.from({ length: 40 }, (_, i) => i + 1);
 const GENERATIONS = 600;
 const BASE = {
-  N: 300, S: 3000, c: 0.02, r0: 0.2, sigmaS: 0.005, theta: 0.15,
-  v: 0.005, a: 0.0004, b: 0.00001, pDom: 0, t: 0,
-  silencingOn: true, sexual: true,
+  N: 300,
+  S: 3000,
+  c: 0.02,
+  r0: 0.2,
+  sigmaS: 0.005,
+  theta: 0.15,
+  v: 0.005,
+  a: 0.0004,
+  b: 0.00001,
+  pDom: 0,
+  t: 0,
+  silencingOn: true,
+  sexual: true,
 };
 
 interface Row {
@@ -3109,9 +3432,10 @@ for (const seed of SEEDS) {
     // Family-level: no within-run mutation, but the founding rate is drawn from
     // the same lognormal spread so that variation exists BETWEEN runs.
     const jitter = makeRng(seed * 7919);
-    const r0 = arm === "family-level"
-      ? BASE.r0 * Math.exp(jitter.normal() * 0.05)
-      : BASE.r0;
+    const r0 =
+      arm === "family-level"
+        ? BASE.r0 * Math.exp(jitter.normal() * 0.05)
+        : BASE.r0;
     const sigmaR = arm === "per-copy" ? 0.05 : 0;
 
     const world = createWorld(defaultParams({ ...BASE, r0, sigmaR, seed }));
@@ -3131,9 +3455,15 @@ for (const seed of SEEDS) {
 
 const header = "arm,seed,final_copies_per_genome,extinct,time_to_inactivation";
 const body = rows
-  .map((r) => `${r.arm},${r.seed},${r.finalCopiesPerGenome},${r.extinct},${r.timeToInactivation}`)
+  .map(
+    (r) =>
+      `${r.arm},${r.seed},${r.finalCopiesPerGenome},${r.extinct},${r.timeToInactivation}`,
+  )
   .join("\n");
-writeFileSync("experiments/001-per-copy-vs-family-rate.csv", `${header}\n${body}\n`);
+writeFileSync(
+  "experiments/001-per-copy-vs-family-rate.csv",
+  `${header}\n${body}\n`,
+);
 console.log(`wrote ${rows.length} rows`);
 ```
 
@@ -3218,19 +3548,19 @@ git commit -m "feat(experiments): registered question 001, per-copy vs family-le
 
 **Spec coverage.** Every section of the spec maps to a task:
 
-| spec | task |
-| --- | --- |
-| §3.1 state, two heritable traits, derived silencing | 2, 3 |
-| §3.2 six phases | 4, 5, 6, 7, 8, 9 |
-| §3.3 emergent families, escape, resurrection | 3, 11 |
-| §3.4 parameters | 2, 15 |
-| §4 the seven pokes | 18 |
-| §5 field, timeline, scatter | 16, 17 |
-| §6 guards 1–7 | 15, 13, 14, 12, 10, 11, 19 |
-| §7 layout, R+ggplot2 figures | 1, 20 |
-| §8 registered question | 20 |
-| §9 out of scope | not built, by construction |
-| §10 open items | 15 step 1 |
+| spec                                                | task                       |
+| --------------------------------------------------- | -------------------------- |
+| §3.1 state, two heritable traits, derived silencing | 2, 3                       |
+| §3.2 six phases                                     | 4, 5, 6, 7, 8, 9           |
+| §3.3 emergent families, escape, resurrection        | 3, 11                      |
+| §3.4 parameters                                     | 2, 15                      |
+| §4 the seven pokes                                  | 18                         |
+| §5 field, timeline, scatter                         | 16, 17                     |
+| §6 guards 1–7                                       | 15, 13, 14, 12, 10, 11, 19 |
+| §7 layout, R+ggplot2 figures                        | 1, 20                      |
+| §8 registered question                              | 20                         |
+| §9 out of scope                                     | not built, by construction |
+| §10 open items                                      | 15 step 1                  |
 
 **Placeholder scan.** No TBDs. The one deliberately unfilled value —
 `PREDICTED_EQUILIBRIUM` in Task 15 — is written as a failing assertion
@@ -3241,8 +3571,18 @@ the guard go red rather than silently pass.
 `PhaseIndices` and `SweepPoint` are each defined once and imported everywhere else.
 Phase functions all share the shape `(world: World) => void`; pure functions
 (`fitness`, `copyNumberLoad`, `damageLoad`, `isSilenced`) take `Params` explicitly.
-`sim/index.ts` is the only import surface used by `web/`, `tests/guards/`,
-`tools/` and `experiments/`.
+`sim/index.ts` is the only import surface used by `web/`, `tools/` and
+`experiments/`.
+
+⚠️ **CORRECTED 2026-09-03. This sentence also listed `tests/guards/`, and that is
+false as built** — `tests/guards/escape-arm.ts:26` imports
+`../../sim/phases/transpose.js` directly, because guard 6 drives the transpose
+phase in isolation against hand-placed copies. It also contradicted this same
+document at the `sim/index.ts` row of the file table above, which says "the only
+import surface for `web/` and `experiments/`" and is correct. The narrower
+statement is the true one: **`web/`, `tools/` and `experiments/` reach `sim/`
+only through the barrel** (verified by grep across all three); `tests/` does not,
+by design — the per-phase unit tests import their phase directly too.
 
 **Ordering note.** Tasks 1–9 build the model; 10–14 are guards that can run as soon
 as the model exists; 15 is blocked on external reading and can be deferred without

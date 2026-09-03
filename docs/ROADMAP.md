@@ -25,8 +25,10 @@ Settled there, and **superseding the two sections immediately below**:
   scientific correctness as the floor. One TypeScript core, browser UI, node
   runners. See spec §1 and §7.
 
-~~**Nothing is designed yet.**~~ Superseded 2026-09-02. Scaffolded 2026-09-01;
-still no code, no runner, no measurement — but the design is no longer open.
+~~**Nothing is designed yet.**~~ Superseded 2026-09-02. ~~Scaffolded 2026-09-01;
+still no code, no runner, no measurement~~ — superseded again 2026-09-03: the
+model, the toy, all seven guards, one registered question and its result are
+built and committed on `impl/sim-core-v1`. See the checklist at the bottom.
 
 ## The constraint that shapes everything else
 
@@ -87,7 +89,7 @@ Osmanski et al. 2023 (248 mammal genomes, deposited into Dfam, so CC0).
 ## Prior grounding that already exists — read before re-running it
 
 ➡️ **SUPERSEDED IN PART by [`REFERENCES.md`](REFERENCES.md) (built 2026-09-02).**
-That file carries 34 registry-verified works, the null model this roadmap lacks
+That file carries 38 registry-verified works (42 DOIs), the null model this roadmap lacks
 (Charlesworth & Charlesworth 1983), a calibration number for the piRNA trap
 (cluster size >0.2% of genome), and a **re-derived artifact-gap finding that
 contradicts the second bullet below**. Read it before the brainstorm.
@@ -129,19 +131,23 @@ live registry and the null stated as "checked HERE", naming where.
       element** (spec §4). Rate is never chosen, only selected
 - [x] **DONE 2026-09-02** — Write the implementation plan
       (`superpowers/plans/2026-09-02-transposon-genome-ecology.md`, 20 tasks)
-- [ ] Build `sim/` core + guards 1–7, then `web/` — **in progress on
-      `impl/sim-core-v1`;** core (tasks 1–9) and guard 5 (task 10) are committed
+- [x] **DONE 2026-09-03** — Build `sim/` core + guards 1–7, then `web/`. All 20
+      tasks of the plan are committed on `impl/sim-core-v1`. `sim/` is 14 files;
+      all seven guard files exist under `tests/guards/`; `web/` is 10 files. Suite
+      is 20 files / 177 tests, `tsc --noEmit` and `vite build` clean.
 - [x] **DONE 2026-09-02** — Read Charlesworth & Charlesworth 1983 in full, not the
       abstract → [`charlesworth-1983-equilibrium.md`](charlesworth-1983-equilibrium.md).
       Unblocks guard 1. ⚠️ **Guard 1 is re-specified**: it asserts the paper's
       qualitative predictions, not a numeric equilibrium. Our haploid recombination
       deduplicates sites shared by both parents, a copy sink the diploid null model
-      does not have, so the analytic constant does not transfer — measured
-      no-selection 150, linear 124–148, quadratic 3–9, against a predicted 48.
-- [~] `bio-grounding` on piRNA conscription and on domestication, against the
-  actual pathways rather than the summary — **literature base built
-  (`REFERENCES.md` §3, §5); the pathway mechanics themselves still need
-  reading past the abstracts.**
+      does not have, so the analytic constant does not transfer. ⚠️ **The figures
+      that stood here — "no-selection 150, linear 124–148, quadratic 3–9" — are
+      SUPERSEDED.** They were taken on commit `c1bc201` at an unrecorded `N` with
+      a mutation still in the tree. Re-measured at `N = 200`, five seeds,
+      generation 300: no-selection **308.2**, linear **299.1**, quadratic
+      **26.8**. The RATIOS are what guard 1 asserts and they reproduce; the
+      absolute numbers did not. Canonical definition:
+      `tests/guards/equilibrium-arm.ts`.
 - [x] **DONE 2026-09-02** — Prior-art check against live registries, null stated as
       "checked HERE". OpenAlex + WebSearch + GitHub + CRAN + PyPI + itch.io + Steam,
       all named in `REFERENCES.md` §7. **The interaction-mode gap SURVIVES**: no
@@ -159,4 +165,51 @@ live registry and the null stated as "checked HERE", naming where.
       NULL** — "no corresponding resource located" was a failure to look, not an
       absence: Hertweck 2013 (`10.1139/gen-2013-0042`) is exactly the pointer. Best
       validation set is Osmanski et al. 2023, 248 mammal genomes, deposited into Dfam.
-- [ ] First registered question + pre-registration, before any runner exists
+- [x] **DONE 2026-09-02** — First registered question + pre-registration, written
+      before any runner existed. Pre-registration `f5ae5b1`
+      ([`pre-registrations/2026-09-02-per-copy-vs-family-rate.md`](pre-registrations/2026-09-02-per-copy-vs-family-rate.md));
+      runner and result `4995f3b`
+      (`experiments/001-per-copy-vs-family-rate.ts`). The result reproduces from
+      its committed CSV.
+
+## What is actually left — the four carried-forward limitations
+
+Everything in the plan is built. These are the known defects and scope limits the
+build carried forward deliberately; none is a blocker for merge, and each is
+recorded at its own site in tracked code so it survives a clone.
+
+- [ ] **The field render undercounts copies by ~12%.** `markWidth` in
+      `web/render/field.ts` floors a mark at 1 px against a 0.919 px/site pitch,
+      so adjacent occupied sites overlap. Measured 1383/1714/1237 marks against
+      1551/1923/1416 actual copies. The undercount is consistent and monotone, so
+      it never reverses the direction of a change a visitor is watching — but it
+      is on the hero panel, and a visitor counts. Fix needs sub-pixel accumulation
+      rather than a wider mark. Recorded on `markWidth`.
+- [ ] **The piRNA repertoire scan is unbounded.** Nothing removes a repertoire
+      entry, so one silencing pass costs `O(copies × repertoire)` and the cost
+      grows. Measured at `TOY_DEFAULTS`, seed 1, generations 250 to 11000: the
+      repertoire grows 94x (7 to 660 entries per genome) while copy number has no
+      trend, so the cost of one pass — copies x repertoire — rises 130x.
+      The obvious fix — keep `repertoire` sorted and binary-search it — changes
+      that array's ORDER, which `stateHash` reads, so it needs its own task and a
+      check against golden hash `9c15fd28`. Recorded on `reset()` in
+      `web/main.ts`.
+- [ ] **Full inactivation implies the family DIES, which diverges from biology.**
+      `lose` keeps excising silenced copies that silencing prevents from
+      replacing themselves, so decay to zero is guaranteed; real silenced TE
+      insertions largely persist as genomic fossils. Not fixed because changing
+      `lose` would alter the RNG draw stream and invalidate every calibration in
+      the suite. Recorded on `tests/guards/three-phases-arm.ts` and in spec §10.
+- [ ] **Guard 4's bloat result is one arm at one horizon, and its direction
+      reverses.** The knockout/silenced ratio decays from 2.63 at generation 120
+      to 1.30 by 160, and at 180 the direction REVERSES. The guard asserts
+      direction only, at a fixed horizon, and says so — but the result must not be
+      quoted as a general property of the model. Recorded in the
+      "WHAT THIS GUARD DOES NOT CLAIM" block of `tests/guards/bloat.test.ts`.
+
+Still open from the reading list, and unchanged:
+
+- [~] `bio-grounding` on piRNA conscription and on domestication, against the
+  actual pathways rather than the summary — literature base built
+  (`REFERENCES.md` §3, §5); the pathway mechanics themselves still need
+  reading past the abstracts.

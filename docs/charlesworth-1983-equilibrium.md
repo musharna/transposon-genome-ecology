@@ -151,17 +151,46 @@ with probability ½, and then **deduplicating shared sites**.
 
 That dedup is a copy sink with no counterpart in the null model. If the parents'
 site sets were independent, it would cost `n²/(4S)` per generation — predicting a
-selection-free equilibrium of `4S(k-1)/k² ≈ 356` at `k = (1+r)(1-v)`. The observed
-selection-free equilibrium is ~150, well below that, because at equilibrium the
-parents' sites are **not** independent: identity by descent makes shared sites
-common, and every shared site is destroyed rather than transmitted twice. In a
-true diploid, an individual homozygous at a site transmits that element to every
-offspring; our haploid collapses the homozygote into one copy and throws the
-second away. The sink is therefore both density- and relatedness-dependent, which
-is also why the quadratic arm is N-dependent.
+selection-free equilibrium of `4S(k-1)/k² ≈ 356` at `k = (1+r)(1-v)` (`r = 0.05`,
+`v = 0.001`, `S = 2000`).
 
-This is not a bug in `reproduce.ts` — dedup is correct for a haploid. It is a
-structural mismatch between our life cycle and the null model's.
+⚠️ **CORRECTED 2026-09-03. THIS PASSAGE ARGUED FROM A NUMBER THIS FILE SUPERSEDES
+FORTY LINES ABOVE, AND THE ARGUMENT DOES NOT SURVIVE THE CORRECTION INTACT.** It
+read "the observed selection-free equilibrium is ~150, well below that" — a 58%
+shortfall against 356 — and concluded that identity by descent makes the dedup
+sink **larger** than the independence calculation predicts. But 150 is exactly
+the figure superseded above: the Task 15 re-measurement on the unmutated model
+gives **308.2**.
+
+At 308.2 the shortfall against 356 is **13.4%**, not 58%. What that does to the
+conclusion, stated plainly:
+
+- **The direction survives.** 308.2 is still below 356, so the sink is still at
+  least as large as independence predicts, and the mechanism is still real —
+  identity by descent does make shared sites common, and a haploid does destroy
+  every one of them rather than transmitting it twice.
+- **The magnitude no longer licenses the claim.** A 13.4% residual is not
+  separable from the approximations in the derivation that produced 356. That
+  derivation is mean-field (it takes `E[shared sites] = n²/(4S)` and ignores the
+  variance), it treats `k = (1+r)(1-v)` as the per-copy growth factor when not
+  every copy is active every generation, and it is N-free — while the measured
+  arms are demonstrably **N-dependent** (the quadratic arm runs 19.2 / 26.8 /
+  31.3 at `N` = 100 / 200 / 400, and 308.2 is an `N = 200` number). Comparing an
+  N-free prediction against an N-dependent measurement cannot resolve 13%.
+- **So the honest statement is the weaker one:** the dedup sink is a real
+  structural difference from the diploid null model, it is density- and
+  relatedness-dependent, and it is why the quadratic arm is N-dependent. The
+  further claim that identity by descent makes it _quantitatively larger than
+  independence predicts_ IS NOT RE-DERIVABLE at the corrected value and should
+  not be repeated. Establishing it would need the independence prediction
+  recomputed at matched `N`, or the shared-site fraction measured directly rather
+  than inferred from the equilibrium gap.
+
+In a true diploid, an individual homozygous at a site transmits that element to
+every offspring; our haploid collapses the homozygote into one copy and throws
+the second away. This is not a bug in `reproduce.ts` — dedup is correct for a
+haploid. It is a structural mismatch between our life cycle and the null model's,
+and that much stands independently of the arithmetic above.
 
 ### Consequence for Guard 1
 

@@ -9,5 +9,5 @@
     "skipLibCheck": true,
     "noEmit": true
   },
-  "include": ["sim", "tests", "experiments", "tools", "web"]
+  "include": ["sim", "scripts", "tests", "experiments", "tools", "web"]
 }

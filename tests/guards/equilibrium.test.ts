@@ -229,7 +229,11 @@ describe("guard 1: Charlesworth equilibrium", () => {
    *     one number, and it is the assertion that goes red if `b` stops mattering.
    */
   it("a linear fitness function does not control copy number; the quadratic term does", () => {
-    const finals: Record<string, number[]> = { NONE: [], LINEAR: [], QUADRATIC: [] };
+    const finals: Record<string, number[]> = {
+      NONE: [],
+      LINEAR: [],
+      QUADRATIC: [],
+    };
 
     for (const seed of SEEDS) {
       const r = {
@@ -297,6 +301,17 @@ describe("guard 1: Charlesworth equilibrium", () => {
     // them in. The per-seed assertions above are the stronger statement; these
     // are here so a failure reports the size of the effect, not only its worst
     // seed.
+    //
+    // ⚠️ ALL THREE ARE ENTAILED, NOT INDEPENDENT, and they cannot fail while the
+    // per-seed loop passes. Each is a ratio of MEANS, and the per-seed loop
+    // asserts the corresponding ratio at every seed; since every denominator is
+    // positive, `Q_i < 0.15·N_i` for all i gives `ΣQ_i < 0.15·ΣN_i` and hence
+    // `mean(Q)/mean(N) < 0.15`, and identically for `mean(L)/mean(N) > 0.85`
+    // and `mean(L)/mean(Q) > 5`. (This would NOT hold for a mean OF RATIOS,
+    // which is a different statistic; it holds here only because these are
+    // ratios of means.) Kept for the failure message and for the spec's
+    // phrasing — but they add no coverage and must not be counted as three
+    // further checks.
     const m = {
       NONE: mean(finals["NONE"]!),
       LINEAR: mean(finals["LINEAR"]!),

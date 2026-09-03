@@ -59,9 +59,26 @@ export function history(world: World, generations: number): Snapshot[] {
  * Structural digest of the world, for cross-environment comparison. Deliberately
  * excludes copy ids, which are allocation-order artefacts rather than state.
  *
- * `toFixed(9)` is a deliberate tolerance, not incidental precision loss: two
- * `r` or `s` values differing by less than 5e-10 hash identically. Task 19's
- * cross-environment (node vs. browser) comparison relies on this.
+ * `toFixed(9)` is a deliberate coarsening, not incidental precision loss: `r`
+ * and `s` are compared at nine decimal places rather than at full double
+ * precision, so most sub-nanoscale disagreement between two runs is absorbed.
+ *
+ * ⚠️ IT IS NOT A GUARANTEED TOLERANCE, AND AN EARLIER VERSION OF THIS COMMENT
+ * CLAIMED IT WAS. "Two `r` or `s` values differing by less than 5e-10 hash
+ * identically" is FALSE: `toFixed(9)` ROUNDS, so two values agree only if they
+ * fall on the same side of every rounding midpoint. Verified in node —
+ * `(0.1234567894999).toFixed(9)` is `"0.123456789"` and
+ * `(0.1234567895001).toFixed(9)` is `"0.123456790"`, a difference of 2e-13 that
+ * this digest reports as a mismatch. What holds is the converse direction only:
+ * two values that hash identically differ by less than 1e-9.
+ *
+ * So guard 7 (`tests/guards/one-implementation.test.ts`) does NOT rest on a
+ * tolerance. It rests on node and Chromium being the same engine and therefore
+ * producing bit-identical doubles; the coarsening reduces how often a genuine
+ * last-ulp divergence would surface, it does not make one impossible. That is
+ * stated in the guard's own "WHAT THIS GUARD DOES NOT CLAIM" block, and it is
+ * why the guard is scoped to one engine family rather than to engines in
+ * general.
  *
  * Sorts a COPY of `genome.copies` by `site` before hashing rather than trusting
  * the array's existing order. `Genome.copies` is documented to be kept sorted

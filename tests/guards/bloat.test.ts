@@ -51,6 +51,37 @@ import {
  * still 1.55x the strongest silenced seed (17, at 105.0).
  *
  * ---------------------------------------------------------------------------
+ * CROSS-GUARD CORROBORATION — GUARD 3 MEASURES THE SAME QUANTITY
+ * ---------------------------------------------------------------------------
+ * This is the only place in the guard body where two guards independently
+ * measure the same thing, and neither file said so until 2026-09-03. Guard 3
+ * (`tests/guards/cluster-threshold.test.ts`) sweeps the SAME parameter set —
+ * `tools/sweep-cluster-size.ts`'s `BASE` agrees with `./bloat-arm.js`'s `BASE`
+ * on all nineteen non-`c` fields, at `N = 100`, `S = 2000`, `GENERATIONS = 120`
+ * — over a DIFFERENT seed set (1..11 there, seven of them shared with the
+ * eleven above).
+ *
+ *   TWO MECHANISMS, ONE QUANTITY. This guard's knockout removes silencing at the
+ *   master switch (`silencingOn: false`: cluster sites exist and are never
+ *   consulted). Guard 3's control removes it structurally (`c = 0`: no cluster
+ *   sites exist, so nothing can ever be captured). Different code paths through
+ *   `sim/phases/trap.ts` and `sim/silencing.ts`, same destination:
+ *
+ *       this guard, knockout arm                               202.4 per genome
+ *       guard 3, c = 0           19296.4 total / 100 genomes =  193.0 per genome
+ *
+ *   4.9% apart, on different seeds, by two mechanisms. Neither guard asserts the
+ *   agreement — the arms are not matched tightly enough to make a threshold out
+ *   of it — but it is the strongest evidence in the repo that the silencing
+ *   machinery is not quietly doing something else.
+ *
+ *   AND A WEAKER, DIFFERENT CHECK. This guard's SILENCED arm (66.1 per genome)
+ *   against guard 3's `c = 0.01` point (6944.5 total, 69.4 per genome), 5.0%
+ *   apart. That pair is NOT two mechanisms: both are `c = 0.01` with silencing
+ *   on, i.e. the same configuration measured by two files. It is a seed-set
+ *   reproducibility check, and should not be quoted as anything stronger.
+ *
+ * ---------------------------------------------------------------------------
  * WHAT THIS GUARD DOES NOT CLAIM — READ THE ARM MODULE BEFORE GENERALISING
  * ---------------------------------------------------------------------------
  * This is a claim about THIS pinned arm at THIS horizon, not a general property
@@ -153,6 +184,14 @@ describe("guard 4: silencing knockout produces bloat", () => {
     }
 
     // THE CLAIM, on the means, which is the form the spec states it in.
+    //
+    // ⚠️ ENTAILED, NOT INDEPENDENT. The per-seed assertion above establishes
+    // `off.perGenome > on.perGenome` at EVERY seed, and a sum of strict
+    // inequalities is a strict inequality, so `mean(knockout) > mean(silenced)`
+    // CANNOT FAIL while the per-seed loop passes. It is kept because the spec
+    // states the claim on the means and because its message reports the size of
+    // the effect rather than only its worst seed — but it adds no coverage, and
+    // it must not be counted as a second check.
     const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
     expect(
       mean(knockout),

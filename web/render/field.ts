@@ -328,6 +328,27 @@ export function spanGeometry(
   };
 }
 
+/**
+ * ⚠️ KNOWN DEFECT — THE FIELD UNDERCOUNTS BY ROUGHLY 12%, AND THIS FLOOR IS WHY.
+ *
+ * At the toy's defaults the field is ~919 px wide for `S = 1000` sites, so the
+ * true pitch is 0.919 px/site. `Math.max(1, ...)` floors the mark at 1 px, which
+ * is wider than the pitch, so adjacent occupied sites OVERLAP and the one drawn
+ * second hides part of the first. Measured by counting distinguishable marks
+ * against `totalCopies` on three worlds: 1383 / 1714 / 1237 detected against
+ * 1551 / 1923 / 1416 actual — an 11%..13% shortfall.
+ *
+ * The floor is not removable as-is: below 1 px a mark can land entirely between
+ * two device pixels and vanish, which trades a consistent undercount for an
+ * inconsistent one. THE UNDERCOUNT IS CONSISTENT AND MONOTONE — it never
+ * reverses the direction of a change a visitor is watching — which is why the
+ * hero panel ships with it. It is still a real defect and it is listed in
+ * `docs/ROADMAP.md`; it is recorded HERE because a note that lives only in an
+ * untracked report does not survive a clone.
+ *
+ * Do not quote a mark count off this panel as a copy number. `observe()` is the
+ * count; this is the picture.
+ */
 function markWidth(p: Params, field: Rect): number {
   return Math.max(1, field.w / p.S);
 }

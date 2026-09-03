@@ -60,6 +60,37 @@ import {
  * bit-identical data.
  *
  * ---------------------------------------------------------------------------
+ * CROSS-GUARD CORROBORATION — GUARD 4 MEASURES THE SAME QUANTITY
+ * ---------------------------------------------------------------------------
+ * This is the only place in the guard body where two guards independently
+ * measure the same thing, and neither file said so until 2026-09-03. Guard 4
+ * (`tests/guards/bloat.test.ts`) pins the SAME parameter set as this arm —
+ * `tools/sweep-cluster-size.ts`'s `BASE` and `tests/guards/bloat-arm.ts`'s
+ * `BASE` agree on all nineteen non-`c` fields, at `N = 100`, `S = 2000`,
+ * `GENERATIONS = 120` — but runs a DIFFERENT seed set (this guard uses 1..11;
+ * guard 4 uses 1,2,3,4,5,7,11,13,17,101,202, seven of which are shared).
+ *
+ *   TWO MECHANISMS, ONE QUANTITY. Removing silencing structurally (`c = 0` —
+ *   no cluster sites exist, so nothing can ever be captured) and removing it at
+ *   the master switch (`silencingOn: false` — cluster sites exist and are
+ *   simply never consulted) are different code paths through `sim/phases/trap.ts`
+ *   and `sim/silencing.ts`. They land in the same place:
+ *
+ *       this guard, c = 0        19296.4 total / 100 genomes = 193.0 per genome
+ *       guard 4, knockout arm                                  202.4 per genome
+ *
+ *   4.9% apart, on different seeds, by two mechanisms. Neither guard asserts the
+ *   agreement — the arms are not matched tightly enough to make a threshold out
+ *   of it — but it is the strongest evidence in the repo that the silencing
+ *   machinery is not quietly doing something else.
+ *
+ *   AND A WEAKER, DIFFERENT CHECK. This guard's `c = 0.01` point (6944.5 total,
+ *   69.4 per genome) against guard 4's SILENCED arm (66.1 per genome), 5.0%
+ *   apart. That pair is NOT two mechanisms: both are `c = 0.01` with silencing
+ *   on, i.e. the same configuration measured by two files. It is a seed-set
+ *   reproducibility check, and should not be quoted as anything stronger.
+ *
+ * ---------------------------------------------------------------------------
  * WHAT THIS GUARD DOES NOT CLAIM
  * ---------------------------------------------------------------------------
  *   - NOT that copy number falls with cluster size at every seed. It does not:
@@ -185,6 +216,16 @@ describe("guard 3: cluster-size threshold", () => {
 
     // CLAIM 2: the endpoint comparison the spec states, now that every arm is
     // known to be alive. Measured 1393.7 against 19296.4, a 13.85x separation.
+    //
+    // ⚠️ ENTAILED, NOT INDEPENDENT. `none` is `points[0]` and `large` is
+    // `points[points.length - 1]`, and CLAIM 1 above asserts a strict decrease
+    // across every consecutive pair, so `large < none` follows by transitivity
+    // and this assertion CANNOT FAIL while CLAIM 1 passes. It is kept because
+    // the spec states the claim in this form and because its failure message
+    // reports the endpoint separation directly — but it adds no coverage, and
+    // it must not be counted as a second check. (Guard 2 labels its vacuous
+    // half and guard 6 deleted its tautology outright; this is the same
+    // standard applied here.)
     const large = points[points.length - 1]!;
     expect(
       large.meanFinalCopies,
