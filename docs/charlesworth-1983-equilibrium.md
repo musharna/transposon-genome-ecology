@@ -106,13 +106,37 @@ high-copy start so that early drift cannot dominate):
 | `a = 0.001, b = 0` — linear/multiplicative | ∞ (runaway) | **~124–148**              |
 | `a = 0.001, b = 0.0005` — quadratic        | 48          | **~3–9**, and N-dependent |
 
+⚠️ **The three `observed n̄` figures in the table above are SUPERSEDED.** They
+were taken on commit `c1bc201`, at an unrecorded `N`, with the Task 10
+`transpose.ts` mutation still in the tree. Task 15 re-measured all three on the
+unmutated model at `N = 200, S = 2000`, five seeds, generation 300, and the
+no-selection and quadratic arms are both roughly twice the values above:
+
+| arm                     | n̄ (mean of 5 seeds) | per-seed range |
+| ----------------------- | ------------------- | -------------- |
+| `a = 0, b = 0`          | **308.2**           | 299.9 – 314.0  |
+| `a = 0.001, b = 0`      | **299.1**           | 286.8 – 307.2  |
+| `a = 0.001, b = 0.0005` | **26.8**            | 24.7 – 28.4    |
+
+The N-dependence the table asserts is confirmed and quantified: the quadratic
+arm sits at 19.2 copies per genome at `N = 100`, 26.8 at `N = 200` and 31.3 at
+`N = 400`. So is the direction of every qualitative claim below — the RATIOS,
+which are what Guard 1 asserts, reproduce (linear 97.0% of no selection with a
+per-seed minimum of 94.0%; quadratic 8.7% with a per-seed maximum of 9.4%). The
+absolute numbers did not. `scripts/explore-equilibrium.ts` prints all of it and
+`tests/guards/equilibrium-arm.ts` records the derivation.
+
 Two things follow, and they point in opposite directions.
 
 **The paper's central qualitative claim reproduces exactly.** A linear fitness
-function does not control copy number: at `a = 0.001, b = 0` the equilibrium is
-statistically indistinguishable from having no host selection whatsoever
-(124–148 vs 150). Turning on the quadratic term collapses it by more than an
-order of magnitude. That is precisely "fitness must fall off more steeply with n
+function does not control copy number: at `a = 0.001, b = 0` the equilibrium
+stays within a few percent of having no host selection whatsoever — re-measured
+in Task 15 at `N = 200`, 299.1 against 308.2, i.e. 97.0%, per-seed minimum
+94.0%. (The phrase "statistically indistinguishable" stood here and is WRONG;
+see the correction in item 2 of "Consequence for Guard 1" below, which this
+sentence contradicted. Linear selection has a small but consistent effect.)
+Turning on the quadratic term collapses copy number by more than an order of
+magnitude. That is precisely "fitness must fall off more steeply with n
 than does a multiplicative function" (p. 12), and it is falsifiable: set `b = 0`
 and copy-number control disappears.
 
@@ -213,3 +237,14 @@ Simulation measurements in this file were taken on commit `c1bc201` with
 `sigmaR: 0`, a regime in which the Task 10 see-it-fail mutation then present in
 `sim/phases/transpose.ts` is both value-identical and draw-identical to the
 unmutated code. They are to be re-confirmed once that mutation is reverted.
+
+**Re-confirmed in Task 15**, on the unmutated model, at `N = 200, S = 2000`,
+five seeds, horizon 300, by `scripts/explore-equilibrium.ts`. Result: the
+QUALITATIVE claims all reproduce and are what Guard 1 asserts; the three
+absolute `n̄` figures in the first measured table do not, and are marked
+superseded above. Two further claims in this file were re-measured and hold:
+`sigmaR > 0` destroys the constant-`u` assumption (mean `r` 0.050 -> 0.852 by
+generation 200 with no host selection, at 75.0% site occupancy), and `sexual`
+is load-bearing (run asexually the no-selection arm passes 48% occupancy by
+generation 150, the linear arm goes extinct, and the quadratic arm settles 16x
+higher than its sexual value).

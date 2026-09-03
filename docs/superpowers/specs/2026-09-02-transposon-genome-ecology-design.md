@@ -144,12 +144,35 @@ fraction · `p_dom` domestication probability · `w_dom` domestication fitness b
 **Runtime toggles** (`silencing_on`, and the pokes of §4) are parameters too, and
 must be settable mid-run without restarting — that is the whole session shape.
 
-⚠️ **Defaults are not yet set, and one functional form is unconfirmed.** The
-fitness function `w(n)` is written here as falling with copy count under
-synergistic epistasis, but **the exact form and coefficients must be read out of
-Charlesworth & Charlesworth 1983 itself before the equilibrium guard can be
-calibrated** — the reference base was built from abstracts and registry metadata,
-not full texts. This is ROADMAP task #4 and it **blocks guard 1**, not the build.
+**RESOLVED (Task 15).** Charlesworth & Charlesworth 1983 has been read from the
+OA PDF; the reading is `docs/charlesworth-1983-equilibrium.md` and the summary
+lives on `copyNumberLoad` in `sim/phases/select.ts`. Three findings:
+
+1. **The fitness form stays.** The paper's own form is `w_n = 1 - s·n^t`
+   (eq. 23, p. 13), a different functional family from our
+   `w_n = exp(-(a·n + b·n²))`. Ours was checked against the paper's *conditions*
+   rather than pattern-matched to its formula, and it satisfies them:
+   `∂² ln w_n/∂n² = -2b < 0` is the p. 11 requirement for an interior
+   equilibrium, and at `b = 0` our model degenerates to exactly the
+   independent-effects multiplicative case p. 12 rules out. Ours is also better
+   behaved — eq. (23) goes negative for large `n` and needs truncation. The form
+   was NOT replaced.
+2. **Excision is a separate constant per-element rate** (`v` here, `v` there,
+   p. 11) and enters the balance only as the difference `u - v` (eqs. 20a, 29).
+   That is what our `lose` phase already does.
+3. **The paper's NUMBER does not transfer, and guard 1 asserts none.** Eq. (29),
+   p. 16 gives `-∂ ln w_n/∂n ≈ u - v`, predicting `n̄ = (r - v - a)/(2b) = 48` at
+   our defaults; measured it is 26.8. Charlesworth is diploid, our genome is
+   haploid, and `reproduce.ts` discards a site inherited from both parents — a
+   relatedness-dependent copy sink the null model has no counterpart for, which
+   also makes the equilibrium N-dependent (19.2 / 26.8 / 31.3 copies per genome
+   at N = 100 / 200 / 400). Calibrating the constant off our own simulation
+   instead would be circular. Guard 1 asserts the paper's qualitative
+   predictions against the paper's own negative controls; see §6.
+
+**Coefficient defaults were NOT changed by Task 15.** Every other guard in the
+suite is derived against the current `defaultParams` values and the golden hash
+in `tests/step.test.ts` pins the number of RNG draws consumed.
 
 ## 4. The pokes
 
@@ -188,8 +211,14 @@ Three regions.
 One guard per claim, in `tests/`:
 
 1. **Charlesworth equilibrium** (trap off) — copy number converges to a stable,
-   non-zero, non-saturating equilibrium, asserted against the analytic prediction.
-   _The floor._ Blocked on §3.4's open item.
+   non-zero, non-saturating equilibrium, reached from a high-copy start as well
+   as from below; a LINEAR fitness function does not control copy number while
+   the quadratic term does. Asserted qualitatively, against the paper's own
+   negative controls (`b = 0` is the multiplicative model of p. 12; no selection
+   at all is the `f(0) < u - v` baseline of p. 11), and NOT against an analytic
+   constant — see §3.4 finding 3 for why there is no constant to assert.
+   _The floor._ `tests/guards/equilibrium.test.ts` + `equilibrium-arm.ts`,
+   derived by `scripts/explore-equilibrium.ts`.
 2. **Three phases** (trap on) — assert the _ordering_ amplification → plateau via
    segregating cluster insertions → inactivation, not merely the endpoint.
 3. **Cluster threshold** — sweep `c`; repression onset must land in Kofler's
@@ -250,13 +279,18 @@ mode (held as a possible second toy).
 
 ## 10. Open items carried into planning
 
-- **Blocks guard 1:** confirm the Charlesworth 1983 fitness form and coefficients
-  from the paper itself (ROADMAP task #4). The reference base was built from
-  abstracts and registry metadata.
+- ~~**Blocks guard 1:** confirm the Charlesworth 1983 fitness form and
+  coefficients from the paper itself (ROADMAP task #4).~~ **RESOLVED in Task 15**
+  — read from the OA PDF, written up in `docs/charlesworth-1983-equilibrium.md`,
+  summarised in §3.4. The form is confirmed as-is and the coefficients are
+  unchanged; what the paper does NOT supply is a transferable equilibrium value,
+  for the structural reason recorded there.
 - **Confirm before repeating:** the claim that SLiM "compresses TEs into individual
   units, precluding TE sequence mutagenesis and nested insertion" comes from a
   competing tool's preprint, not SLiM's own docs (`REFERENCES.md` §7).
 - **Still unverified:** Dfam, Repbase and the Asparagales pointer (§8 of the
   reference base). Not on the critical path for v1.
 - **Parameter defaults** are unset; they need a first calibration pass against
-  guards 1–3.
+  guards 1–3. Task 15 deliberately did NOT do this: guards 2–6 are each derived
+  against their own pinned arm, and moving a default would move the golden hash
+  and every one of those derivations at once.

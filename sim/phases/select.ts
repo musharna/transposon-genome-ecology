@@ -6,11 +6,47 @@ import type { Genome } from "../state.js";
  * Fitness cost of carrying n transposable-element copies, under synergistic
  * epistasis.
  *
- * ⚠️ PROVISIONAL. This form and its coefficients have NOT been read out of
- * Charlesworth & Charlesworth 1983 — the reference base was built from abstracts
- * and registry metadata. Task 15 confirms or replaces both. Guard 1 (the
- * equilibrium check) cannot be calibrated until it does. Everything else in the
- * model is independent of this choice, which is why it lives alone in one function.
+ * `ln w_n = -(a·n + b·n²)`, so `w_n = exp(-(a·n + b·n²))`.
+ *
+ * CONFIRMED against Charlesworth, B. & Charlesworth, D. (1983), "The population
+ * dynamics of transposable elements", Genet. Res. 42(1):1-27,
+ * doi:10.1017/S0016672300021455, read from the OA PDF. The reading, with page
+ * and equation numbers, is `docs/charlesworth-1983-equilibrium.md`.
+ *
+ * This is NOT the paper's own form. Theirs is `w_n = 1 - s·n^t` (eq. 23, p. 13).
+ * Ours is a different functional family — exponential-of-polynomial rather than
+ * one-minus-power — so it was checked against the paper's CONDITIONS rather than
+ * pattern-matched to its formula, and it satisfies them:
+ *
+ *   - `∂² ln w_n/∂n² < 0` is necessary for an interior equilibrium (p. 11). Here
+ *     `∂² ln w/∂n² = -2b`, so the condition holds IFF `b > 0`. At `b = 0` the
+ *     model degenerates to `w = (e^-a)^n`, EXACTLY the independent-effects
+ *     multiplicative case p. 12 rules out ("fitness must fall off more steeply
+ *     with n than does a multiplicative function `w_n = (1 - s)^n`"). The `b`
+ *     term is the entire ballgame.
+ *   - `f(0) < u - v` is needed for copy number to rise from zero (p. 11); here
+ *     that is `a < r0 - v`.
+ *
+ * It is also better behaved than eq. (23), which goes negative for large `n` and
+ * needs truncation, while `exp(-(a·n + b·n²))` is positive everywhere and
+ * strictly decreasing. Keeping our form is the deliberate modelling choice; the
+ * form was NOT replaced.
+ *
+ * WHAT DOES NOT TRANSFER IS THE PAPER'S NUMBER. Eq. (29), p. 16 gives the
+ * balance `-∂ ln w_n/∂n ≈ u - v` in the regime `n << T`, which for our form
+ * predicts `n̄ = (r - v - a)/(2b)` = 48 at the current defaults. Measured, it is
+ * 26.8 — because Charlesworth's model is DIPLOID and ours is haploid:
+ * `reproduce.ts` discards a site inherited from both parents, a copy sink the
+ * null model has no counterpart for, and a relatedness-dependent one (the same
+ * arm equilibrates at 19.2, 26.8 and 31.3 copies per genome at N = 100, 200 and
+ * 400). Guard 1 therefore asserts the paper's qualitative predictions and their
+ * paper-supplied negative controls, and asserts no equilibrium value at all —
+ * see `tests/guards/equilibrium-arm.ts` for the derivation and every measured
+ * figure.
+ *
+ * `a` and `b` themselves remain the values chosen in the reference base. They
+ * were NOT recalibrated in Task 15: every other guard in the suite is derived
+ * against them and the golden hash in `tests/step.test.ts` pins the RNG stream.
  */
 export function copyNumberLoad(n: number, p: Params): number {
   return p.a * n + p.b * n * n;
@@ -74,13 +110,26 @@ export function fitness(genome: Genome, p: Params): number {
  * mathematically identical to `fitness(g,p) / max(fitness(...))` but cannot
  * underflow a whole population to all-zero the way naive `fitness` can.
  *
- * That failure is not hypothetical: Task 10's Guard 5 runs with
- * `a: 0.002, b: 0.0002, S: 2000, silencingOn: false, r0: 0.1` for 300
- * generations specifically to drive unchecked copy-number bloat, and
- * underflows naive `fitness` to exactly 0 for every genome at n >= 1925
- * (96% of saturation) — its second arm (`a: 0.02, b: 0.002`) underflows at
- * n >= 606. Guard 1's `S: 4000`, `silencingOn: false` arm hits the same
- * failure. A fitness-proportional sampler built on naive `fitness` in that
+ * The regime is reachable in this model's own parameter space, and the exact
+ * boundary is checkable: with Guard 5's coefficients `a: 0.002, b: 0.0002`
+ * (`tests/guards/rate-evolves.test.ts`, `S: 2000`), naive `fitness` is
+ * 5e-324 at n = 1925 and underflows to exactly 0 at n >= 1926 — 96% of
+ * saturation; with that guard's STRONG arm (`a: 0.02, b: 0.002`) the boundary
+ * is n >= 606, and with `defaultParams`' `a: 0.001, b: 0.0005` it is n >= 1220.
+ *
+ * NO GUARD IN THE SUITE CURRENTLY REACHES IT, and this comment previously
+ * claimed two that do. Both claims were re-measured in Task 15 and are
+ * corrected here: Guard 5 runs 60 generations, not 300, and peaks under 9% site
+ * occupancy, so its largest naive fitness argument is nowhere near the
+ * boundary; and Guard 1 is `S: 2000`, not `S: 4000`, with a largest copy number
+ * of 300 per genome at its seeded from-above start, where naive `fitness` is
+ * 2.1e-20 — small, but 300 orders of magnitude above underflow. The boundary
+ * figures above are arithmetic on `Math.exp`, not run measurements, and they do
+ * not depend on any guard reaching them. That is the point: `relativeFitness`
+ * makes this failure structurally impossible instead of leaving it as a regime
+ * every future caller has to remember to stay out of.
+ *
+ * A fitness-proportional sampler built on naive `fitness` in that
  * regime sees `total = 0`, `target = 0`, every `target < cumulative[i]` is
  * `0 < 0` = false, and silently always returns the last genome — the
  * population collapses to clones with no error. `relativeFitness` is the
