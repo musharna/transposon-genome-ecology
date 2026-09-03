@@ -1,2 +1,4 @@
 _scratch/
 node_modules/
+dist/
+dist-guard7/

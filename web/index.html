@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Transposons as genome ecology</title>
+    <style>
+      /* box-sizing here is load-bearing, not hygiene. #stage is a 100vh grid
+         item with 8px padding, and under the default content-box that padding is
+         ADDED to 100vh -- the stage overflowed the viewport by 16px, and the
+         third canvas was clipped at the fold with no bottom border while the
+         first two closed cleanly. min-height:0 stops a grid item's auto minimum
+         from re-inflating the rows. Measured after the fix at an 800px
+         viewport: 8 + 368 + 8 + 180 + 8 + 220 + 8 = 800 exactly. */
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+      :root {
+        color-scheme: dark;
+      }
+      body {
+        margin: 0;
+        background: #0d0f12;
+        color: #d8dee9;
+        font:
+          13px/1.5 system-ui,
+          sans-serif;
+      }
+      #app {
+        display: grid;
+        grid-template-columns: 1fr 320px;
+        height: 100vh;
+        overflow: hidden;
+      }
+      #stage {
+        display: grid;
+        grid-template-rows: 1fr 180px 220px;
+        gap: 8px;
+        padding: 8px;
+        min-width: 0;
+        min-height: 0;
+      }
+      #stage > canvas {
+        min-height: 0;
+      }
+      canvas {
+        width: 100%;
+        height: 100%;
+        display: block;
+        background: #14181d;
+        border-radius: 4px;
+      }
+      /* The side column is a PANEL, not bare page background. It was 320x440 of
+         #0d0f12 with nothing but a dashed placeholder in it, which reads as
+         forgotten rather than as reserved. */
+      #controls {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        margin: 8px 8px 8px 0;
+        padding: 12px;
+        background: #14181d;
+        border-radius: 4px;
+        overflow-y: auto;
+        min-height: 0;
+      }
+      #readout .up {
+        color: #88c0a0;
+      }
+      #readout .dn {
+        color: #e5989b;
+      }
+      #readout {
+        font-variant-numeric: tabular-nums;
+        white-space: pre;
+        color: #8fbcbb;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        margin: 0;
+      }
+      .panel-title {
+        color: #939eac;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        font-size: 10px;
+        margin-bottom: 6px;
+      }
+      /* The tally lives HERE, in the side column, not in the field canvas. In
+         the canvas it sat 10px right of the last genome mark inside the same
+         frame and read as one more genome column -- an unlabelled chart abutting
+         the data it was summarising. */
+      #tally .row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 3px 0;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 11px;
+      }
+      #tally .k {
+        width: 76px;
+        color: #9aa5b1;
+        flex: none;
+      }
+      #tally .track {
+        width: 114px;
+        height: 9px;
+        background: #0f1216;
+        border-radius: 2px;
+        flex: none;
+      }
+      #tally .bar {
+        display: block;
+        height: 100%;
+        border-radius: 2px;
+      }
+      /* Fixed width and nowrap: "22 1.4%" used to wrap where "7 0.4%" fit, so
+         the caption and the whole legend below it jumped 8-16px every time the
+         domesticated count crossed a digit boundary -- visible flicker in a
+         toy that redraws 40 times a second. */
+      #tally .n {
+        color: #8fbcbb;
+        font-variant-numeric: tabular-nums;
+        text-align: right;
+        width: 88px;
+        flex: none;
+        white-space: nowrap;
+      }
+      #tally .note {
+        color: #939eac;
+        font-size: 10px;
+        margin-top: 6px;
+        min-height: 28px;
+      }
+      #legend div {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 4px 0;
+        color: #9aa5b1;
+      }
+      #legend i {
+        width: 10px;
+        height: 10px;
+        border-radius: 2px;
+        display: inline-block;
+        flex: none;
+      }
+      /* ONE entry, two weights. See SILENCED_SMALL in web/render/field.ts:
+         #4c566a is 2.416:1 against the panel ground, which a row-tall filled
+         mark can carry and a 1.5px line or a 2px dot cannot, so every thin mark
+         is drawn in #5e81ac. Two legends showing one state in two colours would
+         document the contradiction instead of resolving it. */
+      #legend .pair {
+        display: inline-flex;
+        gap: 3px;
+        flex: none;
+      }
+      #legend .note {
+        color: #939eac;
+        font-size: 10px;
+        margin: 2px 0 6px 0;
+        display: block;
+      }
+      /* THIS PANEL ABSORBS THE COLUMN'S SPARE HEIGHT, so there is no dead space
+         at any viewport rather than at one measured viewport. Three of the four
+         obvious ways to write that are wrong and were measured wrong in a real
+         browser before this one was kept:
+
+           flex: 1 1 auto; min-height: 0    collapsed the panel to height 0 at
+                                            an 800px viewport
+           flex: 1 0 auto                   grew it 156px PAST the space
+                                            available at 1440px, so the column
+                                            overflowed a container it should
+                                            have exactly filled
+           the same, as a nested flex column rather than a grid   identical
+
+         The cause of the second is a ratchet, and it is worth naming because
+         nothing about it is visible in the CSS. `fit()` in web/main.ts sets the
+         canvas's width/height ATTRIBUTES from its own bounding rect every
+         frame. Those attributes are the canvas's intrinsic size, the intrinsic
+         size feeds a `flex-basis: auto` content measurement, and with
+         flex-shrink 0 the panel could never give the height back -- so one
+         frame laid out while `#readout` was still empty (the readout is filled
+         by JS after first layout, and it is 156px of text) permanently inflated
+         this panel by exactly that much.
+
+         `flex-basis: 0` is the fix: the panel contributes NOTHING of its own
+         content to the free-space calculation, so the canvas's attributes
+         cannot feed back into it. `min-height` is then the floor, and it is the
+         panel's real minimum -- 21px of title plus the 140px inset height Task
+         17 measured -- because with a zero basis there is nothing else holding
+         it open. `tests/layout.test.ts` asserts both ends of this in Chromium:
+         the panel sits at exactly its floor when the column overflows, and
+         there is NOTHING UNPAINTED below the last section when it does not.
+         That second one is measured as the panel's content-box bottom minus
+         its last child's bottom, NOT as `scrollHeight === clientHeight`, which
+         is how it was written first and could not fail: scrollHeight is floored
+         at clientHeight, so it reads equal whether the column is exactly filled
+         or half empty. */
+      #trap-panel {
+        display: grid;
+        grid-template-rows: auto minmax(140px, 1fr);
+        flex: 1 1 0;
+        min-height: 161px;
+      }
+      #cluster-inset {
+        /* Sized by its grid row. The global `canvas { height: 100% }` resolves
+           against that row, which is definite, and `min-height: 0` stops the
+           grid item's automatic minimum from re-inflating the row -- the same
+           thing `#stage` already has to do. 140px is the floor Task 17
+           measured this inset at; above that it takes the column's spare
+           height so there is no dead space at any viewport. */
+        min-height: 0;
+      }
+      /* NOT bottom-anchored. `margin-top: auto` was right for a reserved slot
+         and wrong for the toy's primary interaction -- see the comment on the
+         slot's markup below, and tests/layout.test.ts, which measures every
+         slider and button against the viewport in a real browser. The dashed
+         border it had while it was a placeholder is gone too: dashes read as
+         "not built yet", and it is built. */
+      #controls-slot {
+        flex: none;
+        padding: 10px 12px 12px;
+        border: 1px solid #232830;
+        border-radius: 4px;
+        color: #939eac;
+        font-size: 11px;
+      }
+      /* Two groups, divided, because one of them costs you your run. See the
+         header comment in web/controls.ts: the sliders and the two toggles
+         perturb a RUNNING world; the pair below the rule restart it. */
+      .poke-group + .poke-group {
+        margin-top: 12px;
+        padding-top: 10px;
+        border-top: 1px solid #232830;
+      }
+      .poke-sub {
+        color: #939eac;
+        font-size: 10px;
+        margin-bottom: 2px;
+      }
+      .poke-row {
+        display: block;
+        margin: 8px 0 2px;
+        color: #9aa5b1;
+        font-variant-numeric: tabular-nums;
+      }
+      .poke-slider {
+        width: 100%;
+        display: block;
+        accent-color: #5e81ac;
+      }
+      .poke-btn {
+        display: block;
+        width: 100%;
+        margin-top: 8px;
+        padding: 6px;
+        cursor: pointer;
+        font: inherit;
+        color: #d8dee9;
+        background: #1b2129;
+        border: 1px solid #2b3440;
+        border-radius: 3px;
+        text-align: left;
+      }
+      .poke-btn:hover:not(:disabled) {
+        background: #222a34;
+      }
+      .poke-btn:disabled {
+        opacity: 0.45;
+        cursor: default;
+      }
+      .poke-note {
+        color: #939eac;
+        font-size: 10px;
+        margin-top: 6px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <div id="stage">
+        <canvas id="field"></canvas>
+        <canvas id="timeline"></canvas>
+        <canvas id="scatter"></canvas>
+      </div>
+      <div id="controls">
+        <div>
+          <div class="panel-title">population</div>
+          <div id="readout"></div>
+        </div>
+
+        <!-- Filled by mountControls (web/controls.ts). Empty in the document
+             so there is exactly one definition of what the pokes are.
+
+             SECOND IN THE COLUMN, not last. It was bottom-anchored while it
+             held the Task 16 placeholder, which was right for a reserved slot
+             and wrong for the toy's primary interaction: measured in headless
+             Chromium at 1280x800, every slider and every button sat outside the
+             viewport (the first at y=807) and a visitor saw the heading and
+             nothing else. The readout sits immediately above it because the
+             readout is what you check after a poke. -->
+        <div id="controls-slot"></div>
+
+        <div id="tally">
+          <div class="panel-title">all copies, by state</div>
+          <div class="row">
+            <span class="k">active</span>
+            <span class="track"><i class="bar" id="bar-active"></i></span>
+            <span class="n" id="n-active">0</span>
+          </div>
+          <div class="row">
+            <span class="k">silenced</span>
+            <span class="track"><i class="bar" id="bar-silenced"></i></span>
+            <span class="n" id="n-silenced">0</span>
+          </div>
+          <div class="row">
+            <span class="k">domesticated</span>
+            <span class="track"><i class="bar" id="bar-domesticated"></i></span>
+            <span class="n" id="n-domesticated">0</span>
+          </div>
+          <div class="note" id="tally-note">
+            Bar length is share of all copies — the same number printed beside
+            it. An outlined bar is below the 3px floor: its length is the floor,
+            not a measurement.
+          </div>
+        </div>
+
+        <div id="trap-panel">
+          <div class="panel-title">the trap, magnified</div>
+          <canvas id="cluster-inset"></canvas>
+        </div>
+
+        <div id="legend-panel">
+          <div class="panel-title">legend</div>
+          <div id="legend">
+            <div><i style="background: #bf616a"></i> active</div>
+            <div>
+              <span class="pair"
+                ><i style="background: #4c566a"></i
+                ><i style="background: #5e81ac"></i
+              ></span>
+              silenced
+            </div>
+            <span class="note"
+              >Two weights, one state: the darker blue fills a genome's row in
+              the field; the lighter one draws every thin mark — the timeline
+              line, the scatter dots, the magnified trap — which need the
+              contrast a filled row does not.</span
+            >
+            <div><i style="background: #a3be8c"></i> domesticated</div>
+            <div>
+              <i style="background: #4a6f9e"></i> piRNA cluster — the trap
+            </div>
+            <div><i style="background: #8a6d2f"></i> beneficial sites</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

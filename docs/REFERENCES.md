@@ -1,8 +1,11 @@
 # Reference base — transposons as genome ecology
 
-**Built 2026-09-02** (37 works / 41 DOIs). Every entry below was resolved against
-**OpenAlex live**: first-author surname, year, venue and DOI all came back from
-the registry, not from recall. Citation counts are as of 2026-09-02 and will drift.
+**Built 2026-09-02** (37 works / 41 DOIs); **extended 2026-09-03 to 38 works / 42
+DOIs** — Brouha et al. 2003 added to §4 to ground a claim that was standing
+uncited in `tests/guards/three-phases-arm.ts`. Every entry below was resolved
+against **OpenAlex live**: first-author surname, year, venue and DOI all came
+back from the registry, not from recall. Citation counts are as of the date the
+entry was added and will drift.
 
 **Status:** §7's registry sweep is **complete** — the interaction-mode gap survives
 GitHub, CRAN, PyPI, itch.io and Steam. §9's failed citation is **resolved**. The
@@ -48,6 +51,16 @@ the sim would simulate.** Building without reading it means reinventing it badly
   individual**, and drift. Shows an equilibrium exists in an infinite population
   where not all sites are occupied. **This is the sim's default null model** — if
   the sim cannot reproduce this equilibrium, the sim is wrong.
+  ➡️ **READ IN FULL 2026-09-02 — see
+  [`charlesworth-1983-equilibrium.md`](charlesworth-1983-equilibrium.md).** Fitness
+  form (eq. 23), balance condition (eq. 29) and the excision answer are recorded
+  there with page numbers. ⚠️ The last sentence above needs qualifying: our model
+  is **haploid** and this one is **diploid**, and our recombination step
+  deduplicates sites shared by both parents — a copy sink with no counterpart in
+  the null model. The paper's _qualitative_ predictions do reproduce (a linear
+  fitness function controls copy number no better than no selection at all); its
+  _numeric_ equilibrium does not transfer, and calibrating one from our own
+  simulation would be circular.
 - **Hua-Van, Le Rouzic, Boutin, Filée & Capy 2011**, "The struggle for life of the
   genome's selfish architects", _Biol Direct_ 6:19,
   [10.1186/1745-6150-6-19](https://doi.org/10.1186/1745-6150-6-19), 260 cites.
@@ -137,12 +150,38 @@ game. Both papers below say silencing is genuinely double-edged, with measuremen
   [10.1371/journal.pgen.1008872](https://doi.org/10.1371/journal.pgen.1008872), 142 cites.
   Argues epigenetic silencing is an under-recognised _source_ of TE harm, distinct
   from insertional disruption.
+- **Brouha et al. 2003**, "Hot L1s account for the bulk of retrotransposition in
+  the human population", _PNAS_ 100(9):5280-5285,
+  [10.1073/pnas.0831042100](https://doi.org/10.1073/pnas.0831042100), 1110 cites.
+  **Added 2026-09-03**, registry-verified against OpenAlex and CrossRef (first
+  author Brouha, 2003, PNAS). LINE-1 is 17% of the human genome, but an
+  exhaustive search of the draft sequence found only 90 L1s with intact ORFs, and
+  they estimate **80–100 retrotransposition-competent L1s per person**. This is
+  the citation behind the claim that inactive TE copies PERSIST rather than being
+  purged — the divergence recorded on `tests/guards/three-phases-arm.ts`, where
+  our uniform excision rate `v` drives a fully silenced family to zero. ⚠️ L1 is
+  a retrotransposon with no excision mechanism, so its persistence is partly
+  structural; this supports "inactive copies accumulate", not "silencing and
+  removal are decoupled", which remains a modelling assumption.
 
 ### ⭐ And the host has a SECOND strategy the roadmap never names: tolerance
 
 **Meiklejohn & Blumenstiel 2018**, "Invasion of the P elements: tolerance is not
-futile", _PLoS Biol_, [10.1371/journal.pbio.3000036](https://doi.org/10.1371/journal.pbio.3000036)
+futile", _PLoS Biol_ 16(10):e3000036,
+[10.1371/journal.pbio.3000036](https://doi.org/10.1371/journal.pbio.3000036)
 (found 2026-09-02 via the §9 author lookup).
+
+⚠️ **THIS IS A PRIMER, NOT A PRIMARY RESULT, AND IT CARRIES THE ENTIRE §4
+TOLERANCE BRANCH.** Verified 2026-09-03 against the PLOS search API, which
+returns `article_type: "Primer"` for this DOI. A PLOS Biology Primer is
+commissioned commentary explaining a research article published in the same
+issue — so the resistance/tolerance framing below is this piece's synthesis of
+someone else's data, not a measurement it made. That does not make it wrong, and
+the framing is standard host–parasite ecology independent of this article. But
+the `t` dial in spec §4 is the only poke whose grounding rests on a single
+secondary source, and **the primary study it comments on has not been read**.
+Read it before quoting a number, and do not cite this Primer for a quantitative
+claim.
 
 Before a host acquires **resistance** (silencing the element), individuals vary in
 their capacity to **tolerate** TE activity — ignoring or repairing the damage while
@@ -302,12 +341,80 @@ Say that, or say nothing.
   outgroup species.** The roadmap's pointer resolves to an actual usable
   cross-taxon resource. Companion: Gilbert, Peccoud & Cordaux 2020, _Annu Rev
   Entomol_, [10.1146/annurev-ento-070720-074650](https://doi.org/10.1146/annurev-ento-070720-074650), 154 cites.
-- ⬜ **Dfam / Repbase** — **not checked this session.** Both are real, but their
-  current licensing, coverage and access terms were not verified and Repbase in
-  particular has had access changes. Query before asserting anything about
-  contents.
-- ⬜ **Asparagales** — **not checked this session.** No corresponding resource
-  located; treat as an unresolved pointer, not a dataset.
+- ✅ **Dfam 4.0** — released **27 May 2026**, [dfam.org](https://dfam.org/).
+  **7.6 million families across 6,549 taxa** (3.9 was 4.1M / 2,784): curated
+  libraries for five model organisms plus 242 mammals, uncurated de-novo libraries
+  for >4,300 species. **CC0 1.0, whole database, no registration** — relnotes §11,
+  "you can redistribute it and/or modify it as you wish… even for commercial
+  purposes, all without asking permission". Open REST API at `dfam.org/api`, hit
+  live this session, no key, `total_count` on every query, so it is directly usable
+  from a small web project. ⚠️ **Bulk download is family libraries only**
+  (`releases/current/families/`: FamDB 3.0.0 components cc/ch/uc/uh, plus
+  `Dfam-RepeatMasker.lib.gz` and the HMM partitions). **There is no per-genome
+  annotation download** — `releases/current/annotations/` is a 404 in both 4.0 and
+  3.9 — so "a species' TE annotation" means running RepeatMasker yourself.
+  Plant/orchid coverage, queried live: Viridiplantae **300 curated / 1,248,134
+  incl. uncurated**; Orchidaceae **0 curated / 18,947 uncurated** (Phalaenopsis
+  2,056 · Cymbidium 1,964 · Asparagus 1,955 · Gastrodia 1,850 · Vanilla 1,637 ·
+  Apostasia, Platanthera, Allium 0).
+- ⚠️ **Repbase — CLOSED. Stop naming it as an option.** Dfam's own 4.0 relnotes
+  call it "a closed database". Browse/search/archive at girinst.org are gated "For
+  subscribed users only"; licensing moved from Phoenix Bioinformatics to GIRI
+  ("Beginning April 1, Phoenix Bioinformatics will no longer manage Repbase
+  licenses"). The academic agreement forbids making Repbase "available to anyone
+  outside your research group" — **redistribution in a public artifact is
+  prohibited**, which is exactly what this project would be doing. ⚠️ **No current
+  price is published anywhere on girinst.org**; the only figure in circulation is a
+  2019 forum post ($1,395/yr individual academic), 7 years stale — do not repeat it
+  as fact. A real number requires emailing licensing@girinst.org.
+- ✅ **Asparagales — the pointer RESOLVES, and the previous "no corresponding
+  resource located" was a FALSE NULL.** **Hertweck 2013**, "Assembly and
+  comparative analysis of transposable elements from low coverage genomic sequence
+  data in Asparagales", _Genome_ 56(8),
+  [10.1139/gen-2013-0042](https://doi.org/10.1139/gen-2013-0042), 19 cites, OA.
+  Low-coverage single-end Illumina from **11 exemplar Asparagales taxa**, de-novo
+  repeat assembly annotated against a monocot repeat library, tied to genome-size
+  estimates in a phylogeny. Real, but small and 2013 — a comparative _study_, not a
+  downloadable table. Companions: Li et al. 2014, _PLoS ONE_,
+  [10.1371/journal.pone.0097189](https://doi.org/10.1371/journal.pone.0097189) ·
+  Peška et al. 2019, _IJMS_,
+  [10.3390/ijms20030733](https://doi.org/10.3390/ijms20030733).
+  ⭐ **Orchid-specific and the most design-relevant of these: Eriksson et al.
+  2022**, "Repeat Dynamics across Timescales… Sibling Allotetraploid Marsh Orchids
+  (_Dactylorhiza majalis_ s.l.)", _Mol Biol Evol_ 39(8):msac167,
+  [10.1093/molbev/msac167](https://doi.org/10.1093/molbev/msac167), 16 cites —
+  **five allotetraploids formed independently and sequentially from the same two
+  diploid parents between 500 and 100,000 generations ago**, tracking LTR-RT fate
+  after polyploidisation. Replicated natural experiments with a real time axis, in
+  orchids; the same replicated-independent-origin structure that makes the
+  syncytins interesting in §5. Also Hsu et al. 2020, _BMC Genomics_,
+  [10.1186/s12864-020-07221-6](https://doi.org/10.1186/s12864-020-07221-6) · Russo
+  et al. 2024, _Nat Commun_,
+  [10.1038/s41467-024-50622-4](https://doi.org/10.1038/s41467-024-50622-4).
+- ⭐ **Better than any of the above for validating a copy-number model: Osmanski et
+  al. 2023**, "Insights into mammalian TE diversity through the curation of 248
+  genome assemblies", _Science_,
+  [10.1126/science.abn1430](https://doi.org/10.1126/science.abn1430), 137 cites,
+  FWCI 40.3. De-novo TE curation of **248 placental mammal genomes** — per-species
+  TE content, diversity and _recent accumulation_ (multiple independent expansion
+  and quiescence events across the tree; young LINEs drive genome-size increase,
+  DNA transposons track smaller genomes). The 25,676 resulting consensus sequences
+  were deposited **into Dfam**, so unlike Petersen this arrives CC0 and
+  API-accessible. Plant-side supplement: He et al. 2024, _GPB_,
+  [10.1093/gpbjnl/qzae078](https://doi.org/10.1093/gpbjnl/qzae078), 234
+  representative plant genomes. ⚠️ A Zenodo search for `Zoonomia_TEs_Release`
+  returned **0 hits** — the deposit route actually verified is Dfam; do not cite a
+  Zenodo DOI without checking the _Science_ SI.
+
+**Where checked, stated:** dfam.org relnotes, release directory listings, and live
+`/api/taxa` + `/api/families` queries; girinst.org (5 pages), phoenixbioinfo.org
+/repbase, and the Repbase Academic User Agreement; OpenAlex `search_works` and
+`batch_resolve_references` (8/8 DOIs resolved, first-author surname + year + venue
+confirmed against each record, abstracts checked to support the claims made here);
+Zenodo `/api/records`; WebSearch — all 2026-09-02. **Not checked:** a current
+Repbase price (unpublished; requires contacting GIRI), Zenodo/Dryad for an
+Asparagales TE deposit, and Dfam `clade=Asparagales` / `clade=Dendrobium` counts
+(the API returned no result within timeout — **unverified, not zero**).
 
 Background/orientation, if the element taxonomy needs settling:
 **Wells & Feschotte 2020**, "A field guide to eukaryotic transposable elements",

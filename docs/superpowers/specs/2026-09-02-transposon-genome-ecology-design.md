@@ -1,7 +1,7 @@
 # Transposons as genome ecology — design
 
 **Date:** 2026-09-02 · **Status:** approved in brainstorm, not yet planned
-**Grounding:** `docs/REFERENCES.md` (37 works, registry-verified 2026-09-02)
+**Grounding:** `docs/REFERENCES.md` (38 works, registry-verified 2026-09-02, extended 2026-09-03)
 **Supersedes:** the open questions in `docs/ROADMAP.md` §"The first decision"
 
 ---
@@ -29,9 +29,22 @@ one this project can defensibly claim. **Novelty may not be claimed on the
 | decision                  | choice                                | why                                                                                                                            |
 | ------------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | Primary aim               | Playable first                        | The verified gap is interaction mode; a merely-correct instrument competes with SLiM and Kofler where this project has no edge |
-| Session shape             | Poke-and-watch, minutes               | Smallest thing occupying the gap; every §6 counterfactual is literally a poke                                                  |
+| Session shape             | Poke-and-watch, minutes               | Smallest thing occupying the gap; guards 1, 3 and 4 are literally pokes — see the note below                                   |
 | Stack                     | One TS core, browser UI, node runners | One implementation, so the thing played is provably the thing validated                                                        |
 | **Unit of individuality** | **The copy**                          | Below                                                                                                                          |
+
+⚠️ **"Every §6 counterfactual is literally a poke" stood in that cell and is
+narrowed as of 2026-09-03.** Three of the seven are: guard 1's fitness arms are
+reachable through the sliders, guard 3's cluster sweep is the cluster-size
+slider, and guard 4's knockout is the silencing button. **Guards 5 and 6 have no
+poke at all** — guard 5 contrasts `sigmaR` on and off, and the toy exposes no
+`sigmaR` control (turning the variation generator off would freeze evolution,
+which is a debugging state, not a perturbation); guard 6 hand-places copies at
+chosen `s` coordinates, which is the injection poke §4 records as unbuilt. Guard
+2 is a detector over a trajectory rather than a counterfactual, and guard 7 is a
+build-integrity check. So the honest form of the claim is that the validation
+surface and the interaction surface OVERLAP substantially, not that they
+coincide.
 
 ### The unit decision — this closes ROADMAP's "first decision"
 
@@ -144,31 +157,80 @@ fraction · `p_dom` domestication probability · `w_dom` domestication fitness b
 **Runtime toggles** (`silencing_on`, and the pokes of §4) are parameters too, and
 must be settable mid-run without restarting — that is the whole session shape.
 
-⚠️ **Defaults are not yet set, and one functional form is unconfirmed.** The
-fitness function `w(n)` is written here as falling with copy count under
-synergistic epistasis, but **the exact form and coefficients must be read out of
-Charlesworth & Charlesworth 1983 itself before the equilibrium guard can be
-calibrated** — the reference base was built from abstracts and registry metadata,
-not full texts. This is ROADMAP task #4 and it **blocks guard 1**, not the build.
+**RESOLVED (Task 15).** Charlesworth & Charlesworth 1983 has been read from the
+OA PDF; the reading is `docs/charlesworth-1983-equilibrium.md` and the summary
+lives on `copyNumberLoad` in `sim/phases/select.ts`. Three findings:
+
+1. **The fitness form stays.** The paper's own form is `w_n = 1 - s·n^t`
+   (eq. 23, p. 13), a different functional family from our
+   `w_n = exp(-(a·n + b·n²))`. Ours was checked against the paper's _conditions_
+   rather than pattern-matched to its formula, and it satisfies them:
+   `∂² ln w_n/∂n² = -2b < 0` is the p. 11 requirement for an interior
+   equilibrium, and at `b = 0` our model degenerates to exactly the
+   independent-effects multiplicative case p. 12 rules out. Ours is also better
+   behaved — eq. (23) goes negative for large `n` and needs truncation. The form
+   was NOT replaced.
+2. **Excision is a separate constant per-element rate** (`v` here, `v` there,
+   p. 11) and enters the balance only as the difference `u - v` (eqs. 20a, 29).
+   That is what our `lose` phase already does.
+3. **The paper's NUMBER does not transfer, and guard 1 asserts none.** Eq. (29),
+   p. 16 gives `-∂ ln w_n/∂n ≈ u - v`, predicting `n̄ = (r - v - a)/(2b) = 48` at
+   our defaults; measured it is 26.8. Charlesworth is diploid, our genome is
+   haploid, and `reproduce.ts` discards a site inherited from both parents — a
+   relatedness-dependent copy sink the null model has no counterpart for, which
+   also makes the equilibrium N-dependent (19.2 / 26.8 / 31.3 copies per genome
+   at N = 100 / 200 / 400). Calibrating the constant off our own simulation
+   instead would be circular. Guard 1 asserts the paper's qualitative
+   predictions against the paper's own negative controls; see §6.
+
+**Coefficient defaults were NOT changed by Task 15.** Every other guard in the
+suite is derived against the current `defaultParams` values and the golden hash
+in `tests/step.test.ts` pins the number of RNG draws consumed.
 
 ## 4. The pokes
 
 Each maps to a counterfactual or calibration target, so the interactions are also
 the validation surface.
 
-| poke                                   | what it exercises                                                                                                                                                |
-| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Silencing knockout                     | Genome bloat (§6)                                                                                                                                                |
-| Cluster-size slider, 0→5%              | Kofler 2020's threshold — the player finds ~0.2%                                                                                                                 |
-| Seed an invasion (new `s`, chosen `r`) | Kofler 2019's three phases, live                                                                                                                                 |
-| Sex ↔ asex                             | Nowell 2021's bdelloids — theory predicts disruption; reality does not                                                                                           |
-| **Resistance ↔ tolerance** (`t`)       | Resistance silences: pays the neighbour cost, builds clusters, **is conscriptable**. Tolerance absorbs damage: flat cost, no clusters, **cannot be conscripted** |
-| Population size                        | Drift                                                                                                                                                            |
-| Domestication                          | A copy landing in a beneficial site may be co-opted: fitness bonus, transposition permanently off. The alternate win                                             |
+| poke                              | what it exercises                                                                                                                                                |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Silencing knockout                | Genome bloat (§6)                                                                                                                                                |
+| Cluster-size slider, 0→5%         | Kofler 2020's threshold — the player finds ~0.2%                                                                                                                 |
+| Seed a fresh invasion (next seed) | Kofler 2019's three phases, live                                                                                                                                 |
+| Sex ↔ asex                        | Nowell 2021's bdelloids — theory predicts disruption; reality does not                                                                                           |
+| **Resistance ↔ tolerance** (`t`)  | Resistance silences: pays the neighbour cost, builds clusters, **is conscriptable**. Tolerance absorbs damage: flat cost, no clusters, **cannot be conscripted** |
+| Population size (shrink only)     | Drift                                                                                                                                                            |
+| Domestication                     | A copy landing in a beneficial site may be co-opted: fitness bonus, transposition permanently off. The alternate win                                             |
 
 The resistance↔tolerance dial is the only poke that changes whether the trap can
 exist at all, which is what makes §3 and §4 of the reference base interact rather
 than sit side by side.
+
+### ⚠️ Two rows narrowed against what was built (2026-09-03)
+
+Both rows above overstated what shipped, and both are corrected in place rather
+than left to be discovered from the code.
+
+**"Seed an invasion (new `s`, chosen `r`)" was not built, and should not have
+been promised.** `web/controls.ts:409-411` fires `onReset({ seed: params.seed + 1 })`
+— a full restart of the world on the next seed. There is no injection of a
+lineage at a chosen `s` and `r` into a _running_ world. That is a different and
+considerably harder poke: it needs a UI for two continuous parameters, a rule for
+where the invader lands, and a decision about whether the resident family's
+established trap already covers the invader's `s` — which is guard 6's question,
+not a control. What shipped is a fresh world, which still exercises Kofler's
+three phases from generation 0 and is honestly captioned as "seed a fresh
+invasion". **Injecting into a live world remains unbuilt.**
+
+**"Population size" is shrink-only, with a floor of 20, and the asymmetry is
+deliberate.** `web/controls.ts:101-105` halves `N` down to `N_FLOOR = 20` and
+there is no grow button. The reasoning belongs here rather than only in the
+control: _every other poke changes the conditions a population lives under, and a
+grow-the-population button would be manufacturing the population itself, which is
+not a poke in this toy's grammar._ It is also the honest behaviour — drift is not
+reversible in a real population either. A session that has shrunk to the floor
+needs a reload, and the floor caption says so, because a state you cannot leave
+has to name the way out or a visitor reads a disabled button as a broken one.
 
 ## 5. The screen
 
@@ -188,19 +250,41 @@ Three regions.
 One guard per claim, in `tests/`:
 
 1. **Charlesworth equilibrium** (trap off) — copy number converges to a stable,
-   non-zero, non-saturating equilibrium, asserted against the analytic prediction.
-   _The floor._ Blocked on §3.4's open item.
+   non-zero, non-saturating equilibrium, reached from a high-copy start as well
+   as from below; a LINEAR fitness function does not control copy number while
+   the quadratic term does. Asserted qualitatively, against the paper's own
+   negative controls (`b = 0` is the multiplicative model of p. 12; no selection
+   at all is the `f(0) < u - v` baseline of p. 11), and NOT against an analytic
+   constant — see §3.4 finding 3 for why there is no constant to assert.
+   _The floor._ `tests/guards/equilibrium.test.ts` + `equilibrium-arm.ts`,
+   derived by `scripts/explore-equilibrium.ts`.
 2. **Three phases** (trap on) — assert the _ordering_ amplification → plateau via
    segregating cluster insertions → inactivation, not merely the endpoint.
 3. **Cluster threshold** — sweep `c`; repression onset must land in Kofler's
    0.2–3% band under matching conditions.
 4. **Knockout → bloat** — direction only, not magnitude.
-5. **Rate evolves** — mean `r` moves under selection and does _not_ move with
-   selection off. Guards the entire justification for copy-as-unit.
+5. **Rate evolves** — mean `r` moves with the variation generator ON and does
+   _not_ move with it OFF. Guards the entire justification for copy-as-unit.
+   ⚠️ As built, the null is `sigmaR = 0`, **not** "selection off": a
+   selection-off arm still moves the mean, because the mutation `r · exp(𝒩(0,σ))`
+   has `E[multiplier] > 1`. The guard therefore also asserts the **geometric**
+   mean, which mutational bias cannot move. Runs at five seeds.
 6. **Escape** — a diverged sublineage escapes an established trap.
 7. **One implementation** — a headless-browser run of `n` generations must produce
-   a state hash identical to the node run. Without this, "the thing you play is
-   the thing that is validated" is an unbacked assertion.
+   a state hash identical to the node run, at the plain scenario **and at the
+   toy's own parameters**. Without this, "the thing you play is the thing that is
+   validated" is an unbacked assertion.
+
+   ⚠️ **SCOPE, and it is narrower than the sentence above suggests.** Node and
+   Playwright's Chromium are both V8, so what this establishes is ONE CODEBASE,
+   THROUGH ONE BUNDLER, ON ONE ENGINE FAMILY — that Vite's transform and
+   minification did not change the model's behaviour. It is **not**
+   engine-independence. The model reaches `r` and `s` through `Math.exp`
+   (`sim/phases/transpose.ts:35`, `sim/phases/select.ts:103` and `:147`) and
+   `Math.sqrt`/`Math.log` (`sim/rng.ts:39`), all of which ECMA-262 permits an
+   implementation to approximate; because `normal()` feeds the RNG stream, a
+   last-ulp difference would diverge the ORDER of draws, not just a low digit.
+   A second engine family in CI would be needed to say more, and none has run.
 
 ### Testing disciplines, committed to explicitly
 
@@ -250,13 +334,36 @@ mode (held as a possible second toy).
 
 ## 10. Open items carried into planning
 
-- **Blocks guard 1:** confirm the Charlesworth 1983 fitness form and coefficients
-  from the paper itself (ROADMAP task #4). The reference base was built from
-  abstracts and registry metadata.
+- ~~**Blocks guard 1:** confirm the Charlesworth 1983 fitness form and
+  coefficients from the paper itself (ROADMAP task #4).~~ **RESOLVED in Task 15**
+  — read from the OA PDF, written up in `docs/charlesworth-1983-equilibrium.md`,
+  summarised in §3.4. The form is confirmed as-is and the coefficients are
+  unchanged; what the paper does NOT supply is a transferable equilibrium value,
+  for the structural reason recorded there.
 - **Confirm before repeating:** the claim that SLiM "compresses TEs into individual
   units, precluding TE sequence mutagenesis and nested insertion" comes from a
   competing tool's preprint, not SLiM's own docs (`REFERENCES.md` §7).
 - **Still unverified:** Dfam, Repbase and the Asparagales pointer (§8 of the
   reference base). Not on the critical path for v1.
 - **Parameter defaults** are unset; they need a first calibration pass against
-  guards 1–3.
+  guards 1–3. Task 15 deliberately did NOT do this: guards 2–6 are each derived
+  against their own pinned arm, and moving a default would move the golden hash
+  and every one of those derivations at once.
+- ⚠️ **KNOWN DIVERGENCE FROM BIOLOGY — full inactivation implies the family DIES.**
+  `lose` keeps excising silenced copies that silencing prevents from replacing
+  themselves, so once a family is fully silenced its decay to zero is guaranteed.
+  Measured in ARM 4 of `scripts/explore-three-phases.ts`: total copies fall from a
+  peak of 3400–6847 to 249–818 by generation 120 and 9–201 by generation 200, and
+  8 of 11 seeds reach zero on or before generation 300 (earliest 205).
+
+  Real silenced TE insertions largely persist as **genomic fossils** rather than
+  being purged, so this is a genuine divergence and not merely a parameter choice.
+  It is NOT fixed: changing `lose` would alter the RNG draw stream and invalidate
+  every calibration in the suite at once. It is the direct reason `detectPhases`
+  conjoins `totalCopies > 0` and `silencedCopies > activeCopies` onto the
+  crossing — without those, this arm run far enough would report a
+  spike-and-crash to extinction as Kofler's inactivation phase.
+
+  `tests/guards/three-phases-arm.ts` says this divergence "is flagged for the spec
+  instead". **This bullet is that flag** — before 2026-09-03 the sentence pointed
+  at nothing.
