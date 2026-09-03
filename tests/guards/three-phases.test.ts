@@ -9,6 +9,9 @@ import {
   HORIZON_MARKS,
   INVARIANCE_SEEDS,
   KNOCKOUT_SEEDS,
+  PLATEAU_BAND,
+  PLATEAU_MIN_GENERATIONS,
+  plateauDuration,
   runArm,
   SEEDS,
 } from "./three-phases-arm.js";
@@ -32,27 +35,26 @@ import {
  *   fwr@amp  .580 .620 .547 .477 .573 .593 .670 .493 .480 .320 .617
  *   fwr@plat .920 .957 .967 .943 .910 .960 .883 .917 .917 .970 .923
  *
- * The ordering holds at every seed, strictly, in both inequalities. The three
- * landmarks are the same triple whether the history is truncated at 40, 50, 60,
- * 80, 120, 200 or 300 generations: 66 truncation comparisons across the eleven
- * seeds, 0 in which the triple moved (ARM 2, and the fourth test below).
+ *   plateau duration (consecutive generations within 10% of peak copy number):
+ *                16   11   14   16   11   11   15   12   10   11    9
+ *
+ * The ordering holds at every seed. The three landmarks are the same triple
+ * whether the history is truncated at 40, 50, 60, 80, 120, 200 or 300
+ * generations: 66 truncation comparisons across the eleven seeds, 0 in which the
+ * triple moved (ARM 2, and the fourth test below — which also says which THIRD of
+ * that triple the invariance is actually informative about).
  *
  * ---------------------------------------------------------------------------
  * A MODEL PROPERTY THIS GUARD DOES NOT CLAIM AWAY — FLAGGED FOR THE SPEC
  * ---------------------------------------------------------------------------
- * In this model, full inactivation implies the family eventually DIES.
- * `sim/phases/lifecycle.ts`'s `lose` exempts only domesticated copies from
- * excision, so silenced copies keep being lost at rate `v` while silencing
- * prevents them from replacing themselves, and decay to zero follows. Measured
- * here (ARM 4): from peaks of 3400..6847 copies, the eleven seeds fall to
- * 249..818 by generation 120 and to 9..201 by generation 200, and 8 of 11 reach
- * `totalCopies: 0` on or before generation 300, earliest at 205. Real silenced
- * TE insertions largely persist as genomic fossils, so that is a genuine
- * divergence from the biology. It is NOT fixed here — changing `lose` would move
- * the RNG draw stream and invalidate every calibration in the suite — and this
- * guard is scoped to generation 60, where every seed still carries 1702..4014
- * copies. The first test asserts that liveness explicitly rather than letting
- * "three phases in order" quietly also be true of a run that has since died.
+ * In this model, full inactivation implies the family eventually DIES, and this
+ * guard is scoped to generation 60, before that happens. The CANONICAL statement
+ * of the property — the mechanism in `sim/phases/lifecycle.ts`, the measured
+ * decay figures, and why it is not fixed — is the EXTINCTION note on `BASE` in
+ * `./three-phases-arm.js`. READ IT. It is deliberately not restated here or in
+ * `sim/phases-detect.ts`, so there is one copy to keep true. The first test
+ * asserts liveness at the horizon explicitly rather than letting "three phases in
+ * order" quietly also be true of a run that has since died.
  */
 describe("guard 2: three-phase invasion", () => {
   /**
@@ -74,10 +76,54 @@ describe("guard 2: three-phase invasion", () => {
    *     — a first-crossing landmark found in the last few generations of a
    *     truncated history is an artefact of the truncation.
    *
-   * The ordering itself carries no threshold: two strict inequalities, asserted
-   * per seed, never on a mean. It goes red if the model jumps from amplification
-   * to inactivation with no plateau (`amplification === plateau`), or if copy
-   * number peaks only after active copies have already collapsed.
+   *   - THE PLATEAU IS A PHASE, at least 6 consecutive generations within 10% of
+   *     peak copy number: measured 9..16 across the eleven seeds (weakest seed
+   *     202 at 9, strongest seeds 1 and 4 at 16, mean 12.4), a 3-generation
+   *     margin, 1.5x. Derived in ARM 6; `PLATEAU_BAND` and
+   *     `PLATEAU_MIN_GENERATIONS` are pinned in `./three-phases-arm.js` and
+   *     `plateauDuration` is shared with the sweep. This is the ONLY assertion
+   *     here that a spike-shaped model fails — see the next paragraph for why it
+   *     had to be added.
+   *
+   * ---------------------------------------------------------------------------
+   * ONE HALF OF THE ORDERING CANNOT FAIL. SAYING SO IS THE POINT OF THIS BLOCK.
+   * ---------------------------------------------------------------------------
+   * The two inequalities are NOT alike, and an earlier version of this comment
+   * claimed a falsifiability for the second that it does not have:
+   *
+   *   - `amplification < plateau` IS falsifiable. The plateau scan in
+   *     `sim/phases-detect.ts` starts at `i = amplification`, so `plateau ===
+   *     amplification` is reachable — it is what happens when copy number peaks
+   *     at the very generation of fastest growth, i.e. a jump rather than a
+   *     plateau. Deleting the plateau scan reddens it, verified by mutation.
+   *
+   *   - `plateau < inactivation` is VACUOUS. The inactivation scan starts at
+   *     `i = plateau + 1` and returns that `i`, so `inactivation >= plateau + 1`
+   *     for EVERY possible input. No model behaviour can make it red. It is kept
+   *     because it documents the intended reading of the triple, and it costs
+   *     nothing, but it carries no information and no margin — the 1-generation
+   *     gap between the two landmarks at 9 of the 11 seeds is not a margin,
+   *     because there is no quantity that could shrink it to zero.
+   *
+   * Losing that half of the ordering claim is why the plateau-duration floor
+   * above exists: it is a claim about the same phase that CAN go red.
+   *
+   * ---------------------------------------------------------------------------
+   * ADJACENT INDICES, EXTENDED TRAJECTORY — TWO DIFFERENT CLAIMS, NOT BLURRED
+   * ---------------------------------------------------------------------------
+   * The plateau and inactivation LANDMARKS are adjacent at 9 of the 11 seeds
+   * (plateau 27 -> inactivation 28 and the like; the exceptions are seed 11,
+   * 22 -> 27, and seed 17, 27 -> 29). Read alone, that looks like a model with no
+   * plateau at all, and before this fix round only that adjacency was asserted.
+   *
+   * The TRAJECTORY is a different matter and is what the word "plateau" is about:
+   * copy number stays within 10% of its peak for 9..16 consecutive generations,
+   * a stretch that straddles both landmarks. The two facts are consistent — the
+   * landmarks are an argmax and a first crossing, and both fall late inside a
+   * long flat top, because the flat top is flat. Anyone reading "the landmarks
+   * are adjacent" as "there is no plateau" has confused the index for the
+   * trajectory, and anyone reading the duration as licensing a claim about WHERE
+   * the landmarks fall has done the reverse. Both are asserted below, separately.
    *
    * The two conditions `detectPhases` conjoins onto the crossing —
    * `totalCopies > 0` and `silencedCopies > activeCopies` AT the inactivation
@@ -121,15 +167,31 @@ describe("guard 2: three-phase invasion", () => {
         `seed ${seed}: inactivation at generation ${ph.inactivation} leaves only ${GENERATIONS - ph.inactivation} generations of headroom before the horizon ${GENERATIONS}`,
       ).toBeGreaterThanOrEqual(20);
 
-      // THE CLAIM. Ordering only — no duration, no magnitude, no rate.
+      // THE CLAIM, PART 1: the ordering of the landmark indices.
+      //
+      // Falsifiable: `plateau === amplification` is reachable, and is what a
+      // model that jumps from peak growth straight to peak copy number produces.
       expect(
         ph.amplification,
         `seed ${seed}: amplification (${ph.amplification}) did not precede the plateau (${ph.plateau}) — copy number peaked at the moment of fastest growth, which is a jump, not a plateau`,
       ).toBeLessThan(ph.plateau);
+      // VACUOUS BY CONSTRUCTION, and labelled as such rather than dropped: the
+      // inactivation scan starts at `plateau + 1`, so this holds for every
+      // possible input and no model behaviour can redden it. It documents the
+      // intended reading of the triple. It is not evidence of anything, and the
+      // 1-generation gap it "passes" by at 9 of 11 seeds is not a margin.
       expect(
         ph.plateau,
-        `seed ${seed}: the plateau (${ph.plateau}) did not precede inactivation (${ph.inactivation})`,
+        `seed ${seed}: the plateau (${ph.plateau}) did not precede inactivation (${ph.inactivation}) — which sim/phases-detect.ts makes impossible, so this firing means the scan's start index changed`,
       ).toBeLessThan(ph.inactivation);
+
+      // THE CLAIM, PART 2: the plateau is a PHASE, not an argmax. This is the
+      // assertion a spike-shaped model fails and the ordering above does not.
+      const duration = plateauDuration(a.h, ph.plateau);
+      expect(
+        duration,
+        `seed ${seed}: copy number stayed within ${((1 - PLATEAU_BAND) * 100).toFixed(0)}% of its peak for only ${duration} generation(s) around the plateau at ${ph.plateau} — that is a spike, not a plateau phase`,
+      ).toBeGreaterThanOrEqual(PLATEAU_MIN_GENERATIONS);
     }
   });
 
@@ -227,6 +289,26 @@ describe("guard 2: three-phase invasion", () => {
    * one seed costs roughly thirty times a silenced one. The claim it supports is
    * mechanistic — no `silencingOn`, no repertoire, no silenced copy anywhere —
    * not statistical.
+   *
+   * ---------------------------------------------------------------------------
+   * WHERE THE DYNAMICAL CONTENT OF THIS TEST ACTUALLY LIVES
+   * ---------------------------------------------------------------------------
+   * The final `no-inactivation` claim is ENTAILED BY CONTROL 3. With
+   * `silencingOn: false`, `silencedCopies` is 0 at every generation, so
+   * `silencedCopies > activeCopies` is false everywhere and `no-inactivation` is
+   * forced unless silencing leaks — which control 3 asserts against, and asserts
+   * more directly. The mutation log bears this out: the model-layer mutation
+   * (deleting the `silencingOn` guard in `trap`) reddened CONTROL 1, and only a
+   * detector-layer mutation reddened the final claim. So the null is a
+   * consistency check on the detector's exit labelling, not evidence about the
+   * model, and it is not the reason to keep this test.
+   *
+   * The dynamical content is controls 1 and 3 — the arm really invades, and the
+   * mechanism really is absent — plus CONTROL 5, added in this fix round: the
+   * crossing-only property, asserted over the whole trajectory. Active copies
+   * never fall to 20% of their peak after reaching it. That IS a statement about
+   * how the arm behaves rather than about what the detector returns, and it is
+   * what a knockout arm that crashed for some unrelated reason would fail.
    */
   it("with the trap off there is no inactivation phase, on an arm that is alive and invading", () => {
     for (const seed of KNOCKOUT_SEEDS) {
@@ -265,8 +347,38 @@ describe("guard 2: three-phase invasion", () => {
         `seed ${seed}: the detector returns null WITH silencing on too, so the null below says nothing about the trap`,
       ).not.toBeNull();
 
+      // CONTROL 5, the dynamical one: over the WHOLE trajectory, active copies
+      // never fall to 20% of their peak after reaching it. This is the
+      // crossing-only property stated about the arm rather than read off the
+      // detector's return value, and it is what an arm that crashed for some
+      // reason other than silencing would fail. Measured minimum of the ratio
+      // across the three seeds: 0.599 (seed 1, peak 223747 at generation 44,
+      // minimum 134105 at generation 56), a 3.0x margin over the 0.2 level.
+      let peakActive = 0;
+      let peakAt = 0;
+      for (let i = 0; i < off.h.length; i++) {
+        if (off.h[i]!.activeCopies > peakActive) {
+          peakActive = off.h[i]!.activeCopies;
+          peakAt = i;
+        }
+      }
+      let trough = Infinity;
+      let troughAt = peakAt;
+      for (let i = peakAt; i < off.h.length; i++) {
+        if (off.h[i]!.activeCopies < trough) {
+          trough = off.h[i]!.activeCopies;
+          troughAt = i;
+        }
+      }
+      expect(
+        trough,
+        `seed ${seed}: active copies fell from ${peakActive} at generation ${peakAt} to ${trough} at generation ${troughAt} — the knockout arm crashed, so it is not the never-inactivating arm this test needs`,
+      ).toBeGreaterThan(0.2 * peakActive);
+
       // THE CLAIM, with the null path named so it cannot be confused with the
-      // other three ways of returning null.
+      // other three ways of returning null. Entailed by control 3 — see the
+      // docstring; this is a check on the detector's exit labelling, not on the
+      // model.
       expect(
         off.result.failure,
         `seed ${seed}: the knockout arm returned null for the wrong reason`,
@@ -294,6 +406,35 @@ describe("guard 2: three-phase invasion", () => {
    * The positive control is in the same body: "truncation changed nothing" is
    * exactly the assertion that also passes when the truncation never happened,
    * so the lengths of the sliced histories are asserted to differ first.
+   *
+   * ---------------------------------------------------------------------------
+   * WHICH THIRD OF THE TRIPLE THIS IS ACTUALLY EVIDENCE ABOUT
+   * ---------------------------------------------------------------------------
+   * The three landmarks are not equally at risk from a longer history, and the
+   * test title is broader than its content. Taking them in turn, against the
+   * scans in `sim/phases-detect.ts`:
+   *
+   *   - `amplification` — REAL CONTENT. A strict-`>` argmax over one-generation
+   *     growth. Appending generations moves it only if a later generation has
+   *     STRICTLY greater growth than the incumbent. In a decaying tail that
+   *     cannot happen, which is the substantive thing being checked.
+   *
+   *   - `plateau` — REAL CONTENT, AND THE MOST FRAGILE OF THE THREE. A `>=`
+   *     running-max scan, so ties resolve to the LATER index: appending a
+   *     generation that merely EQUALS the incumbent peak moves it, no strict
+   *     increase required. This is the third most likely to move, and the one
+   *     that makes the test worth running.
+   *
+   *   - `inactivation` — TAUTOLOGY, GIVEN THE OTHER TWO. It is the first index
+   *     after `plateau` satisfying a per-index conjunction. Once that index has
+   *     been found inside a prefix, appending data cannot move it: a first
+   *     crossing in a prefix is a first crossing in every extension of that
+   *     prefix. So it is stable whenever `plateau` is stable, and it carries no
+   *     independent evidence.
+   *
+   * Two thirds content, one third bookkeeping. The assertion compares the whole
+   * triple because that is the cheap and readable thing to do, not because all
+   * three are equally informative.
    */
   it("the three landmarks are invariant to the horizon", () => {
     const longest = Math.max(...HORIZON_MARKS);
@@ -353,6 +494,14 @@ describe("guard 2: three-phase invasion", () => {
    * the majority condition under the current `Snapshot` semantics, and case A
    * below is rejected by both at once — it is kept as an explicit statement of
    * what the landmark must mean, not because it can reject alone.
+   *
+   * Case D pins a different thing: that the scan CONTINUES past an index which
+   * meets the crossing but fails the conjunction, rather than giving up there.
+   * Cases A and B cannot pin it, because in both of them the conjunction fails at
+   * every index after the crossing, so a detector that gave up at the first
+   * failure returns the same answer. That detector would also pass the guard arm,
+   * where the conjunction happens to hold at the first crossing. Case D is the
+   * only thing in the suite that distinguishes them.
    */
   it("inactivation is not extinction: a crash the trap did not cause is rejected", () => {
     const snap = (
@@ -418,9 +567,80 @@ describe("guard 2: three-phase invasion", () => {
       "case B: a crash with nothing silenced was reported as inactivation, so the predicate cannot tell suppression from collapse",
     ).toBe("no-inactivation");
 
+    // --- CASE D: the scan must CONTINUE past a failed conjunction, not give up
+    // at the first crossing. Cases A and B both fail the conjunction at EVERY
+    // subsequent index, so a detector that returned `no-inactivation` at the
+    // first crossing whose extra conditions fail would pass both of them, and
+    // would pass the guard arm too. Here the crossing is met at index 7 with the
+    // majority the WRONG way round (silenced 200 < active 400), and the majority
+    // is achieved at index 9 — the generation that deserves the name.
+    //
+    // The recovery at index 9 is to 2000 copies, not to the 3000 a first draft
+    // used, and the reason is worth recording: a jump of 2500 from the 500-copy
+    // trough would have been a LARGER one-generation growth than anything in the
+    // rise, so `amplification` moved to index 9, `plateau` followed it to the end
+    // of the history, and the whole case silently degenerated into a
+    // `no-inactivation` null that would have looked like the fixture working.
+    // Every snapshot here also keeps `total === active + silenced`, as the guard
+    // arm's `pDom: 0` makes the model do. ---
+    const late: Snapshot[] = [
+      ...rise.map((n, i) => snap(i, n, n, 0)),
+      snap(7, 600, 400, 200),
+      snap(8, 600, 400, 200),
+      ...Array.from({ length: 21 }, (_, k) => snap(9 + k, 2000, 300, 1700)),
+    ];
+    const crossingD = late.findIndex(
+      (s, i) => i > plateauIndex && s.activeCopies < 0.2 * peakActive,
+    );
+    expect(
+      crossingD,
+      "case D: the crossing is not met at index 7, so this history does not test that the scan continues",
+    ).toBe(7);
+    expect(
+      late[crossingD]!.silencedCopies < late[crossingD]!.activeCopies,
+      "case D: the conjunction already holds at the first crossing, so there is nothing for the scan to continue past",
+    ).toBe(true);
+    // FIXTURE INTEGRITY, computed from the fixture's own numbers and NOT from
+    // the detector, so that a broken fixture and a broken detector cannot be
+    // mistaken for each other. (They were: the first version of this block
+    // asked the detector where the plateau was, and under a detector mutation it
+    // reported `undefined` with a message blaming the fixture.) The steepest
+    // one-generation rise must still be the rise's last step, and the running
+    // maximum of total copies must still be last attained at `plateauIndex` —
+    // both of which the 3000-copy recovery broke.
+    let steepestAt = 0;
+    let steepest = -Infinity;
+    for (let i = 1; i < late.length; i++) {
+      const g = late[i]!.totalCopies - late[i - 1]!.totalCopies;
+      if (g > steepest) {
+        steepest = g;
+        steepestAt = i;
+      }
+    }
+    expect(
+      steepestAt,
+      "case D: the recovery out-grew the rise, so amplification relocates and the case no longer tests the scan",
+    ).toBe(5);
+    let lastPeakAt = 0;
+    let peakSoFar = -Infinity;
+    for (let i = 0; i < late.length; i++) {
+      if (late[i]!.totalCopies >= peakSoFar) {
+        peakSoFar = late[i]!.totalCopies;
+        lastPeakAt = i;
+      }
+    }
+    expect(
+      lastPeakAt,
+      "case D: the recovery reattained the peak, so the plateau relocates and the scan does not start where the case assumes",
+    ).toBe(plateauIndex);
+    expect(
+      detectPhasesDetailed(late).phases?.inactivation,
+      "case D: the scan stopped at the first crossing instead of continuing to the first generation where the family is actually majority-silenced",
+    ).toBe(9);
+
     // --- POSITIVE CONTROL: the same shape, but genuinely inactivated. The
-    // copies are still there and are mostly silenced. Without this, cases A and
-    // B would be satisfied by a predicate that rejects every history. ---
+    // copies are still there and are mostly silenced. Without this, cases A, B
+    // and D would be satisfied by a predicate that rejects every history. ---
     const inactivated: Snapshot[] = [
       ...rise.map((n, i) => snap(i, n, n, 0)),
       ...Array.from({ length: 23 }, (_, k) => snap(7 + k, 3000, 300, 2700)),

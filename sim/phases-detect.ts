@@ -47,10 +47,11 @@ export type PhaseResult =
  * "Active copies fell below 20% of their peak" is satisfied TRIVIALLY BY A DEAD
  * POPULATION: `activeCopies` is 0 when every copy is gone, so a spike-and-crash
  * to extinction reports three phases and passes an ordering guard. That is not
- * hypothetical at this model's invasion parameters — see the extinction note on
- * `tests/guards/three-phases-arm.ts`, and ARM 4 of
- * `scripts/explore-three-phases.ts`, which prints the run continuing past the
- * horizon to `totalCopies: 0`.
+ * hypothetical at this model's invasion parameters: the CANONICAL statement of
+ * that model property, with the measured decay figures, is the EXTINCTION note
+ * on `BASE` in `tests/guards/three-phases-arm.ts` — it is not restated here or
+ * in the guard, so there is one copy to keep true. ARM 4 of
+ * `scripts/explore-three-phases.ts` prints it.
  *
  * Inactivation means *the copies are still there and are silenced*, not *the
  * copies are gone*. So the crossing is conjoined with:
@@ -59,6 +60,15 @@ export type PhaseResult =
  * Both are measured at every guard seed in ARM 1 of the sweep, with the margins
  * recorded there. Neither is a tunable: they are the two ways the word
  * "inactivation" can be false while the crossing is true.
+ *
+ * The scan CONTINUES past an index that meets the crossing but fails either
+ * added condition, and returns the FIRST index meeting all three — it does not
+ * stop at the first crossing and give up. That is a semantic choice, not an
+ * implementation detail: a family can dip below the crossing before the trap has
+ * silenced the majority of it, and the generation that deserves the name
+ * "inactivation" is the later one. Pinned by case D of the fifth test in
+ * `tests/guards/three-phases.test.ts`; without that case, a version returning
+ * `no-inactivation` at the first failed conjunction passes the whole suite.
  *
  * `silencedCopies` and `activeCopies` both exclude domesticated copies
  * (`sim/silencing.ts`), so this compares suppressed against transposition-capable

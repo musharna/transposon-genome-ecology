@@ -69,6 +69,11 @@ import {
  * ---------------------------------------------------------------------------
  * EXTINCTION — A REAL PROPERTY OF THE MODEL, DELIBERATELY NOT FIXED HERE
  * ---------------------------------------------------------------------------
+ * THIS IS THE CANONICAL STATEMENT of the property. `sim/phases-detect.ts` and
+ * `tests/guards/three-phases.test.ts` point here rather than restating it; an
+ * earlier draft carried three copies of this paragraph and two copies of the
+ * figures, which is three places for one measurement to go stale.
+ *
  * Full inactivation implies the family eventually DIES in this model.
  * `sim/phases/lifecycle.ts`'s `lose` exempts only domesticated copies from
  * excision, so silenced copies keep being lost at rate `v` while silencing
@@ -126,10 +131,15 @@ export const BASE: Params = {
  *
  * ARM 2 shows the choice is not load-bearing in either direction: truncating the
  * same histories at 40, 50, 60, 80, 120, 200 and 300 gives BIT-IDENTICAL
- * `(amplification, plateau, inactivation)` triples at all eleven seeds — 77
- * truncations, 77 identical triples. That is not luck; it is what the landmark
- * definitions imply once the run has passed its peak and is decaying, and the
- * guard asserts it as a test rather than trusting this paragraph.
+ * `(amplification, plateau, inactivation)` triples at all eleven seeds — 66
+ * comparisons (7 marks per seed, each compared against the seed's first mark, at
+ * 11 seeds), 0 in which the triple moved. That is the ONE framing used
+ * everywhere: the sweep prints it, the guard's fourth test asserts it, and this
+ * paragraph quotes it. (An earlier draft here counted the 77 detections instead
+ * of the 66 comparisons — the same measurement described two ways, which is one
+ * way too many.) See the fourth test in `three-phases.test.ts` for which THIRD of
+ * the triple that invariance is actually informative about; one of the three is a
+ * tautology of the scan.
  *
  * The horizon is bounded from ABOVE by the knockout arm, not by the silenced
  * one. With silencing off there is no trap, nothing inactivates, and copy
@@ -179,6 +189,50 @@ export const INVARIANCE_SEEDS = [3, 11, 101] as const;
 
 /** The horizon ARM 4 runs to when documenting the post-inactivation decay. */
 export const DECAY_HORIZON = 300;
+
+/**
+ * The band that defines "still at the plateau": total copy number within 10% of
+ * its peak. Shared by the guard and by ARM 6 of the sweep so the assertion and
+ * the measurement that derived its floor cannot drift apart.
+ */
+export const PLATEAU_BAND = 0.9;
+
+/**
+ * The floor on how many CONSECUTIVE generations copy number stays inside
+ * `PLATEAU_BAND` of its peak — the plateau as a DURATION rather than as an
+ * argmax. Derived in ARM 6: measured 9..16 generations across the eleven seeds
+ * (weakest seed 202 at 9, strongest seeds 1 and 4 at 16, mean 12.4), so a floor
+ * of 6 leaves a 3-generation margin, 1.5x, under the weakest seed.
+ *
+ * This is the assertion a SPIKE-shaped model fails: a run that peaks for one
+ * generation and falls away has a run length of 1..2 here, while the ordering
+ * assertions it would still satisfy. It is the one number in this guard that
+ * makes the word "plateau" mean a phase.
+ */
+export const PLATEAU_MIN_GENERATIONS = 6;
+
+/**
+ * The length of the maximal run of CONSECUTIVE generations containing `plateau`
+ * over which total copy number stays at or above `PLATEAU_BAND` of its peak.
+ *
+ * `plateau` is by definition the index attaining that peak, so the run always
+ * contains it and is at least 1 — the quantity is a duration, and 1 is the value
+ * a pure spike gets. Measured note, not an assumption: at every one of the
+ * eleven seeds this maximal run is the ONLY stretch of the whole history inside
+ * the band (ARM 6 prints both the run and the whole-history count, and they are
+ * equal at every seed), so there is no second excursion for the "containing
+ * `plateau`" qualifier to be doing work against here. It is written that way
+ * anyway, because a duration that could be summed out of two separate visits to
+ * the band would not be a phase.
+ */
+export function plateauDuration(h: Snapshot[], plateau: number): number {
+  const threshold = PLATEAU_BAND * h[plateau]!.totalCopies;
+  let lo = plateau;
+  while (lo - 1 >= 0 && h[lo - 1]!.totalCopies >= threshold) lo--;
+  let hi = plateau;
+  while (hi + 1 < h.length && h[hi + 1]!.totalCopies >= threshold) hi++;
+  return hi - lo + 1;
+}
 
 export interface ArmResult {
   p: Params;

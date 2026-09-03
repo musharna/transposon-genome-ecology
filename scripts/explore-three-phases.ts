@@ -14,6 +14,9 @@ import {
   HORIZON_MARKS,
   INVARIANCE_SEEDS,
   KNOCKOUT_SEEDS,
+  PLATEAU_BAND,
+  PLATEAU_MIN_GENERATIONS,
+  plateauDuration,
   runArm,
   SEEDS,
 } from "../tests/guards/three-phases-arm.js";
@@ -97,7 +100,7 @@ for (const seed of SEEDS) {
     cells.push(`${m}:${triple}`);
   }
   console.log(
-    `seed ${pad(seed, 4)} ${cells.join("  ")}${INVARIANCE_SEEDS.includes(seed as never) ? "   <- asserted in the guard" : ""}`,
+    `seed ${pad(seed, 4)} ${cells.join("  ")}${(INVARIANCE_SEEDS as readonly number[]).includes(seed) ? "   <- asserted in the guard" : ""}`,
   );
 }
 console.log(
@@ -216,4 +219,53 @@ for (const seed of SEEDS) {
 console.log(
   '\nBoth predicates agree at this horizon in WHICH generation they name, because the\ncrossing, the survival condition and the silenced-majority condition all first hold\ntogether. The strengthening is not idle: it is what makes the returned index MEAN\ninactivation, and ARM 4 above is the trajectory that would otherwise let a run with\nzero copies satisfy it. See the guard\'s `it("...an extinct population...")` test,\nwhich builds exactly that history and checks the predicate rejects it.',
 );
+// ---------------------------------------------------------------------------
+// ARM 6: the plateau as a DURATION, which is what makes it a phase rather than
+// an argmax. Derives PLATEAU_MIN_GENERATIONS. Half of the guard's ordering claim
+// (`plateau < inactivation`) is vacuous by construction of the inactivation
+// scan, so this is the assertion that carries the plateau's weight instead: a
+// spike-shaped model gets a run length of 1..2 here.
+//
+// Two measures are printed. `plateauDuration` — the maximal CONSECUTIVE run
+// containing the plateau index — is the one the guard asserts. The count of
+// generations inside the band anywhere in the history is printed beside it to
+// check that the run is the only excursion (they are equal at every seed, so
+// the "consecutive" qualifier is not hiding a second visit). The count inside
+// the [amplification, inactivation] WINDOW is printed third and was REJECTED as
+// the guard's statistic: it is bounded above by inactivation - amplification + 1
+// (7..12 here), so its floor could only be 3 against a measured minimum of 4 —
+// a one-generation margin on a quantity whose ceiling is set by the other two
+// landmarks rather than by the trajectory.
+// ---------------------------------------------------------------------------
+console.log(
+  `\n=== ARM 6: plateau duration, band ${PLATEAU_BAND} of peak, horizon ${GENERATIONS} ===`,
+);
+console.log(
+  "seed  amp  plat  inact  peakTot |  consecutive (asserted)  anywhere-in-band  in [amp,inact] (rejected)",
+);
+const durations: number[] = [];
+const windowed: number[] = [];
+for (const seed of SEEDS) {
+  const a = runArm({ seed });
+  const ph = a.result.phases!;
+  const peak = a.h[ph.plateau]!.totalCopies;
+  const run = plateauDuration(a.h, ph.plateau);
+  let anywhere = 0;
+  for (const s of a.h) if (s.totalCopies >= PLATEAU_BAND * peak) anywhere++;
+  let win = 0;
+  for (let i = ph.amplification; i <= ph.inactivation; i++)
+    if (a.h[i]!.totalCopies >= PLATEAU_BAND * peak) win++;
+  durations.push(run);
+  windowed.push(win);
+  console.log(
+    `${pad(seed, 4)} ${pad(ph.amplification, 4)}  ${pad(ph.plateau, 4)}  ${pad(ph.inactivation, 5)}  ${pad(peak, 7)} | ${pad(run, 22)}  ${pad(anywhere, 16)}  ${pad(win, 24)}${run === anywhere ? "" : "   <- RUN IS NOT THE ONLY EXCURSION"}`,
+  );
+}
+console.log(
+  `\nconsecutive: min ${min(durations)} (weakest), max ${max(durations)}, mean ${(durations.reduce((x, y) => x + y, 0) / durations.length).toFixed(1)} => floor ${PLATEAU_MIN_GENERATIONS} leaves a ${min(durations) - PLATEAU_MIN_GENERATIONS}-generation margin (${(min(durations) / PLATEAU_MIN_GENERATIONS).toFixed(2)}x)`,
+);
+console.log(
+  `rejected window statistic: min ${min(windowed)}, max ${max(windowed)} — see the comment above ARM 6`,
+);
+
 console.log(`\nBASE: ${JSON.stringify(BASE)}`);
