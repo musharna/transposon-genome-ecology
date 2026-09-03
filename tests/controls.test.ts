@@ -526,6 +526,13 @@ describe("the panel says what the model is doing", () => {
     );
     expect(shrink.disabled, "so the button stops offering").toBe(true);
     expect(shrink.textContent).toBe(shrinkCaption(N_FLOOR));
+    // N is a one-way ratchet -- it only halves, and a fresh invasion carries
+    // the current N forward -- so the floor is the one state this session
+    // cannot leave. A disabled button that does not say why reads as broken.
+    expect(shrink.textContent, "and it names the way out").toContain("reload");
+    expect(shrink.textContent, "and the N it is stuck at").toContain(
+      `N=${N_FLOOR}`,
+    );
   });
 
   /**

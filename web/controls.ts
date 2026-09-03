@@ -158,9 +158,21 @@ export function invadeCaption(seed: number): string {
   return `seed a fresh invasion — now on seed ${seed}`;
 }
 
+/**
+ * The floor state NAMES THE WAY OUT, because there is not one inside the panel.
+ *
+ * `N` only ever halves and a fresh invasion carries the current `N` forward, so
+ * a session that has shrunk to the floor cannot get back to 60 without a
+ * reload. That ratchet stays: every other control here changes the conditions a
+ * population lives under, and a grow-the-population button would be
+ * manufacturing the population itself, which is not a poke in this toy's
+ * grammar. It is also the honest behaviour -- drift is not reversible in a real
+ * population either. But a state you cannot leave has to say so, or a visitor
+ * reads a disabled button as a broken one.
+ */
 export function shrinkCaption(n: number): string {
   return n <= N_FLOOR
-    ? `shrink the population — at the floor, N=${n}`
+    ? `at the floor, N=${n} — reload for a fresh population`
     : `shrink the population (more drift) — N=${n}`;
 }
 
