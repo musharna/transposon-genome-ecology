@@ -9,6 +9,7 @@ import {
   type World,
 } from "../sim/index.js";
 import { TOY_DEFAULTS } from "./params.js";
+import { mountControls, rebuildWorld } from "./controls.js";
 import { BAR_FLOOR_PX, barLength, sharePercent } from "./tally.js";
 import {
   ACTIVE_COLOUR,
@@ -24,6 +25,15 @@ import { drawClusterInset } from "./render/cluster-inset.js";
 
 export { TOY_DEFAULTS };
 
+/**
+ * ONE PARAMS OBJECT FOR THE WHOLE SESSION, AND IT NEVER GETS REPLACED.
+ *
+ * `createWorld` stores this object by reference, so `world.params === params`
+ * and every phase of `step` reads what the controls write. `reset()` below
+ * rebuilds the world through `rebuildWorld`, which assigns INTO this object
+ * rather than making a new one — see the note there for why a `let` and a
+ * reassignment would silently break every slider on the first restart.
+ */
 const params: Params = defaultParams(TOY_DEFAULTS);
 let world: World = createWorld(params);
 let snapshots: Snapshot[] = [observe(world)];
@@ -327,6 +337,12 @@ function frame(): void {
  * `drawField` gets the same speedup without that risk by sorting a per-frame
  * COPY; see `web/render/field.ts`.
  */
+function reset(overrides: Partial<Params> = {}): void {
+  world = rebuildWorld(params, overrides);
+  snapshots = [observe(world)];
+  traces = [];
+}
+
 // Exposed for guard 7 and for poking from the console.
 Object.assign(window, {
   __sim: {
@@ -336,15 +352,16 @@ Object.assign(window, {
     get snapshots() {
       return snapshots;
     },
+    get params() {
+      return params;
+    },
     setSpeed(n: number) {
       speed = n;
     },
-    reset(overrides: Partial<Params> = {}) {
-      world = createWorld(defaultParams({ ...params, ...overrides }));
-      snapshots = [observe(world)];
-      traces = [];
-    },
+    reset,
   },
 });
+
+mountControls(el("controls-slot"), params, reset);
 
 requestAnimationFrame(frame);

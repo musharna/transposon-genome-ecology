@@ -173,14 +173,65 @@
       #cluster-inset {
         height: 140px;
       }
-      /* Bottom-anchored, so the reserved space reads as deliberate. */
+      /* Bottom-anchored, so the pokes sit at the foot of the column and the
+         readout stays where it was. The dashed border this had while it was a
+         placeholder is gone: dashes read as "not built yet", and it is built. */
       #controls-slot {
         margin-top: auto;
-        padding: 10px 12px;
-        border: 1px dashed #232830;
+        padding: 10px 12px 12px;
+        border: 1px solid #232830;
         border-radius: 4px;
         color: #939eac;
         font-size: 11px;
+      }
+      /* Two groups, divided, because one of them costs you your run. See the
+         header comment in web/controls.ts: the sliders and the two toggles
+         perturb a RUNNING world; the pair below the rule restart it. */
+      .poke-group + .poke-group {
+        margin-top: 12px;
+        padding-top: 10px;
+        border-top: 1px solid #232830;
+      }
+      .poke-sub {
+        color: #939eac;
+        font-size: 10px;
+        margin-bottom: 2px;
+      }
+      .poke-row {
+        display: block;
+        margin: 8px 0 2px;
+        color: #9aa5b1;
+        font-variant-numeric: tabular-nums;
+      }
+      .poke-slider {
+        width: 100%;
+        display: block;
+        accent-color: #5e81ac;
+      }
+      .poke-btn {
+        display: block;
+        width: 100%;
+        margin-top: 8px;
+        padding: 6px;
+        cursor: pointer;
+        font: inherit;
+        color: #d8dee9;
+        background: #1b2129;
+        border: 1px solid #2b3440;
+        border-radius: 3px;
+        text-align: left;
+      }
+      .poke-btn:hover:not(:disabled) {
+        background: #222a34;
+      }
+      .poke-btn:disabled {
+        opacity: 0.45;
+        cursor: default;
+      }
+      .poke-note {
+        color: #939eac;
+        font-size: 10px;
+        margin-top: 6px;
       }
     </style>
   </head>
@@ -228,8 +279,8 @@
             <div>
               <span class="pair"
                 ><i style="background: #4c566a"></i
-                ><i style="background: #5e81ac"></i></span
-              >
+                ><i style="background: #5e81ac"></i
+              ></span>
               silenced
             </div>
             <span class="note"
@@ -251,7 +302,9 @@
           <canvas id="cluster-inset"></canvas>
         </div>
 
-        <div id="controls-slot">Controls arrive in Task 18.</div>
+        <!-- Filled by mountControls (web/controls.ts). Empty in the document
+             so there is exactly one definition of what the pokes are. -->
+        <div id="controls-slot"></div>
       </div>
     </div>
     <script type="module" src="./main.ts"></script>
