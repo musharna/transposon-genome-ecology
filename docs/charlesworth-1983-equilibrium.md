@@ -182,7 +182,13 @@ supplies:
    `a = 0, b = 0`. **Measured, that is false** and it is corrected here: linear
    selection has a small but consistent effect. At `N = 200, S = 2000`, five seeds,
    generation 800, the linear arm sits at **97.2%** of the no-selection arm
-   (per-seed minimum 95.4%) — the two ranges do not overlap. The claim the paper
+   (per-seed minimum 95.4%). ⚠️ That draft also said "the two ranges do not
+   overlap", which is **true only at generation 800 and false at the horizon
+   Guard 1 actually runs**: Task 15 measured generation 300, where the per-seed
+   ranges DO overlap and linear reaches 100.7% of no-selection at seed 5. Both
+   arms are still climbing at 300. **Never assert a per-seed ordering between
+   these two arms** — Guard 1 correctly asserts a floor/ceiling pair on the
+   ratio of means instead. The claim the paper
    actually supports is comparative, and the separation is an order of magnitude:
    linear stays within a few percent of no selection at all, while the quadratic
    arm falls to **9.1%** of it (per-seed maximum 9.4%). Assert that shape, not
