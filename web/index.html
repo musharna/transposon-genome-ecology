@@ -162,22 +162,75 @@
         margin: 2px 0 6px 0;
         display: block;
       }
-      /* The magnified cluster. It is a flex item placed BEFORE the
-         bottom-anchored #controls-slot, so it consumes the column's dead space
-         by construction rather than by being positioned at coordinates measured
-         once in one browser at one viewport height. Its own height is fixed
-         because the canvas inside it needs a size the global `canvas { height:
-         100% }` rule cannot give it inside an auto-height flex item. Measured
-         content height of the column above it at an 800px viewport is ~573px of
-         ~784px available, so ~211px is free and this block takes 161. */
-      #cluster-inset {
-        height: 140px;
+      /* The magnified cluster is the section that ABSORBS the column's spare
+         height, which is how the column has no dead space at any viewport
+         rather than at one measured viewport. `flex: 1 1 auto` gives it
+         whatever is left over once every other section has taken what it needs,
+         and `min-height: 0` stops a flex item's auto minimum from re-inflating
+         it; the canvas below then gets a definite height from flex layout, so
+         `drawClusterInset` -- which already reads its size from
+         getBoundingClientRect -- simply draws taller. `min-height` on the
+         canvas is the floor it had as a fixed height, so it never shrinks below
+         what Task 17 measured it at.
+
+         This replaces the old arrangement, in which this panel sat before a
+         bottom-anchored #controls-slot and absorbed the slack by being pushed
+         against it. That worked while the slot held a placeholder and left a
+         ~190px hole under this panel once the slot held real controls. */
+      /* THIS PANEL ABSORBS THE COLUMN'S SPARE HEIGHT, so there is no dead space
+         at any viewport rather than at one measured viewport. Three of the four
+         obvious ways to write that are wrong and were measured wrong in a real
+         browser before this one was kept:
+
+           flex: 1 1 auto; min-height: 0    collapsed the panel to height 0 at
+                                            an 800px viewport
+           flex: 1 0 auto                   grew it 156px PAST the space
+                                            available at 1440px, so the column
+                                            overflowed a container it should
+                                            have exactly filled
+           the same, as a nested flex column rather than a grid   identical
+
+         The cause of the second is a ratchet, and it is worth naming because
+         nothing about it is visible in the CSS. `fit()` in web/main.ts sets the
+         canvas's width/height ATTRIBUTES from its own bounding rect every
+         frame. Those attributes are the canvas's intrinsic size, the intrinsic
+         size feeds a `flex-basis: auto` content measurement, and with
+         flex-shrink 0 the panel could never give the height back -- so one
+         frame laid out while `#readout` was still empty (the readout is filled
+         by JS after first layout, and it is 156px of text) permanently inflated
+         this panel by exactly that much.
+
+         `flex-basis: 0` is the fix: the panel contributes NOTHING of its own
+         content to the free-space calculation, so the canvas's attributes
+         cannot feed back into it. `min-height` is then the floor, and it is the
+         panel's real minimum -- 21px of title plus the 140px inset height Task
+         17 measured -- because with a zero basis there is nothing else holding
+         it open. `tests/layout.test.ts` asserts both ends of this in Chromium:
+         the panel sits at exactly its floor when the column overflows, and the
+         column's scrollHeight equals its clientHeight when it does not. */
+      #trap-panel {
+        display: grid;
+        grid-template-rows: auto minmax(140px, 1fr);
+        flex: 1 1 0;
+        min-height: 161px;
       }
-      /* Bottom-anchored, so the pokes sit at the foot of the column and the
-         readout stays where it was. The dashed border this had while it was a
-         placeholder is gone: dashes read as "not built yet", and it is built. */
+      #cluster-inset {
+        /* Sized by its grid row. The global `canvas { height: 100% }` resolves
+           against that row, which is definite, and `min-height: 0` stops the
+           grid item's automatic minimum from re-inflating the row -- the same
+           thing `#stage` already has to do. 140px is the floor Task 17
+           measured this inset at; above that it takes the column's spare
+           height so there is no dead space at any viewport. */
+        min-height: 0;
+      }
+      /* NOT bottom-anchored. `margin-top: auto` was right for a reserved slot
+         and wrong for the toy's primary interaction -- see the comment on the
+         slot's markup below, and tests/layout.test.ts, which measures every
+         slider and button against the viewport in a real browser. The dashed
+         border it had while it was a placeholder is gone too: dashes read as
+         "not built yet", and it is built. */
       #controls-slot {
-        margin-top: auto;
+        flex: none;
         padding: 10px 12px 12px;
         border: 1px solid #232830;
         border-radius: 4px;
@@ -248,6 +301,18 @@
           <div id="readout"></div>
         </div>
 
+        <!-- Filled by mountControls (web/controls.ts). Empty in the document
+             so there is exactly one definition of what the pokes are.
+
+             SECOND IN THE COLUMN, not last. It was bottom-anchored while it
+             held the Task 16 placeholder, which was right for a reserved slot
+             and wrong for the toy's primary interaction: measured in headless
+             Chromium at 1280x800, every slider and every button sat outside the
+             viewport (the first at y=807) and a visitor saw the heading and
+             nothing else. The readout sits immediately above it because the
+             readout is what you check after a poke. -->
+        <div id="controls-slot"></div>
+
         <div id="tally">
           <div class="panel-title">all copies, by state</div>
           <div class="row">
@@ -272,7 +337,12 @@
           </div>
         </div>
 
-        <div>
+        <div id="trap-panel">
+          <div class="panel-title">the trap, magnified</div>
+          <canvas id="cluster-inset"></canvas>
+        </div>
+
+        <div id="legend-panel">
           <div class="panel-title">legend</div>
           <div id="legend">
             <div><i style="background: #bf616a"></i> active</div>
@@ -296,15 +366,6 @@
             <div><i style="background: #8a6d2f"></i> beneficial sites</div>
           </div>
         </div>
-
-        <div>
-          <div class="panel-title">the trap, magnified</div>
-          <canvas id="cluster-inset"></canvas>
-        </div>
-
-        <!-- Filled by mountControls (web/controls.ts). Empty in the document
-             so there is exactly one definition of what the pokes are. -->
-        <div id="controls-slot"></div>
       </div>
     </div>
     <script type="module" src="./main.ts"></script>
