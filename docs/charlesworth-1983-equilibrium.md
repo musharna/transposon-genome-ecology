@@ -189,8 +189,9 @@ supplies:
    ranges DO overlap and linear reaches 100.7% of no-selection at seed 5. Both
    arms are still climbing at 300. **Never assert a per-seed ordering between
    these two arms** — Guard 1 asserts a floor/ceiling pair on the RATIO instead,
-   per seed AND again on the means (`equilibrium.test.ts` lines 266/272 and
-   293/297). It is the ORDERING that is unassertable, not the per-seed
+   per seed AND again on the means (in `equilibrium.test.ts`, search
+   `toBeLessThan(0.15)` and `toBeGreaterThan(0.85)` — each appears twice, once
+   inside the per-seed loop and once after it). It is the ORDERING that is unassertable, not the per-seed
    granularity: the ratio is well behaved seed by seed (linear/none 94.0–100.7%,
    quadratic/none 8.1–9.4%) even though the raw ranges overlap. The claim the paper
    actually supports is comparative, and the separation is an order of magnitude:
