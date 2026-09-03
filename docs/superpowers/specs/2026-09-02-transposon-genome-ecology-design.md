@@ -206,10 +206,45 @@ The resistance↔tolerance dial is the only poke that changes whether the trap c
 exist at all, which is what makes §3 and §4 of the reference base interact rather
 than sit side by side.
 
-### ⚠️ Two rows narrowed against what was built (2026-09-03)
+### ⚠️ Three rows narrowed against what was built (2026-09-03)
 
-Both rows above overstated what shipped, and both are corrected in place rather
-than left to be discovered from the code.
+All three rows above overstated what shipped, and all three are corrected in
+place rather than left to be discovered from the code.
+
+**"Domestication — the alternate win" IS A REAL BEHAVIOUR OF THIS MODEL AND AN
+UNREACHABLE ONE AT THE SHIPPED DEFAULTS.** Guard 8
+(`tests/guards/domestication.test.ts`) measured it at eleven seeds after this row
+was written. Above a bonus threshold the win is exactly as described, and
+stronger than described: domesticated copies persist through the total extinction
+of the still-transposing family, holding ~18-22 copies per genome at generation
+600 and still ~17-20 at generation 2000 with zero parasitic copies left. **Below
+the threshold they are made and then lost to zero at every seed, and
+`defaultParams`' `wDom = 0.01` is below it** — the measured band at that guard's
+arm is `0.03 < wDom* <= 0.075`, so the shipped value is 7.5x under the lowest
+bonus at which every seed keeps a copy, with `beta = 0.005, pDom = 0.001` making
+the event rare on top of that. The loss route is **segregation**, not excision and
+not selection: a domesticated copy is exempt from `lose` and from `isSilenced`,
+but not from the free-recombination draw in `reproduce`, and by ceasing to
+transpose it has given up the only mechanism that could restore its own
+frequency. The same arm under `sexual: false` keeps them at every seed. **The
+defaults were NOT changed** — that would move every guard derivation and the
+golden hash — so the row stands as a statement about the model, not about the
+configuration the toy runs at. `docs/ROADMAP.md` carries it as an open
+calibration item.
+
+**And one claim in the "Resistance ↔ tolerance" row is now measured and holds in
+a stronger form than "cannot be conscripted" suggests.** Guard 9
+(`tests/guards/tolerance.test.ts`): at `t = 1` no genome holds a repertoire entry
+at any generation, at any seed, while 268..463 copies sit in cluster sites — the
+trap is offered material and declines it. The boundary is a DISCONTINUITY rather
+than the end of a gradient: at `t = 0.99` every genome at every seed still forms a
+repertoire. ⚠️ The corollary the row invites — that intermediate `t` interpolates
+observably in the population — was measured and is FALSE at that arm: mean
+repertoire size is non-monotone in `t` over {0, 0.25, 0.5, 0.75} at ten of eleven
+seeds, because the repertoire saturates. §3.2 step 5's "intermediate `t`
+interpolates" is exact for the FITNESS term (`damageLoad` is linear in `t`, and
+the guard asserts the ordering reversal and its crossing at `t = 0.5`) and is not
+a claim the population's repertoire supports.
 
 **"Seed an invasion (new `s`, chosen `r`)" was not built, and should not have
 been promised.** `web/controls.ts:409-411` fires `onReset({ seed: params.seed + 1 })`
@@ -285,6 +320,29 @@ One guard per claim, in `tests/`:
    implementation to approximate; because `normal()` feeds the RNG stream, a
    last-ulp difference would diverge the ORDER of draws, not just a low digit.
    A second engine family in CI would be needed to say more, and none has run.
+
+8. **Domestication is an alternate win, above a benefit threshold** — added
+   2026-09-03, when a phase-coverage audit found `pDom = 0` in all six scientific
+   arms and therefore nothing asserting anything about §3.2 step 3. Asserts the
+   CONTRAST, at eleven seeds: below the threshold domesticated copies are made and
+   lost to zero; above it they persist THROUGH THE FAMILY'S TOTAL EXTINCTION; and
+   the same below-threshold bonus under `sexual: false` keeps them, which pins the
+   loss route to segregation rather than to excision or selection. ⚠️ Its
+   below-threshold arm is the SHIPPED DEFAULT `wDom`, so the guard is also the
+   record of the calibration finding in §4. `tests/guards/domestication.test.ts` +
+   `domestication-arm.ts`, derived by `scripts/explore-domestication.ts`.
+
+9. **Resistance and tolerance differ in kind, not degree** — added 2026-09-03,
+   when the same audit found `t = 0` in all seven arms and in both parameter
+   defaults, so `damageLoad`'s tolerance branch had never executed in a population
+   run. Three claims: at `t = 1` no repertoire forms at any generation at any
+   seed while hundreds of copies sit in cluster sites; `t = 0.99` still forms one
+   in every genome, so the boundary is a discontinuity rather than the end of a
+   slope; and the fitness ORDERING between an active-heavy and a silenced-heavy
+   genome of equal copy number REVERSES between `t = 0` and `t = 1`. ⚠️ It
+   deliberately asserts NO mid-dial population gradient — see §4.
+   `tests/guards/tolerance.test.ts` + `tolerance-arm.ts`, derived by
+   `scripts/explore-tolerance.ts`.
 
 ### Testing disciplines, committed to explicitly
 
