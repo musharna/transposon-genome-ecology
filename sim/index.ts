@@ -1,6 +1,11 @@
 export { defaultParams, type Params } from "./params.js";
 export { history, observe, stateHash, type Snapshot } from "./observe.js";
-export { activeCopies, isSilenced, silencedCopies } from "./silencing.js";
+export {
+  activeCopies,
+  isSilenced,
+  repertoireInsertionIndex,
+  silencedCopies,
+} from "./silencing.js";
 export { run, step } from "./step.js";
 export {
   createWorld,

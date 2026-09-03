@@ -172,11 +172,30 @@ live registry and the null stated as "checked HERE", naming where.
       (`experiments/001-per-copy-vs-family-rate.ts`). The result reproduces from
       its committed CSV.
 
-## What is actually left — the four carried-forward limitations
+## What is actually left — three of the four carried-forward limitations
 
 Everything in the plan is built. These are the known defects and scope limits the
 build carried forward deliberately; none is a blocker for merge, and each is
 recorded at its own site in tracked code so it survives a clone.
+
+**Closed since:** the unbounded repertoire scan. `Genome.repertoire` is now kept
+sorted ascending and `isSilenced` binary-searches it, testing only the insertion
+point's two neighbours. Recorded on `sim/silencing.ts`, `sim/phases/trap.ts` and
+`Genome.repertoire` in `sim/state.ts`; the before/after profile is on `reset()`
+in `web/main.ts`. Two things the item predicted turned out to be wrong and are
+worth keeping written down:
+
+- **golden hash `9c15fd28` DID NOT MOVE.** Every genome's repertoire holds
+  exactly one entry at generation 15 of the pinned configuration, and a
+  one-element array is identical under insertion order and sorted order — so the
+  project's determinism oracle is BLIND to the only observable this change has.
+  `tests/step.test.ts` now carries a second pin at a configuration whose
+  repertoires are multi-entry, which is the one that can see it.
+- the item said the fix "changes that array's ORDER, which `stateHash` reads, so
+  it needs its own task". True of `stateHash`, and it is still the only consumer
+  of repertoire order — but the two render tests that assert the renderers do not
+  reorder sim state were the ones the change actually broke, because a sorted
+  repertoire cannot be re-sorted and their fixture controls said so.
 
 - [ ] **The field render undercounts copies by ~12%.** `markWidth` in
       `web/render/field.ts` floors a mark at 1 px against a 0.919 px/site pitch,
@@ -185,15 +204,11 @@ recorded at its own site in tracked code so it survives a clone.
       it never reverses the direction of a change a visitor is watching — but it
       is on the hero panel, and a visitor counts. Fix needs sub-pixel accumulation
       rather than a wider mark. Recorded on `markWidth`.
-- [ ] **The piRNA repertoire scan is unbounded.** Nothing removes a repertoire
+- [x] **The piRNA repertoire scan is unbounded.** ~~Nothing removes a repertoire
       entry, so one silencing pass costs `O(copies × repertoire)` and the cost
-      grows. Measured at `TOY_DEFAULTS`, seed 1, generations 250 to 11000: the
-      repertoire grows 94x (7 to 660 entries per genome) while copy number has no
-      trend, so the cost of one pass — copies x repertoire — rises 130x.
-      The obvious fix — keep `repertoire` sorted and binary-search it — changes
-      that array's ORDER, which `stateHash` reads, so it needs its own task and a
-      check against golden hash `9c15fd28`. Recorded on `reset()` in
-      `web/main.ts`.
+      grows.~~ CLOSED — see the note above this list. Nothing still removes a
+      repertoire entry and it still grows without bound; what is bounded now is
+      the cost of looking one up.
 - [ ] **Full inactivation implies the family DIES, which diverges from biology.**
       `lose` keeps excising silenced copies that silencing prevents from
       replacing themselves, so decay to zero is guaranteed; real silenced TE

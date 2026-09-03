@@ -2,6 +2,49 @@
 
 Milestone-boundary entries. Appended in the commit that closes a milestone.
 
+## Unreleased
+
+### The repertoire lookup is bounded — `sim/silencing.ts`, `sim/phases/trap.ts`
+
+First of v1's four carried-forward limitations to close. `Genome.repertoire` is
+now kept **sorted ascending** and `isSilenced` binary-searches it, testing only
+the insertion point's two neighbours — exhaustive for the minimum in any sorted
+array, so it holds without any assumption about the repertoire's spacing or
+distinctness. The scan it replaces was `O(copies × repertoire)` per pass over a
+repertoire that nothing ever shrinks, which is why **the toy got slower the
+longer anyone watched it**. Profile at `TOY_DEFAULTS`, seed 1, on `reset()` in
+`web/main.ts`. The model's behaviour is unchanged: no phase consumes a different
+number of RNG draws and every `Snapshot` field is bit-identical at five seeds and
+eight generation marks.
+
+Three things this found that were believed and are false:
+
+- **Golden hash `9c15fd28` did not move.** `docs/ROADMAP.md`, `web/main.ts` and
+  `web/render/field.ts` all recorded that a sorted repertoire "changes that
+  array's ORDER, which `stateHash` reads", so the change needed "a check against
+  golden hash `9c15fd28`". Every genome holds exactly ONE repertoire entry at
+  generation 15 of that configuration — `θ/σ_s` is 5 there, the regime where one
+  entry silences a whole family — and a one-element array digests identically in
+  any order. The project's determinism oracle **could not fail** for the only
+  observable this change has. `tests/step.test.ts` now carries a second pin at a
+  multi-entry configuration, with the push-order hash measured alongside the
+  sorted-order one so the coverage claim is checkable.
+- **The two render no-mutation tests were what actually broke**, and they broke
+  on their own fixture controls rather than on their claims: a repertoire that is
+  already ascending cannot be re-sorted, so `sortedRepertoire`'s load-bearing
+  `.slice()` could have been deleted with both tests still green. Both now hand
+  the render a deliberately reversed repertoire.
+- **`tests/render-field.test.ts` (a2) stopped being a cross-check.** It held
+  `web/render/field.ts`'s binary search against `sim/silencing.ts`'s linear
+  scan; both sides are searches now. The scan moved into
+  `tests/silencing.test.ts` as an explicit reference, checked over 20 000
+  generated repertoires (empties, duplicates, exact-θ ties) and over every copy
+  of every genome across real generations.
+
+Also corrected: `web/controls.ts` attributed the asexual flood's frame cost to
+`O(copies × repertoire)` in a sentence directly contradicted by the paragraph
+below it, which measures most of that cost as one `fillRect` per copy.
+
 ## v1 — the model, seven guards, the toy, one registered question (2026-09-03)
 
 First milestone. Closes `impl/sim-core-v1`. Backfilled in one entry: the branch

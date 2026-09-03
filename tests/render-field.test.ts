@@ -2,22 +2,34 @@
  * The render accelerator's equivalence guard.
  *
  * `web/render/field.ts` does not call `sim/silencing.ts`'s `isSilenced`. It
- * reimplements the predicate over a sorted copy of the repertoire, because
- * `isSilenced` scans the whole repertoire per copy and that repertoire grows
- * without bound. Two things can go wrong with that, and only one of them is
+ * reimplements the predicate over a sorted copy of the repertoire — originally
+ * because `isSilenced` scanned the whole repertoire per copy and that repertoire
+ * grows without bound; since 2026-09-03 `isSilenced` is itself a binary search
+ * over the same sorted array, and what keeps the local copy is that `sim/` must
+ * not import from `web/` and the scatter needs the signed distance rather than
+ * the boolean. Two things can go wrong with that, and only one of them is
  * visible on screen:
  *
  *   1. THE PREDICATE DIVERGES. Marks get the wrong colour. Loud, but nothing in
- *      the suite watched for it before this file.
+ *      the suite watched for it before this file. ⚠️ AND (a2) BELOW IS NOW A
+ *      WEAKER CHECK THAN IT WAS: it held a binary search against a linear scan,
+ *      and both sides are binary searches now, so an error the two share would
+ *      pass. The scan survives as an explicit reference in
+ *      `tests/silencing.test.ts`, which is where a search-versus-scan
+ *      disagreement is caught.
  *
  *   2. THE SORT ESCAPES ONTO SIM STATE. `sortedRepertoire` sorts a `.slice()`.
  *      Delete those eight characters and it sorts `genome.repertoire` IN PLACE.
  *      `genome.repertoire` is ORDERED state: `sim/observe.ts`'s `stateHash`
- *      digests it in order and `reproduce` copies it into every daughter, so the
- *      golden hash moves and the model changes -- while every mark on screen
+ *      digests it in order, so the model changes -- while every mark on screen
  *      still looks exactly right, because the sorted array answers the same
  *      questions. A one-character deletion silently corrupting the science, with
- *      no observable, is the reason (b) below exists.
+ *      no observable, is the reason (b) below exists. ⚠️ AND (b) NEEDED A
+ *      PERTURBED FIXTURE TO KEEP SEEING IT once `sim/` started handing it
+ *      already-sorted repertoires; the reason is written on (b) itself.
+ *      ("and `reproduce` copies it into every daughter" stood here as a second
+ *      order-sensitive consumer. `reproduce` copies the array wholesale with no
+ *      positional read; `stateHash` is the only one.)
  *
  * These run against `TOY_DEFAULTS`, the parameters the page actually ships, and
  * they drive the REAL `drawField` through a recording stub rather than
@@ -209,6 +221,28 @@ describe("drawField: the render accelerator agrees with sim/silencing", () => {
     expect(activeSeen).toBeGreaterThan(100);
   });
 
+  /**
+   * ⚠️ THE FIXTURE STOPPED BEING ABLE TO SEE THE DEFECT, AND SAID SO.
+   *
+   * Until 2026-09-03 this test drove `drawField` over worlds straight out of
+   * `step` and asserted that every repertoire came back in its original order.
+   * `sim/` now keeps `Genome.repertoire` SORTED ASCENDING (`sim/state.ts`), so
+   * sorting one of those arrays in place is a NO-OP — a deleted `.slice()` in
+   * `sortedRepertoire` would leave every assertion above green. The fixture
+   * control that used to close this test caught exactly that when the invariant
+   * landed: `anyUnsorted` went false and the test failed on its own control
+   * rather than on its claim, which is the correct outcome for a check whose
+   * subject has moved out from under it.
+   *
+   * The claim is still worth making — `sortedRepertoire` must not mutate sim
+   * state, and a future `trap` that appended out of order would restore the
+   * old exposure — so the detecting power is restored by handing the render an
+   * array a sort WOULD move. `sortedRepertoire` sorts a copy and its
+   * correctness rests on no property of its input's order, so a reversed
+   * repertoire is a legitimate input to the render even though it is not
+   * legitimate sim state; the perturbation happens after the last mark and
+   * nothing steps the world afterwards.
+   */
   it("(b) leaves genome.repertoire in exactly the order it found it", () => {
     const world = freshWorld();
     let generation = 0;
@@ -224,21 +258,29 @@ describe("drawField: the render accelerator agrees with sim/silencing", () => {
       const after = world.genomes.map((g) => [...g.repertoire]);
 
       expect(after, `repertoire order at gen ${mark}`).toEqual(before);
-
-      // The check is only meaningful once repertoires are long enough to be
-      // reordered by a sort, and once at least one is not already ascending.
-      if (mark === MARKS[MARKS.length - 1]) {
-        const longest = Math.max(...before.map((r) => r.length));
-        expect(longest).toBeGreaterThan(20);
-        const anyUnsorted = before.some((r) =>
-          r.some((x, i) => i > 0 && x < r[i - 1]!),
-        );
-        expect(
-          anyUnsorted,
-          "fixture cannot detect an in-place sort if every repertoire is already ascending",
-        ).toBe(true);
-      }
     }
+
+    // Everything above is satisfied by a render that sorts sim state in place,
+    // because sim state is already sorted. This is not.
+    const victim = world.genomes.find((g) => g.repertoire.length > 20);
+    expect(
+      victim,
+      "no genome reached 20 repertoire entries, so nothing here could detect a sort",
+    ).toBeDefined();
+
+    const scrambled = [...victim!.repertoire].reverse();
+    victim!.repertoire = [...scrambled];
+    expect(
+      scrambled.some((x, i) => i > 0 && x < scrambled[i - 1]!),
+      "the perturbed repertoire is still ascending, so a sort would not move it",
+    ).toBe(true);
+
+    const { ctx } = recordingCtx();
+    drawField(ctx, world, W, H);
+    expect(
+      victim!.repertoire,
+      "drawField reordered a repertoire it was given",
+    ).toEqual(scrambled);
   });
 
   it("(c) leaves copies, sites and every other field of sim state untouched", () => {

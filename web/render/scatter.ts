@@ -240,10 +240,22 @@ export interface Placement {
  * is the model, not a mis-colouring.
  *
  * Uses `sortedRepertoire`'s per-frame COPY of the repertoire and one binary
- * search per copy, not `isSilenced`'s full scan. `genome.repertoire` is ORDERED
- * state that `stateHash` and `reproduce` both read, so the `.slice()` is
- * load-bearing; the repertoire reaches ~246 entries by generation 4000 and grows
- * without bound, so the scan is a growing per-frame cost.
+ * search per copy. `genome.repertoire` is ORDERED state that `stateHash` reads,
+ * so the `.slice()` is load-bearing.
+ *
+ * ⚠️ CORRECTIONS, 2026-09-03, both to sentences that stood here.
+ *
+ *   - "not `isSilenced`'s full scan". `sim/silencing.ts`'s `isSilenced` is now
+ *     itself a binary search over the same sorted array, so the reason for the
+ *     local implementation is no longer a cost gap — it is that `sim/` may not
+ *     depend on `web/` and the render needs the signed DISTANCE, not the
+ *     boolean. `tests/render-field.test.ts` (a2) holds the two searches to each
+ *     other, and `tests/silencing.test.ts` holds `isSilenced` to a scan.
+ *   - "`stateHash` and `reproduce` both read". `reproduce` does not read the
+ *     ORDER: it copies the array wholesale (`sim/phases/reproduce.ts:79`), with
+ *     no dedup and no positional read. `stateHash` is the only consumer of
+ *     repertoire order. Restated from `web/main.ts`, where the same error was
+ *     already corrected.
  */
 export function placeCopies(world: World, geom: ScatterGeometry): Placement {
   const p = world.params;

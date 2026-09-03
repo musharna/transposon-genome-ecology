@@ -356,16 +356,28 @@ export function mountControls(
    *     asexual, held full for ~6 s        250-267 ms   3.8-4.0 fps
    *     back to sexual                      16.7 ms    59.9 fps
    *
-   * It gets slower the longer it is held because the cost is
-   * O(copies x repertoire) and the repertoire keeps growing. Clicking back
-   * clears the flood on the very next frame — 0.07 s of wall clock, which at
-   * these frame rates is less than one frame. So it crawls, it stays legible,
-   * and the way out is instant; the panel note carries the numbers.
+   * It gets slower over the first seconds it is held — 167 ms to 250-267 ms —
+   * as occupancy climbs from 26.6% to 98.6%. Clicking back clears the flood on
+   * the very next frame — 0.07 s of wall clock, which at these frame rates is
+   * less than one frame. So it crawls, it stays legible, and the way out is
+   * instant; the panel note carries the numbers.
    *
    * The headless figure this replaces was 1.8 ms/step against 36 ms/step, from
    * a harness that ran no `fillRect` and no `fit()`. It was not wrong, it was
    * not the question: `drawField` issues about 59,000 fills per frame at this
    * occupancy, and that is most of the 250 ms.
+   *
+   * ⚠️ CORRECTION, 2026-09-03. "It gets slower the longer it is held because
+   * the cost is O(copies x repertoire) and the repertoire keeps growing" stood
+   * here, and it named the wrong mechanism twice over. It contradicted the
+   * paragraph directly below it — which measures most of the 250 ms as
+   * `fillRect` calls, one per COPY, with no repertoire term in it — and the
+   * silencing pass it did name is now O(copies x log repertoire) anyway
+   * (`sim/silencing.ts`). The four measured intervals above are unchanged and
+   * were taken before that change; NOBODY HAS RE-MEASURED THEM SINCE, so they
+   * are an upper bound on the current cost, not a current reading. What the
+   * numbers themselves support is only the correlation with occupancy stated
+   * above.
    */
   const sex = doc.createElement("button");
   sex.className = "poke-btn";
