@@ -4,6 +4,17 @@
     <meta charset="utf-8" />
     <title>Transposons as genome ecology</title>
     <style>
+      /* box-sizing here is load-bearing, not hygiene. #stage is a 100vh grid
+         item with 8px padding, and under the default content-box that padding is
+         ADDED to 100vh -- the stage overflowed the viewport by 16px, and the
+         third canvas was clipped at the fold with no bottom border while the
+         first two closed cleanly. min-height:0 stops a grid item's auto minimum
+         from re-inflating the rows. */
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
       :root {
         color-scheme: dark;
       }
@@ -19,6 +30,7 @@
         display: grid;
         grid-template-columns: 1fr 320px;
         height: 100vh;
+        overflow: hidden;
       }
       #stage {
         display: grid;
@@ -26,6 +38,10 @@
         gap: 8px;
         padding: 8px;
         min-width: 0;
+        min-height: 0;
+      }
+      #stage > canvas {
+        min-height: 0;
       }
       canvas {
         width: 100%;
@@ -38,6 +54,7 @@
         padding: 12px;
         border-left: 1px solid #232830;
         overflow-y: auto;
+        min-height: 0;
       }
       #controls label {
         display: block;
@@ -51,22 +68,33 @@
         font-variant-numeric: tabular-nums;
         white-space: pre;
         color: #8fbcbb;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
       }
       #legend {
-        margin-top: 14px;
+        margin-top: 16px;
         color: #9aa5b1;
       }
       #legend div {
         display: flex;
         align-items: center;
         gap: 8px;
-        margin: 3px 0;
+        margin: 4px 0;
       }
       #legend i {
         width: 10px;
         height: 10px;
         border-radius: 2px;
         display: inline-block;
+        flex: none;
+      }
+      /* Task 18's controls land here. Reserved deliberately so the column reads
+         as "not yet built" rather than as an accidental 320x550 hole. */
+      #controls-slot {
+        margin-top: 18px;
+        padding: 10px 12px;
+        border: 1px dashed #232830;
+        border-radius: 4px;
+        color: #5b6672;
       }
     </style>
   </head>
@@ -84,9 +112,11 @@
           <div><i style="background: #4c566a"></i> silenced</div>
           <div><i style="background: #a3be8c"></i> domesticated</div>
           <div>
-            <i style="background: #1d2530"></i> piRNA cluster (the trap)
+            <i style="background: #4a6f9e"></i> piRNA cluster — the trap
           </div>
+          <div><i style="background: #8a6d2f"></i> beneficial sites</div>
         </div>
+        <div id="controls-slot">Controls arrive in Task 18.</div>
       </div>
     </div>
     <script type="module" src="./main.ts"></script>

@@ -1,84 +1,17 @@
 import {
   createWorld,
   defaultParams,
+  isClusterSite,
   observe,
   step,
   type Params,
   type Snapshot,
   type World,
 } from "../sim/index.js";
+import { TOY_DEFAULTS } from "./params.js";
 import { drawField } from "./render/field.js";
 
-/**
- * The toy's parameters: a `web/`-level layer over `defaultParams`, which is NOT
- * touched. Every guard in the suite is calibrated against those values and
- * `tests/step.test.ts` pins the RNG draw stream to golden hash `9c15fd28`.
- *
- * `defaultParams()` itself is unwatchable as a toy. Measured here before these
- * were derived, at its own values, seed 1, one observation per generation:
- *
- *     gen  30   954 copies   902 active    52 silenced
- *     gen  60  1080 copies   318 active   762 silenced
- *     gen 120   273 copies     0 active   273 silenced   <- nothing can transpose
- *     gen 300     0 copies                                <- extinct
- *
- * At `speed` below and 60 fps that is about 1.7 seconds: a red bloom, a grey
- * field, an empty screen. Its `theta` is 5x its `sigmaS`, so one captured entry
- * silences a whole family at once and no daughter can diverge out of the window.
- *
- * WHY THESE VALUES. Two requirements pull against each other, and these are
- * where they were measured to separate.
- *
- *  - SURVIVAL is set by the escape ratio `sigmaS / theta`: a daughter's
- *    sequence coordinate has to be able to outrun its own family's trap.
- *    Measured over seeds 1/2/3/5/7/11/13, everything else held at the values
- *    below, counting worlds still alive at generation 6000:
- *
- *        ratio 1.50 (sigmaS 0.06)   4 of 7   deaths at gen 2598, 4133, 4506
- *        ratio 1.75 (sigmaS 0.07)   6 of 7   death  at gen 714
- *        ratio 2.00 (sigmaS 0.08)   7 of 7
- *        ratio 2.50 (sigmaS 0.10)   7 of 7
- *
- *    `sigmaS = 0.08` is that 2.0. `tests/guards/bloat-arm.ts` reaches the same
- *    regime from the other side and documents it: at 2x, "escape by divergence
- *    is routine", and its silenced arm settles instead of dying.
- *
- *  - SPEED is set by repertoire growth, which is the CAPTURE rate: `c`, and the
- *    transposition rate that feeds copies into cluster sites. `rMax = 0.2` is
- *    the load-bearing one. Left at 1, `r` evolves upward without a ceiling
- *    (0.87 on the arm this replaced) and the element explores sequence space
- *    fast enough that the repertoire runs away. Measured at `c = 0.005`,
- *    seeds 1/2/3/5/7, horizon 2500: with `rMax = 1`, 0 of 5 survive — three
- *    pass 6000 copies by generation 536 and two die by generation 965; with
- *    `rMax = 0.2`, 5 of 5 are alive.
- *
- * EXTINCTION IS NOT A BUG TO BE TUNED AWAY. `tests/guards/three-phases-arm.ts`
- * states it canonically: "Full inactivation implies the family eventually DIES
- * in this model", because `lose` keeps excising silenced copies that silencing
- * prevents from replacing themselves. No parameter set is extinction-proof.
- * These are chosen so full inactivation is not REACHED inside a session: 7 of 7
- * seeds alive at generation 6000, and seeds 1 and 2 still alive at 11000 with
- * active, silenced and domesticated copies all present throughout.
- */
-export const TOY_DEFAULTS: Partial<Params> = {
-  N: 60,
-  S: 1000,
-  c: 0.005,
-  r0: 0.1,
-  rMax: 0.2,
-  sigmaR: 0.05,
-  sigmaS: 0.08,
-  theta: 0.04,
-  v: 0.01,
-  a: 0.001,
-  b: 0.001,
-  d: 0.0005,
-  dTol: 0.002,
-  t: 0,
-  beta: 0.02,
-  pDom: 0.02,
-  wDom: 0.01,
-};
+export { TOY_DEFAULTS };
 
 const params: Params = defaultParams(TOY_DEFAULTS);
 let world: World = createWorld(params);
@@ -99,6 +32,29 @@ function fit(canvas: HTMLCanvasElement): CanvasRenderingContext2D {
   return ctx;
 }
 
+/** Copies currently sitting in a piRNA cluster site, population-wide. */
+function copiesInCluster(w: World): number {
+  let n = 0;
+  for (const genome of w.genomes) {
+    for (const copy of genome.copies) {
+      if (isClusterSite(copy.site, w.params)) n++;
+    }
+  }
+  return n;
+}
+
+/** Mean piRNA repertoire size. The trap's own state, and what degrades. */
+function meanRepertoire(w: World): number {
+  if (w.genomes.length === 0) return 0;
+  let n = 0;
+  for (const genome of w.genomes) n += genome.repertoire.length;
+  return n / w.genomes.length;
+}
+
+function pad(label: string, value: string): string {
+  return label.padEnd(14) + value.padStart(7);
+}
+
 function frame(): void {
   for (let i = 0; i < speed; i++) step(world);
   const snap = observe(world);
@@ -108,14 +64,20 @@ function frame(): void {
   const rect = fieldCanvas.getBoundingClientRect();
   drawField(fit(fieldCanvas), world, rect.width, rect.height);
 
+  // Every row here has to be a row that MOVES. `fractionWithRepertoire` used to
+  // sit in this block and read 100.0% at every timepoint of every session --
+  // once the trap has spread it never falls again, so it carried no information
+  // for the whole run. Mean repertoire size is the same quantity's live edge,
+  // and it is also the number the degradation note below is about.
   readout.textContent = [
-    `gen        ${snap.generation}`,
-    `copies     ${snap.totalCopies}`,
-    `active     ${snap.activeCopies}`,
-    `silenced   ${snap.silencedCopies}`,
-    `domestic.  ${snap.domesticatedCopies}`,
-    `mean rate  ${snap.meanRate.toFixed(4)}`,
-    `w/ piRNA   ${(snap.fractionWithRepertoire * 100).toFixed(1)}%`,
+    pad("gen", String(snap.generation)),
+    pad("copies", String(snap.totalCopies)),
+    pad("active", String(snap.activeCopies)),
+    pad("silenced", String(snap.silencedCopies)),
+    pad("domesticated", String(snap.domesticatedCopies)),
+    pad("in cluster", String(copiesInCluster(world))),
+    pad("piRNA entries", meanRepertoire(world).toFixed(1)),
+    pad("mean rate", snap.meanRate.toFixed(3)),
   ].join("\n");
 
   requestAnimationFrame(frame);
@@ -128,7 +90,7 @@ function frame(): void {
  * every copy, and `trap` (`sim/phases/trap.ts`) only ever APPENDS to that
  * repertoire — nothing removes an entry — so one silencing pass costs
  * O(copies x repertoire) over a repertoire that grows for as long as the world
- * runs. Measured at the defaults above, seed 1, as mean entries per genome. The
+ * runs. Measured at `TOY_DEFAULTS`, seed 1, as mean entries per genome. The
  * count is deterministic and reproduces on any machine, which is why it, and
  * not a wall-clock figure, is the number quoted first:
  *
@@ -149,10 +111,14 @@ function frame(): void {
  *     30 s  gen 3294   rep 203    20 fps
  *     90 s  gen 5736   rep 345    12 fps
  *
- * So roughly the first 20 seconds are above 25 fps. That box was under load
- * from unrelated work and timed the same workload at 9.4 and 23.6 ms/step on
- * two separate runs, so treat every figure in that second table as a floor
- * rather than a measurement of the model.
+ * TREAT THAT SECOND TABLE AS A CEILING ON A FLOOR, AND DO NOT QUOTE IT AS THE
+ * FRAME RATE. It was produced by a harness that ran the steps, `observe` and the
+ * silencing pass but NOT `ctx.fillRect` (1300-2000 calls per frame at these
+ * defaults) and NOT `fit()`'s per-frame backing-store reallocation, so real
+ * in-browser fps is lower than every figure in it — by an amount nobody has
+ * measured yet. It was also taken on a box under unrelated load that timed the
+ * same workload at 9.4 and 23.6 ms/step on two separate runs. The 20 s row sits
+ * on the 25 fps bar in the harness, which means in a browser it is under it.
  *
  * `reset()` below rebuilds the world from scratch, which empties the repertoire
  * and returns the frame rate to its opening value. That is the session shape
