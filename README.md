@@ -51,13 +51,26 @@ a pointer, not a verified fact about its current contents.
     npx playwright install chromium     # REQUIRED -- see below
     npm test
 
-**The second line is not optional.** `tests/layout.test.ts` drives a real
-Chromium against the built page: it is the only thing in the suite that can
-check that the pokes are actually on screen and that the flooded toy still
-answers its own button, and neither of those claims is decidable from Node.
-`vitest.config.ts` includes every `tests/**/*.test.ts`, so that file always
-runs; without the browser binary the suite fails at `chromium.launch()` with
+**The second line is not optional.** Two test files drive a real Chromium
+against the built page, and neither of their claims is decidable from Node:
+
+- `tests/layout.test.ts` — that the pokes are actually on screen, and that the
+  flooded toy still answers its own button.
+- `tests/guards/one-implementation.test.ts` (guard 7) — that the model running
+  in the browser and the model running in Node produce a byte-identical state
+  hash. This is the claim that the artifact played is the artifact validated;
+  the other six guards check `sim/` in Node, and without this one nothing
+  connects those results to the bundle a visitor loads.
+
+`vitest.config.ts` includes every `tests/**/*.test.ts`, so both always run;
+without the browser binary the suite fails at `chromium.launch()` with
 "Executable doesn't exist", which is the truth and is meant to be visible.
+
+Both build first rather than trusting whatever is on disk — a stale bundle
+would make either of them pass on a page nobody is shipping. `layout.test.ts`
+builds `dist/`; guard 7 builds `dist-guard7/`, because vitest runs files in
+parallel and two concurrent builds with `emptyOutDir` on one directory would
+race. Both are gitignored, and neither needs a dev server.
 
 Other commands:
 

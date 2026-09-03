@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>hash harness</title>
+  </head>
+  <body>
+    <!--
+      Not part of the toy. This page exists so guard 7
+      (`tests/guards/one-implementation.test.ts`) can run the model inside a
+      browser, against the SAME bundle the toy is built from, and compare its
+      state hash with node's. It renders nothing; `#out` is there so a human
+      who opens it by hand can see what it computed.
+    -->
+    <pre id="out">running…</pre>
+    <script type="module" src="./hash-harness.ts"></script>
+  </body>
+</html>
