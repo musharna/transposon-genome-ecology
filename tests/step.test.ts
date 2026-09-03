@@ -94,6 +94,12 @@ describe("step", () => {
   // status) — flagging so a future param edit that changes this ratio is
   // visible against a written baseline, not so this test asserts it.
   //
+  // ⚠️ AND IT IS BLIND TO THE ORDER OF `genome.repertoire`, which `stateHash`
+  // digests positionally. All 24 genomes hold exactly ONE entry at generation
+  // 15 here, so insertion order and sorted order are the same string. The
+  // second pin below covers that and carries the measurement; three documents
+  // in this repo asserted that this pin would catch it, and they were wrong.
+  //
   // It defends against exactly one failure mode: an extra or missing
   // `world.rng.next()`/`world.rng.normal()` call anywhere in any phase, or a
   // reordering of the six phases in `step`. Either one shifts every random
@@ -135,6 +141,95 @@ describe("step", () => {
     const w = createWorld(params);
     run(w, 15);
     expect(stateHash(w)).toBe("9c15fd28");
+  });
+
+  // GOLDEN VALUE #2 — REPERTOIRE ORDER. DO NOT UPDATE THE LITERAL TO MAKE THIS
+  // PASS, for the same reasons as the pin above.
+  //
+  // ⚠️ WHY A SECOND PIN EXISTS: THE PIN ABOVE IS BLIND TO REPERTOIRE ORDER, AND
+  // THIS PROJECT SPENT THREE DOCUMENTS BELIEVING OTHERWISE. `docs/ROADMAP.md`,
+  // `web/main.ts` and `web/render/field.ts` all recorded that keeping
+  // `genome.repertoire` sorted "changes that array's ORDER, and `stateHash`
+  // reads it", so the change would "need its own task and a check against
+  // golden hash `9c15fd28`". On 2026-09-03 `sim/phases/trap.ts` was changed
+  // from `push` to a sorted insert and THE HASH DID NOT MOVE — it is still
+  // `9c15fd28`, from the same run that produced every other figure in this
+  // file.
+  //
+  // Measured, at the pinned configuration above, generation 15: all 24 genomes
+  // hold EXACTLY ONE repertoire entry (`[1,1,1,...]`, 24 of 24), and a
+  // one-element array digests identically whatever order it is in. The reason
+  // is in the parameters: `theta / sigmaS` is 0.1 / 0.02 = 5, which by this
+  // project's own classification (`web/params.ts:22-23`,
+  // `tests/guards/bloat-arm.ts`) is the regime where one captured entry
+  // silences a whole family at once — so `trap`'s "already covered" skip
+  // (`sim/phases/trap.ts:22`) rejects every later candidate and a second entry
+  // never appears. `stateHash` is the project's determinism oracle, and for the
+  // one observable this change has it could not fail.
+  //
+  // So this pin runs a configuration where the repertoire is MULTI-ENTRY. It is
+  // `TOY_DEFAULTS` at `N: 20`, which is the regime the toy actually runs
+  // (`theta / sigmaS` = 0.04 / 0.08 = 0.5, i.e. escape by divergence is
+  // routine, so captures keep accumulating), spelled out in full rather than
+  // imported so a recalibration of `TOY_DEFAULTS` cannot silently invalidate
+  // the literal — the same argument the pin above makes about `defaultParams`.
+  //
+  // Measured for THIS configuration at generation 300, node v22.14.0:
+  //
+  //   - 20 of 20 genomes hold 2 or more repertoire entries; the largest holds 6;
+  //   - 700 total copies, of which 611 active, 77 silenced and 12 domesticated,
+  //     so no field of the digested string is constant across copies;
+  //   - hash with the sorted insert:                         3c7584d8
+  //   - hash with `push` (the code as it stood at 29fff12):  fd9b48d0
+  //
+  // Those last two lines are the coverage claim, and they are a measurement,
+  // taken by running this exact configuration in a worktree at 29fff12 — every
+  // other figure above is identical between the two runs, including
+  // `totalCopies` 700 and the 20-of-20 multi-entry count, so the hash moved on
+  // the ORDER and on nothing else. This pin sees repertoire order. The one
+  // above does not: it returns 9c15fd28 in both trees.
+  //
+  // What it does NOT claim: it is not a second RNG-stream guard with its own
+  // per-phase draw counts. The pin above is that, and it stays the one to read
+  // when the stream moves.
+  it("pins repertoire ORDER, which the golden pin above cannot see", () => {
+    const params = defaultParams({
+      N: 20,
+      S: 1000,
+      c: 0.005,
+      r0: 0.1,
+      rMax: 0.2,
+      sigmaR: 0.05,
+      sigmaS: 0.08,
+      theta: 0.04,
+      v: 0.01,
+      a: 0.001,
+      b: 0.001,
+      d: 0.0005,
+      dTol: 0.002,
+      t: 0,
+      beta: 0.02,
+      pDom: 0.02,
+      wDom: 0.01,
+      sexual: true,
+      silencingOn: true,
+      seed: 777,
+    });
+    const w = createWorld(params);
+    run(w, 300);
+
+    // THE PIN'S OWN PRECONDITION, ASSERTED RATHER THAN TRUSTED. A hash pinned
+    // over single-entry repertoires cannot see their order, which is exactly
+    // how the pin above went inert for this change. If a future parameter edit
+    // collapses this configuration back to one entry per genome, this fails
+    // here — naming the reason — instead of passing while testing nothing.
+    const multi = w.genomes.filter((g) => g.repertoire.length >= 2).length;
+    expect(
+      multi,
+      "every genome must hold 2+ repertoire entries or the hash below cannot see their order",
+    ).toBe(20);
+
+    expect(stateHash(w)).toBe("3c7584d8");
   });
 });
 

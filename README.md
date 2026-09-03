@@ -37,11 +37,16 @@ resistance↔tolerance dial, excision rate and domestication probability. Four
 linked panels: the site field, a copy-number timeline, an `r`-versus-`s` scatter
 and a cluster inset.
 
-⚠️ **Frame rate degrades as a session runs**, and the cause is a real defect in
-the core: the piRNA repertoire only ever grows, so one silencing pass costs
-`O(copies × repertoire)`. The measurement and the reasons not to quote its
-second table as a frame rate are on `reset()` in `web/main.ts`. Every poke
-rebuilds the world, so every perturbation is also a reprieve.
+The piRNA repertoire only ever grows — nothing removes an entry — so a silencing
+pass used to cost `O(copies × repertoire)` and **the toy got slower the longer it
+ran**. `Genome.repertoire` is now kept sorted ascending and `isSilenced`
+binary-searches it, testing the insertion point's two neighbours, which is
+exhaustive for the minimum in any sorted array. Measured at `TOY_DEFAULTS`,
+seed 1, one `step` + one `observe`: 1.06 → 35.73 ms at generations 200 → 6000
+before, **0.74 → 1.03 ms after**, i.e. the cost stopped tracking the repertoire
+rather than merely tracking it more slowly. The full table, and what has _not_
+been re-measured since (in-browser frame rate), are on `reset()` in
+`web/main.ts`.
 
 **The validation surface** (`tests/guards/`) is seven guards, each asserting one
 claim the model makes, each against its own matched null:

@@ -70,7 +70,8 @@ function copiesInCluster(w: World): number {
   return n;
 }
 
-/** Mean piRNA repertoire size. The trap's own state, and what degrades. */
+/** Mean piRNA repertoire size. The trap's own state, and the only quantity in
+ *  the readout that never stops moving. */
 function meanRepertoire(w: World): number {
   if (w.genomes.length === 0) return 0;
   let n = 0;
@@ -236,7 +237,7 @@ function frame(): void {
   // in this block and read 100.0% at every timepoint of every session -- once
   // the trap has spread it never falls again, so it carried no information for
   // the whole run. Mean repertoire size is the same quantity's live edge, and
-  // it is also the number the degradation note below is about.
+  // it is also the number the note on `reset()` below is about.
   readout.innerHTML = [
     row("gen", String(snap.generation), null, 0, false),
     row(
@@ -288,11 +289,11 @@ function frame(): void {
 }
 
 /**
- * THE TOY GETS SLOWER THE LONGER IT RUNS, WITHOUT BOUND — AND A POKE FIXES IT.
+ * THE TOY USED TO GET SLOWER THE LONGER IT RAN, WITHOUT BOUND. FIXED 2026-09-03.
  *
- * `isSilenced` (`sim/silencing.ts`) scans a genome's whole piRNA repertoire for
- * every copy, and `trap` (`sim/phases/trap.ts`) only ever APPENDS to that
- * repertoire — nothing removes an entry — so one silencing pass costs
+ * `isSilenced` (`sim/silencing.ts`) scanned a genome's whole piRNA repertoire
+ * for every copy, and `trap` (`sim/phases/trap.ts`) only ever APPENDED to that
+ * repertoire — nothing removes an entry — so one silencing pass cost
  * O(copies x repertoire) over a repertoire that grows for as long as the world
  * runs. Measured at `TOY_DEFAULTS`, seed 1, as mean entries per genome. The
  * count is deterministic and reproduces on any machine, which is why it, and
@@ -302,46 +303,67 @@ function frame(): void {
  *     rep       7     54    122    276    358    486    660
  *     copies 1096   1494   1750    782   1893   1550   1512
  *
- * Copy number has no trend across that whole range; the growth is entirely the
- * repertoire's. NAME THE QUANTITY BEFORE QUOTING A MULTIPLE — the two in the
- * table above differ:
+ * THAT TABLE IS UNCHANGED AND IS NOT WHAT WAS FIXED. The repertoire still grows
+ * without bound and nothing still removes an entry; copy number still has no
+ * trend across the range. NAME THE QUANTITY BEFORE QUOTING A MULTIPLE:
  *
  *   - the REPERTOIRE grows 94x, 7 to 660 entries per genome (gen 250 -> 11000);
- *   - the COST OF ONE PASS is copies x repertoire, and rises 130x, 7 672 to
- *     997 920 comparisons (1096 x 7 -> 1512 x 660).
+ *   - the COST OF ONE LOOKUP was O(repertoire) and is now O(log repertoire),
+ *     because `Genome.repertoire` is kept sorted and binary-searched. The
+ *     insertion point's two neighbours are exhaustive for the minimum, so
+ *     nothing about the repertoire's contents is assumed; the argument is on
+ *     `isSilenced`.
  *
- * ("about 125x" stood here and named neither.)
+ * ("about 125x" once stood here and named neither quantity.)
  *
- * What that costs in practice, on the machine this was derived on, at
- * `speed = 3` (fps at wall-clock marks, seed 1):
+ * WHAT IT BOUGHT, measured on this machine, node v22.14.0, `TOY_DEFAULTS`,
+ * seed 1: median over 5 runs of the mean wall time of one `step` + one
+ * `observe` over a 30-generation window starting at each mark. `observe` is in
+ * it because that is what a frame does — two full silencing passes
+ * (`activeCopies` and `silencedCopies`) on top of the step's own.
  *
- *      2 s  gen  774   rep  40   129 fps
- *     10 s  gen 1878   rep 115    39 fps
- *     20 s  gen 2706   rep 167    28 fps
- *     30 s  gen 3294   rep 203    20 fps
- *     90 s  gen 5736   rep 345    12 fps
+ *     gen    copies  rep     before   after   speedup
+ *      200     1170    3.9   1.06 ms  0.74 ms   1.4x
+ *     1000     1494   53.7   5.88 ms  1.01 ms   5.8x
+ *     3000     1698  183.9  18.14 ms  1.25 ms  14.5x
+ *     6000     1893  358.3  35.73 ms  1.03 ms  34.7x
  *
- * TREAT THAT SECOND TABLE AS A CEILING ON A FLOOR, AND DO NOT QUOTE IT AS THE
- * FRAME RATE. It was produced by a harness that ran the steps, `observe` and the
- * silencing pass but NOT `ctx.fillRect` (about 1900 calls per frame at these
- * defaults) and NOT `fit()`'s per-frame backing-store reallocation, so real
- * in-browser fps is lower than every figure in it — by an amount nobody has
- * measured yet. It was also taken on a box under unrelated load that timed the
- * same workload at 9.4 and 23.6 ms/step on two separate runs. The 20 s row sits
- * on the 25 fps bar in the harness, which means in a browser it is under it.
+ * READ THE `after` COLUMN DOWNWARD, NOT THE SPEEDUP COLUMN. The speedup grows
+ * because the baseline grew; the result is that the cost stopped tracking the
+ * repertoire at all — 0.74 ms to 1.03 ms across a 92x range of repertoire size,
+ * which is inside this harness's own run-to-run spread. THE DEGRADATION IS GONE
+ * RATHER THAN REDUCED, and that, not the 34.7x, is the claim.
  *
- * `reset()` below rebuilds the world from scratch, which empties the repertoire
- * and returns the frame rate to its opening value. That is the session shape
- * this toy is for — the verb is PERTURBING THE WORLD, so every perturbation is
- * also a reprieve, and the degradation is bounded in practice by how often the
- * visitor pokes it.
+ * The `before` column is measured in a worktree at `29fff12`, sequentially on
+ * the same box, with the same script. `copies` and `rep` are IDENTICAL between
+ * the two runs at every mark, which is the cheapest available check that the
+ * trajectory did not move.
  *
- * The unbounded cost is a real defect in the core and is deliberately NOT fixed
- * here. The obvious fix — keep `repertoire` sorted and binary-search it —
- * changes that array's ORDER, and `stateHash` (`sim/observe.ts:101`) reads it:
- * it joins `genome.repertoire` positionally, so a reordered repertoire digests
- * differently even though the SET is identical. That needs its own task and a
- * check against golden hash `9c15fd28`.
+ * THE OLD IN-BROWSER FPS TABLE IS DELETED RATHER THAN CORRECTED. It read
+ * 129 fps at 2 s down to 12 fps at 90 s, from a harness that ran no
+ * `ctx.fillRect` and no `fit()`, on a box under unrelated load that timed the
+ * same workload at 9.4 and 23.6 ms/step on two separate runs. Its whole subject
+ * was the degradation, and quoting numbers for a degradation that no longer
+ * happens would be worse than quoting none. NOBODY HAS RE-MEASURED IN-BROWSER
+ * FPS SINCE THIS CHANGE; `drawField` still issues about 1900 fills per frame at
+ * these defaults, and that cost is untouched by anything here.
+ *
+ * `reset()` below still rebuilds the world from scratch, which still empties the
+ * repertoire. It is no longer also a performance reprieve — the session shape it
+ * serves is PERTURBING THE WORLD, which was always the point.
+ *
+ * ⚠️ AND THE GOLDEN HASH DID NOT MOVE. This note used to say the fix "changes
+ * that array's ORDER, and `stateHash` (`sim/observe.ts:101`) reads it", so it
+ * "needs its own task and a check against golden hash `9c15fd28`". The first
+ * half is true and `stateHash` is still the only consumer of repertoire order.
+ * The check was run and 9c15fd28 IS UNCHANGED: every genome holds exactly one
+ * repertoire entry at generation 15 of that configuration, and a one-element
+ * array digests identically in any order. Measured across 5 seeds x 8 marks,
+ * the hash is byte-identical at every mark where no genome holds 2+ entries and
+ * differs at every mark where one does, while `totalCopies`, `activeCopies`,
+ * `silencedCopies`, `domesticatedCopies`, `meanRate`, `fractionWithRepertoire`,
+ * `nextCopyId` and the repertoire's own CONTENT are byte-identical throughout.
+ * `tests/step.test.ts` carries a second pin for the order.
  *
  * ⚠️ CORRECTION, 2026-09-03. This note previously said the order is read by
  * "`reproduce`'s dedup and `stateHash`". THE FIRST HALF WAS WRONG and it was
@@ -350,11 +372,10 @@ function frame(): void {
  * COPIES, not on the repertoire; the repertoire is copied wholesale at
  * `sim/phases/reproduce.ts:79` (`repertoire: [...mother.repertoire]`) with no
  * dedup and no order-sensitive read at all. `stateHash` is the ONLY consumer of
- * repertoire order. The conclusion is unchanged — one consumer is still enough
- * to block the change — but the mechanism named here now matches the code.
+ * repertoire order.
  *
- * `drawField` gets the same speedup without that risk by sorting a per-frame
- * COPY; see `web/render/field.ts`.
+ * `drawField` reached the same speedup earlier by sorting a per-frame COPY; see
+ * `web/render/field.ts`, which now keeps that copy for reasons other than cost.
  */
 function reset(overrides: Partial<Params> = {}): void {
   world = rebuildWorld(params, overrides);

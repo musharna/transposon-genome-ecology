@@ -841,7 +841,19 @@ describe("drawScatter: every mark stays inside the region that gives it meaning"
 });
 
 describe("drawScatter: the render leaves sim state exactly as it found it", () => {
-  it("does not reorder genome.repertoire, which stateHash and reproduce both read", () => {
+  /**
+   * ⚠️ SAME FIXTURE PROBLEM AS `tests/render-field.test.ts` (b), same fix, and
+   * for the same reason: `sim/` keeps `Genome.repertoire` sorted ascending
+   * since 2026-09-03, so an in-place sort of a repertoire that came out of
+   * `step` moves nothing and the `.slice()` in `sortedRepertoire` could be
+   * deleted with every assertion below still green. The old control asserted
+   * that at least one repertoire was NOT ascending and it went false when the
+   * invariant landed.
+   *
+   * The world is deep-cloned before it is perturbed because `at()` hands out a
+   * cached snapshot that other tests in this file read.
+   */
+  it("does not reorder genome.repertoire, which stateHash reads", () => {
     const world = at(2500);
     const before = world.genomes.map((g) => [...g.repertoire]);
     const genomesBefore = JSON.stringify(world.genomes);
@@ -852,10 +864,30 @@ describe("drawScatter: the render leaves sim state exactly as it found it", () =
     expect(world.genomes.map((g) => [...g.repertoire])).toEqual(before);
     expect(JSON.stringify(world.genomes)).toBe(genomesBefore);
     expect(Math.max(...before.map((r) => r.length))).toBeGreaterThan(20);
+
+    // Detecting power, on an array a sort would actually move.
+    const scratch: World = {
+      ...world,
+      genomes: structuredClone(world.genomes),
+    };
+    const victim = scratch.genomes.find((g) => g.repertoire.length > 20);
     expect(
-      before.some((r) => r.some((x, i) => i > 0 && x < r[i - 1]!)),
-      "fixture cannot detect an in-place sort if every repertoire is ascending",
+      victim,
+      "no genome reached 20 repertoire entries, so nothing here could detect a sort",
+    ).toBeDefined();
+    const scrambled = [...victim!.repertoire].reverse();
+    victim!.repertoire = [...scrambled];
+    expect(
+      scrambled.some((x, i) => i > 0 && x < scrambled[i - 1]!),
+      "the perturbed repertoire is still ascending, so a sort would not move it",
     ).toBe(true);
+
+    const second = recordingCtx();
+    drawScatter(second.ctx, scratch, SC_W, SC_H);
+    expect(
+      victim!.repertoire,
+      "drawScatter reordered a repertoire it was given",
+    ).toEqual(scrambled);
   });
 });
 

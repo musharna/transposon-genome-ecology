@@ -159,14 +159,23 @@ export const BENEFICIAL_FILL = compositeOver(
  * < `s`. Checking those two neighbours is exhaustive for ANY sorted array of any
  * contents, so nothing a future change to `trap` could do can break it.
  *
- * The point is cost. `isSilenced` scans the whole repertoire per copy, which is
- * O(copies x repertoire) per frame over a repertoire that grows without bound
- * (see the degradation note in `web/main.ts`). This is O(copies x log
+ * The point WAS cost, and as of 2026-09-03 it is not. `isSilenced` used to scan
+ * the whole repertoire per copy — O(copies x repertoire) per frame over a
+ * repertoire that grows without bound — and this replaced it with O(copies x log
  * repertoire) after one O(R log R) sort per genome. Measured speedup per
- * full-population pass: 3.5x at repertoire 20, 8.8x at 54, 6.5x at 184, 7.2x at
- * 486. Below about a dozen entries the sort costs more than the scan it
- * replaces (0.41x at repertoire 7) — 0.3ms against 0.13ms, which is why there
+ * full-population pass at the time: 3.5x at repertoire 20, 8.8x at 54, 6.5x at
+ * 184, 7.2x at 486. Below about a dozen entries the sort cost more than the scan
+ * it replaced (0.41x at repertoire 7) — 0.3ms against 0.13ms, which is why there
  * is no threshold here to get wrong.
+ *
+ * `sim/silencing.ts` now keeps `Genome.repertoire` sorted and binary-searches it
+ * itself, so THE COST GAP THIS FUNCTION EXISTED TO CLOSE IS GONE. It stays for
+ * two reasons that are not cost: `sim/` must not import from `web/`, and
+ * `nearestSignedDistance` below returns the signed DISTANCE that
+ * `web/render/scatter.ts` plots, which no predicate in `sim/` exposes. Being a
+ * second, independently-derived implementation of the same search is now its
+ * main hazard rather than its purpose, and `tests/render-field.test.ts` (a2)
+ * holds the two to each other copy by copy.
  */
 export function silencedBySorted(
   s: number,
@@ -217,13 +226,19 @@ export function nearestSignedDistance(
  * A per-frame, read-only sorted view of a genome's repertoire.
  *
  * THE `.slice()` IS LOAD-BEARING AND ITS REMOVAL IS SILENT. `genome.repertoire`
- * is ORDERED state: `sim/observe.ts`'s `stateHash` digests it in order and
- * `reproduce` copies it into every daughter, so sorting it in place would move
- * golden hash `9c15fd28` and change the model, while every mark on screen kept
+ * is ORDERED state that `sim/observe.ts`'s `stateHash` digests in order, so
+ * sorting it in place would change the model while every mark on screen kept
  * looking exactly right. Measured: with the `.slice()` deleted, the colour
  * equivalence test still passes and only the order test fails. That is why
  * `tests/render-field.test.ts` deep-equals the repertoire against a pre-draw
  * snapshot as a SEPARATE assertion.
+ *
+ * ⚠️ AND SINCE 2026-09-03 THAT ASSERTION NEEDS A PERTURBED FIXTURE TO SEE IT.
+ * `sim/` now keeps the repertoire sorted ascending, so an in-place sort of a
+ * repertoire straight out of `step` moves nothing at all: for a while the order
+ * test would have passed with the `.slice()` deleted too. It is
+ * `tests/render-field.test.ts` (b) that hands the render a deliberately
+ * reversed repertoire, and the reason is written there.
  */
 export function sortedRepertoire(genome: Genome): number[] {
   return genome.repertoire.slice().sort((a, b) => a - b);

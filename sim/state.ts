@@ -17,7 +17,25 @@ export interface Genome {
    * Kept sorted by `site` so that structural comparisons are stable.
    */
   copies: Copy[];
-  /** ORDERED s-values this genome has captured into piRNA clusters. */
+  /**
+   * ORDERED s-values this genome has captured into piRNA clusters.
+   *
+   * KEPT SORTED ASCENDING. `sim/silencing.ts`'s `isSilenced` binary-searches
+   * this array and tests only the insertion point's two neighbours, which is
+   * exact for any sorted array and WRONG, SILENTLY, for an unsorted one — no
+   * count, no colour and no picture in this project would look different.
+   * `sim/phases/trap.ts` is the only place an entry is ever added and it
+   * inserts at the sorted position; `sim/phases/reproduce.ts` copies the array
+   * wholesale into each daughter, which preserves order; nothing anywhere
+   * removes one. `tests/trap.test.ts` asserts the invariant over real
+   * generations and demonstrates the check failing on an out-of-order append.
+   *
+   * The order is also STATE, not an implementation detail: `sim/observe.ts`'s
+   * `stateHash` digests this array positionally. It is NOT part of golden hash
+   * `9c15fd28` — that configuration never holds more than one entry per genome,
+   * so it is blind to this array's order; the second pin in
+   * `tests/step.test.ts` is the one that reads it.
+   */
   repertoire: number[];
 }
 
