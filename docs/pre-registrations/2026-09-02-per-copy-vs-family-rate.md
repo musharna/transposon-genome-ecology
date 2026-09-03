@@ -203,8 +203,11 @@ and mean copy rate at the peak generation and at the horizon.
 Measured inside the same runs, on the same CSV:
 
 - In **every** family-level run, mean copy rate at the peak generation must equal
-  that run's `r0` exactly.
-- In **every** per-copy run, it must differ from `r0`.
+  that run's `r0` to within 1e-12.
+- In **every** per-copy run, it must differ from `r0` by more than 1e-6.
+- In **every** run, the peak generation must be ≥ 1 (at generation 0 every copy
+  carries `r0` in both arms by construction, so a peak there would make the check
+  vacuous).
 
 This is the positive control for the arm switch itself: without it, a bug that
 silently gave both arms the same `sigmaR` would produce a clean null and read as
@@ -239,8 +242,86 @@ move invasion outcomes. It would not say that no regime exists where it does.
 Any change to arms, seeds, generations or outcomes after this file is committed
 must be recorded below with its date and reason.
 
-_None._
+**2026-09-03 — manipulation-check tolerance.** As first committed (`f5ae5b1`) the
+check demanded that the family-level arm's mean copy rate equal `r0` *exactly*.
+That is not a property of the model. `sim/observe.ts` computes `meanRate` as a
+running sum divided by a count, so it is exact only up to floating-point
+summation error even when every copy carries `r0` as the identical double —
+`tests/guards/rate-evolves.test.ts` (guard 5) measures that error at 1.54e-14
+over 9361 copies and asserts `toBeCloseTo(r0, 12)` rather than equality for
+exactly this reason. The check is therefore stated with tolerances: 1e-12 for the
+family-level arm (a 65x margin over guard 5's measured worst case) and 1e-6 for
+the per-copy arm's required departure. Bit-exactness of the individual copies
+under `sigmaR = 0` is already asserted at every generation by guard 5's test B,
+so nothing is lost. **Recorded before the runner was written and before any
+confirmatory run existed** — no outcome data informed it.
 
 ## Result
 
-_To be written after the confirmatory run, whatever it says._
+**Run 2026-09-03 at `f5ae5b1` + the runner. 80 runs (40 seeds x 2 arms), 600
+generations, 202.2 s. Manipulation check passed on all 80.** Data:
+`../../experiments/001-per-copy-vs-family-rate.csv`. Figure:
+`../analysis/fig-001-peak-copies.png`. Tests: `../analysis/plot-001.R`.
+
+**The arms are not indistinguishable. The falsification clause does not fire.**
+
+| outcome | per-copy | family-level | pre-specified test | p |
+| --- | --- | --- | --- | --- |
+| 1. peak copies/genome (primary) | 58.65 | 21.49 | Welch t = 4.6675, df = 42.07 | **3.1e-05** |
+| 2. extinct by generation 600 | 21/40 (52.5%) | 25/40 (62.5%) | chi-sq = 0.4604, df = 1 | 0.4975 |
+| 3. time to inactivation | 261.95 (n = 37) | 138.75 (n = 40) | Welch t = 2.8154, df = 57.48 | **0.0067** |
+
+95% CIs: outcome 1, difference in means [21.09, 53.23] copies per genome;
+outcome 2, difference in proportions [-0.341, 0.141]; outcome 3, [35.59, 210.80]
+generations.
+
+**Exclusions for outcome 3:** 3 per-copy runs and 0 family-level runs, every one
+of them `no-inactivation` — the family never reached the point where silenced
+copies outnumbered active ones. Those are the per-copy arm's *most* trap-resistant
+runs, so dropping them biases outcome 3 towards the null: the measured effect is
+conservative, not inflated.
+
+**What the numbers say.** Per-copy rate heritability changes the SIZE and the
+DURATION of an invasion but not its eventual FATE at this horizon.
+
+- Amplitude. Per-copy peaks: min 9.6, quartiles 16.1 / 27.7 / 106.0, max 172.0
+  copies per genome. Family-level: 9.6, 13.7 / 18.8 / 26.0, max 44.2. **17 of 40
+  per-copy runs exceeded 60 copies per genome; 0 of 40 family-level runs did.**
+  The per-copy distribution is visibly bimodal in the figure — runs either escape
+  the trap and bloat or are caught and stay small — while the family-level
+  distribution is unimodal and tight. Per-copy peaked higher in 27 of the 40
+  seed-matched pairs.
+- Duration. Median time to inactivation 165 versus 90 generations; median peak
+  generation 250.5 versus 81.5. The per-copy invasion keeps growing for roughly
+  three times as long.
+- Fate. Extinction 52.5% versus 62.5%, p = 0.50, CI spanning zero. **A bigger,
+  longer invasion is not a more survivable one.** That is consistent with the
+  model property recorded in `tests/guards/three-phases-arm.ts` — inactivation
+  implies eventual death — and says the mechanism operates on the invasion's
+  shape rather than on its endpoint.
+
+**The mechanism, read off the manipulation-check columns.** In the per-copy arm
+mean transposition rate at the peak had risen to **2.51x its founding value**
+(range 1.01x to 4.81x), and among the 19 per-copy survivors it stood at **4.15x**
+at generation 600 (max 4.91x). In the family-level arm it was **exactly 1.000x in
+all 40 runs**, by construction. This is guard 5's within-genome selection
+(`tests/guards/rate-evolves.test.ts`, test C: a higher-`r` copy out-replicates its
+neighbours inside a genome whatever the host pays) operating over an invasion:
+the family is not a fixed strategy meeting the trap, it is a strategy that gets
+faster while the trap forms.
+
+**Robustness, NOT pre-specified and labelled as such.** Outcome 1's distribution
+is bimodal and right-skewed, which Welch's t is not ideally suited to. A
+Mann-Whitney test on the same data gives W = 1100, p = 0.0036 for outcome 1 and
+W = 949, p = 0.033 for outcome 3 — same directions, same conclusions. Reported
+because the pre-specified test's assumptions are imperfect here, not to replace
+it: the table above is the registered analysis.
+
+**What this does and does not establish.** At this arm, this regime and this
+horizon, the family-level abstraction understates an invasion's amplitude by
+roughly a factor of three and its persistence by roughly a factor of two, and it
+cannot produce the bimodal escape-or-be-caught outcome distribution at all,
+because the thing that separates the two modes — a lineage that has evolved a
+higher rate — does not exist in a model with one rate per family. It gets the
+extinction probability right. This is one regime and one horizon; it is evidence
+that spec §2's unit decision buys something real, not proof that it always does.
