@@ -33,5 +33,11 @@ palette_002 <- c("A-conscription" = "#a3be8c", "B-innate" = "#d08770")
 # figures should not be mistakable for one another at a glance. The exploratory
 # ratio is distinguished by LINETYPE rather than by colour, so that its status
 # survives being printed or read in greyscale.
-palette_003 <- c("2.00" = "#b48ead", "3.33" = "#88c0d0", "5.00" = "#ebcb8b")
+# Darkened from the Nord pastels on an adversarial figure review: the originals
+# measured 2.83:1, 2.00:1 and 1.56:1 against white — all under the 3:1 WCAG floor
+# for non-text graphics — and the teal/yellow pair was 1.28:1 against each other,
+# with purple and teal collapsing together under deuteranopia. Shapes carry the
+# same distinction redundantly, so the series stay separable without colour.
+palette_003 <- c("2.00" = "#7d4e79", "3.33" = "#2b6d84", "5.00" = "#9a6b16")
+shape_003 <- c("2.00" = 17, "3.33" = 16, "5.00" = 15)
 linetype_003 <- c("registered" = "solid", "exploratory" = "22")

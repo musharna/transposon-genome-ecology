@@ -184,6 +184,10 @@ ties and are not resolved in favour of either neighbour.
 > at which the cell is CONTROLLED is a **contiguous down-set from `phi = 0`**:
 > control degrades monotonically as the trap gets staler and never returns.
 
+> ⚠️ **HELD, but weakly: the CONTROLLED set is `{0}`, and a one-element set is
+> trivially a down-set. This prediction cannot tell a knife-edge from a broad
+> band. See "Result".**
+
 **Falsified by re-entrant control** — any `phi` whose cell is CONTROLLED sitting
 above a `phi` whose cell is not.
 
@@ -193,7 +197,11 @@ above a `phi` whose cell is not.
 
 **Falsified if** the cell at `phi = 0.875` is CONTROLLED at either registered
 ratio — the collapse would then happen only at exact zero fidelity and the grid
-could not resolve the edge. **No location is predicted.** Betting on a band I
+could not resolve the edge.
+
+> ⚠️ **FALSIFIED — and THIS CLAUSE COULD NOT DETECT IT. The clause covers only
+> the edge sitting too HIGH; the edge fell BELOW the grid's first step, and the
+> prediction is false while the clause never fires. See "Result".** **No location is predicted.** Betting on a band I
 chose is a failure mode this project has already caught once, and the honest
 statement is that an interior edge exists, not where it sits.
 
@@ -370,3 +378,197 @@ noisy readout of `s` would each be different dials with possibly different edges
 This registers the linear-shrinkage dial because its endpoints are exactly the
 two arms already measured, which is what buys the reproduction control; it does
 not claim to be the general form of trap staleness.
+
+## Deviations
+
+**2026-09-04, after the runner was written and run.**
+
+1. **The evaluation of secondary 1 was wrong in the first version of
+   `../analysis/plot-003.R`, in the same way the registration's own
+   falsification clause is wrong.** The script tested the clause ("is the cell
+   at `phi = 0.875` CONTROLLED?") rather than the prediction ("is there a `phi`
+   in `(0,1)` that is CONTROLLED?"), and printed **HELD for a prediction that is
+   false.** Corrected, and the corrected predicate carries a positive control
+   asserting it rejects control-at-`{0}` and control-at-`{0,1}` before it is
+   trusted to accept anything. See the Result.
+2. **The three series in the registered figure are dodged HORIZONTALLY by 0.010,
+   and the figure draws no connecting line at all.** They are exactly coincident
+   — every ratio is 1.0 at `phi = 0` and 0.0 everywhere else — so undodged, the
+   figure would draw one curve where there are three and silently under-report
+   its own result. Drawn position only; every tabulated and printed value is
+   unmodified.
+
+   > **The first fix was worse than the defect, and an adversarial figure review
+   > caught it, not I.** Copying 002's deviation 3 verbatim, I first offset the
+   > curves **vertically** by 0.018 — which put one ratio visibly **above
+   > `y = 1.0`** and another **below `y = 0.0`** on an axis labelled "fraction of
+   > 10 seeds". A fraction reading over 100% and negative. A horizontal dodge
+   > cannot manufacture an impossible fraction, which is why it is the right
+   > device here and the vertical one never was. Two further rounds were needed:
+   > the second draft hard-clipped its own title off the canvas and carried a
+   > headline percentage its own plotted data contradicted. **This is the
+   > carve-out in my instructions that says a fresh critic gates visual output
+   > because builder-bias on rendered artefacts is a perception failure, and it
+   > earned its keep three times over on one figure.**
+
+   Lines are drawn only where consecutive sampled points exist, and **never
+   across `(0, 0.125)`** — the unsampled interval the entire result lives in.
+   Drawing a segment there would assert a gradual ramp the data cannot support.
+   The interval is shaded and labelled NOT SAMPLED instead.
+3. **A second figure, `../analysis/fig-003-silencing.png`, is an UNREGISTERED
+   ADDENDUM** and is labelled so on its face. The registered figure is
+   degenerate; the silencing decay is where the structure actually lives.
+
+## Result
+
+**Run 2026-09-04 at `12e7b08`'s model.** Runner
+`../../experiments/003-trap-fidelity.ts`, data
+`../../experiments/003-trap-fidelity.csv` (270 rows) and
+`../../experiments/003-reproduction-control.csv` (40 rows), analysis
+`../analysis/plot-003.R`, figures `../analysis/fig-003-fidelity.png` and
+`../analysis/fig-003-silencing.png`. 270 grid runs in 2947 s.
+
+### All four manipulation checks passed, and check 2 is the one that matters
+
+- **Check 1** passed at all 50 configurations. **Its positive control is reported
+  with it:** the smallest surviving population at the control horizon was 3839
+  copies, so no hash comparison was between two extinct worlds.
+- **Check 2 passed on all 40 endpoint runs: `phi = 0` and `phi = 1` reproduce
+  `../../experiments/002-conscription-vs-innate.csv` EXACTLY**, on 002's own
+  seeds, in stopping generation, copies per genome, silenced fraction, entries
+  per genome, and every outcome flag. The dial's endpoints are not similar to
+  002's two arms; they **are** them.
+- **Checks 3 and 4** passed on all 270 runs, and `plot-003.R` re-asserts them
+  on the CSV before drawing anything.
+
+**None of these was trusted until it was seen to fail.** Three mutants, each
+aimed at the layer its check guards: a dial corrupted by `1e-6` (check 1 failed,
+50/50); the horizon moved 600 → 599 (check 1 **passed**, check 2 failed, and
+only 2 of its 4 runs — the `phi = 1` endpoint saturates by generation ~120 and
+cannot see a change at 600, which is why the control covers both endpoints); the
+interior of the dial stuck at arm A with both endpoints left correct (checks 1
+and 2 **passed**, check 3 failed 3/3, naming the right reason).
+
+### The answer: the trap must be perfectly fresh
+
+| ratio | `phi`=0 | 0.125 | 0.25 | 0.375 | 0.5 | 0.625 | 0.75 | 0.875 | 1 |
+|---|---|---|---|---|---|---|---|---|---|
+| 2.00 * | **10 C** | 10 R | 10 R | 10 R | 10 R | 10 R | 10 R | 10 R | 10 R |
+| 3.33 | **10 C** | 10 R | 10 R | 10 R | 10 R | 10 R | 10 R | 10 R | 10 R |
+| 5.00 | **10 C** | 10 R | 10 R | 10 R | 10 R | 10 R | 10 R | 9R+1E | 9R+1E |
+
+C = CONTROLLED, R = RUNAWAY, E = EXTINCT, out of 10 seeds. * = exploratory.
+
+**CONTROLLED occurs at `phi = 0` and nowhere else, at every ratio.** At `phi = 0`
+the element sits at 197–345 copies per genome, 93–95% silenced, for the full 600
+generations. At the very next grid step it saturates past 1500 copies per genome
+by generation ~120–175, at every ratio, on every seed.
+
+### PRIMARY: HELD — and it is a weak prediction, which is worth saying
+
+The CONTROLLED set is `{0}` at both registered ratios, and a one-element set is a
+contiguous down-set, so the prediction holds. **But it would have held equally if
+control had extended to `phi = 0.875`.** It discriminates only against *re-entrant*
+control and says nothing about whether the mechanic is a knife-edge or a broad
+band — which is the question this registration is named after. Reported as held,
+and reported as weak; a technically-satisfied prediction is not a result.
+
+### ⚠️ SECONDARY 1: FALSIFIED — AND THIS REGISTRATION'S OWN FALSIFICATION CLAUSE COULD NOT SEE IT
+
+Registered: *"at each registered ratio there is a `phi` in `(0,1)` whose cell is
+CONTROLLED and a larger `phi` whose cell is not."* The largest CONTROLLED `phi`
+is **0**, which is not in the open interval. **The prediction is false.**
+
+The clause attached to it was *"falsified if the cell at `phi = 0.875` is
+CONTROLLED"* — which covers only the edge sitting too **high**. The edge fell
+**below** the grid's first step, and that clause is blind to the entire
+direction. **I wrote a falsification criterion that could detect only one of the
+two ways its own prediction could fail**, and then wrote analysis code encoding
+the clause instead of the prediction, so the first run printed HELD for a false
+prediction. This is the project's signature defect — a check that cannot
+discriminate — sitting in the falsifier itself, which is the last place anything
+but re-reading the words can catch it.
+
+### SECONDARY 2: NOT EVALUABLE
+
+With `phi* = 0` at all three ratios, `ratio/phi*` is infinite everywhere and the
+comparison has nothing to compare. `plot-003.R` reports NOT EVALUABLE rather
+than printing a number, which is the correct behaviour for a test whose
+precondition failed.
+
+### The mechanism: infinite reach versus finite reach
+
+The cliff is not arbitrary. A copy at coordinate `s` captured at infidelity
+`phi` deposits an entry at `(1-phi)s`, which covers the capturing copy iff
+`phi*|s| <= theta` — a **self-coverage reach of `theta/phi`** from the ancestral
+sequence. At `phi = 0` that reach is **infinite**: the entry IS the copy's
+coordinate, so a captured copy is silenced by its own capture no matter how far
+its lineage has travelled. At any `phi > 0` the reach is finite, and measured
+against how far `s` actually goes (ratio 3.33):
+
+| `phi` | reach `theta/phi` | mean max abs(entry) observed |
+|---|---|---|
+| 0 | **infinite** | 10.37 |
+| 0.125 | 0.800 | 2.05 |
+| 0.25 | 0.400 | 1.05 |
+| 0.5 | 0.200 | 0.49 |
+| 1 | 0.100 | 0.00 |
+
+At `phi = 0` the coordinate wanders to `|s| ~ 10` while the trap follows it
+exactly. At `phi = 0.125` the reach is 0.8 and the lineage is already past it.
+**So the transition is not a discontinuity at zero — it is an edge sitting
+roughly where `theta/phi ~ max|s|`, i.e. near `phi ~ 0.01`, an order of magnitude
+below this grid's first step.** That estimate is POST-HOC, derived from these
+data, and is not a registered result: it is the hypothesis 004 must register
+before testing.
+
+### Control is binary; silencing is not
+
+The unregistered addendum figure. Mean silenced fraction at ratio 3.33 runs
+0.942 → 0.173 → 0.107 → 0.058 → 0.053 → 0.043 → 0.030 → 0.019 → 0.017 across the
+dial. **Partial fidelity buys partial silencing and no control whatsoever.** A
+trap at `phi = 0.125` still silences 12–29% of copies and the element saturates
+anyway. The dial acts smoothly on the mechanism and discontinuously on the
+outcome, and only a criterion separating RUNAWAY from CONTROLLED can see that —
+002's `VIABLE` would have called every one of these cells viable.
+
+### 002's pre-committed contrast, discharged
+
+At both registered ratios, `phi = 0` is CONTROLLED 10/10 and `phi = 1` is 0/10,
+`p = 5.7e-05` (two-proportion, two-sided, continuity-corrected). Confirms 002
+out of sample on fresh seeds. **Designated non-primary before any data existed**,
+because 002's committed data already separated the arms completely and a test
+whose answer is known is not a test.
+
+### What this does to the claim
+
+Spec §3.3 justifies the sequence coordinate on the ground that one mechanism
+buys families, escape, and resurrection. 002 narrowed the claim to: tracking is
+what converts survival-by-runaway into survival-at-an-equilibrium. **003 narrows
+it much further: in this model that conversion requires the trap to track
+EXACTLY, and it is gone by `phi = 0.125`.**
+
+That is a finding **against** the model's ambitions, and it is written up as one
+because this registration committed to doing so. No real piRNA cluster rebuilds
+itself from the element with perfect fidelity — clusters carry historical
+insertions, degraded copies, and a readout with error. If the controlled state
+in this model exists only at perfect fidelity, that state is an artefact of a
+limit the biology does not occupy, and "the trap is made of you" is load-bearing
+in a way the biology cannot supply. The honest position: this model's controlled
+equilibrium is **fragile in a parameter the model never exposed as a parameter
+until now.**
+
+The escape hatch, and it is a real one: the mechanism puts the edge near
+`phi ~ 0.01` rather than at 0, so a band of imperfect fidelity that still
+controls should exist — this grid simply cannot see it. Whether that band is
+wide enough to be biologically reachable is exactly what a registered 004 would
+ask, and nothing here answers it.
+
+### Scope
+
+Three ratios, one base configuration, one horizon, ten seeds, nine points on one
+dial, and the dial is linear shrinkage toward the ancestral coordinate — one of
+several ways a trap could be stale, chosen because its endpoints are exactly
+002's two arms. **The grid is far too coarse below `phi = 0.125`, which is where
+the entire result now lives.** That is a limitation of what was registered, and
+it is recorded rather than repaired by an unregistered finer sweep.

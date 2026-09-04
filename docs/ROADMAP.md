@@ -216,33 +216,53 @@ live registry and the null stated as "checked HERE", naming where.
       parameters must be stated in the ratio. **Question 003 is the first grid
       to comply**; the rule stays open because it binds every later grid too.
 
-- [~] **REGISTERED 2026-09-04, RUNNER PENDING — question 003, how fresh must the
-      trap be?** Sited by 002's falsification, at `theta/sigmaS` ∈ {3.33, 5.00}.
-      Pre-registration
-      [`pre-registrations/2026-09-04-how-fresh-must-the-trap-be.md`](pre-registrations/2026-09-04-how-fresh-must-the-trap-be.md),
-      committed alone before any runner exists, at the same model freeze
-      `12e7b08` (`sim/` is byte-identical to it).
-      **002's two arms become one dimensionless dial `phi` ∈ [0,1]**, the trap's
-      infidelity: the captured entry is `(1 - phi) * copy.s`, so `phi = 0` is the
-      shipped trap (002 arm A) and `phi = 1` is the ancestral-fixed trap (002
-      arm B), both **bit-exact**, same RNG draws in the same order.
-      ⚠️ **002's pre-committed two-arm t-test is a foregone conclusion and is
-      NOT the primary**, stated before any new data: recomputed from 002's
-      committed CSV under CONTROLLED (alive and never saturated), **arm B is
-      CONTROLLED in 0 of all 90 runs** and arm A in 53 of 90 — at the two
-      registered ratios it is 30/30 against 0/30. Registering that contrast as
-      the headline would be this project's signature defect installed on
-      purpose. It is run at the endpoints on fresh seeds and reported as a
-      non-primary confirmation.
-      Fixes 002's criterion defect with a three-way exhaustive class
-      **EXTINCT / CONTROLLED / RUNAWAY**. Primary prediction: the CONTROLLED set
-      in `phi` is a contiguous down-set from 0 (falsified by re-entrant
-      control). Grid **stated in the ratio**, `phi` swept closed so no region of
-      the registered axis is unswept — 002's falsification lived below its
-      pilot's floor, and ratio 2.00 is included as a **pre-registered
-      exploratory** point below every ratio 002 swept.
-      Runner does not exist yet and must not be written before this line is
-      committed.
+- [x] **ANSWERED 2026-09-04 — question 003, how fresh must the trap be? THE
+      TRAP MUST BE PERFECTLY FRESH, AND MY OWN FALSIFICATION CLAUSE COULD NOT
+      SEE THE FALSIFICATION.** Pre-registration `126e3bd`
+      ([`pre-registrations/2026-09-04-how-fresh-must-the-trap-be.md`](pre-registrations/2026-09-04-how-fresh-must-the-trap-be.md)),
+      committed alone before the runner existed; check-3 amendment `778fe9c`,
+      made before any data; runner + analysis `e0af8b2`. 270 runs,
+      `experiments/003-trap-fidelity.csv`. Figures
+      `docs/analysis/fig-003-fidelity.png` and (unregistered addendum)
+      `docs/analysis/fig-003-silencing.png`.
+      **CONTROLLED occurs at `phi = 0` and nowhere else, at all three ratios.**
+      At `phi = 0` the element holds 197-345 copies/genome at 93-95% silenced for
+      600 generations; at the next grid step it saturates past 1500 by generation
+      ~120-175, every ratio, every seed.
+      ⚠️ **SECONDARY 1 IS FALSIFIED AND ITS ATTACHED CLAUSE NEVER FIRES.** The
+      prediction was "some `phi` in (0,1) is CONTROLLED"; the clause was
+      "falsified if `phi = 0.875` is CONTROLLED", which covers only the edge
+      being too HIGH. The edge fell BELOW the grid's first step. A falsifier that
+      detects only one of the two directions its prediction can fail in — the
+      signature defect, in the falsifier itself. The first `plot-003.R` encoded
+      the clause rather than the prediction and printed HELD for a false
+      prediction; fixed, with a positive control on the predicate.
+      ⚠️ **THE PRIMARY HELD BUT IS WEAK**: `{0}` is trivially a down-set, so it
+      cannot distinguish a knife-edge from a broad band — the question it is
+      named after.
+      **Mechanism:** self-coverage reach is `theta/phi`, INFINITE at `phi = 0`
+      and 0.8 at `phi = 0.125`, while `|s|` wanders to ~10. So the edge sits near
+      `phi ~ 0.01`, an order of magnitude below the grid — POST-HOC, 004 must
+      register it before testing.
+      **Manipulation check 2 is the strongest control built so far:** both dial
+      endpoints reproduce 002's committed CSV EXACTLY on 002's own seeds. All
+      four checks were seen to FAIL against three targeted mutants before being
+      trusted.
+
+- [ ] ⚠️ **A FALSIFICATION CLAUSE MUST COVER EVERY DIRECTION ITS PREDICTION CAN
+      FAIL IN.** 003's secondary 1 is the instance: the prediction was
+      two-sided, the clause was one-sided, and the analysis code inherited the
+      clause's blind spot. Rule for every future registration here: write the
+      falsifier as the negation of the prediction, not as one scenario that
+      would falsify it, and have the analysis evaluate THE PREDICTION.
+
+- [ ] **Question 004, sited by 003's cliff.** The fidelity edge is somewhere in
+      `(0, 0.125]`, estimated near `phi ~ 0.01` from `theta/phi ~ max|s|`. That
+      estimate is post-hoc and unregistered. 004 sweeps `phi` logarithmically
+      below 0.125 and asks whether a biologically reachable band of imperfect
+      fidelity still controls the element — which decides whether 003's result
+      is "the mechanic is an artefact of a limit" or "the mechanic works in a
+      narrow but real band". Registration first, alone, before any runner.
 
 ## What is actually left — three of the four carried-forward limitations
 
