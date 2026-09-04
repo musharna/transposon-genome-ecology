@@ -221,11 +221,33 @@ worth keeping written down:
       repertoire entry and it still grows without bound; what is bounded now is
       the cost of looking one up.
 - [ ] **Full inactivation implies the family DIES, which diverges from biology.**
-      `lose` keeps excising silenced copies that silencing prevents from
-      replacing themselves, so decay to zero is guaranteed; real silenced TE
-      insertions largely persist as genomic fossils. Not fixed because changing
-      `lose` would alter the RNG draw stream and invalidate every calibration in
-      the suite. Recorded on `tests/guards/three-phases-arm.ts` and in spec §10.
+      ⚠️ **MECHANISM CORRECTED 2026-09-03 — this item blamed the wrong thing.**
+      It used to read "`lose` keeps excising silenced copies that silencing
+      prevents from replacing themselves, so decay to zero is guaranteed". That
+      is excision, and `scripts/explore-fossil-state.ts` measures that it is not
+      the cause. Eleven seeds, aligned on the first generation with zero active
+      copies, positive control that the composed loop reproduces `sim/step.ts`'s
+      `stateHash` 11/11. Copies held 400 generations after inactivation:
+      shipped **0/11**; excision gated as Kofler 2019 gates it **0/10**; plus
+      `d = 0` **0/11**; plus `a = b = d = 0`, no selection on copy number at all,
+      **0/10**; excision gated and **asexual, 10/11, mean 884.9 and flat**.
+      **It is the sexual path, not excision and not selection** — a copy that
+      cannot transpose cannot restore its own frequency, and here that is fatal
+      whatever stopped it. Same mechanism guard 8 discriminated for domesticated
+      copies (asexual 2761 -> 2800, sexual 169 -> 0): two subsystems, two
+      experiments, one mechanism. Not separated: drift-to-absorption versus
+      `reproduce.ts`'s site dedup, both on that path.
+      **What this changes:** the fix this item implied — gate `lose` — would NOT
+      achieve what the item wants. Persistence of an inactive family in a sexual
+      population needs a positive fitness term (as domestication has) or a
+      replacement channel. Still open, still blocked by the same blast radius
+      (any change to `lose` moves the RNG draw stream and invalidates every
+      calibration and both golden pins), but the scope is a different and larger
+      thing than one predicate. Gating `lose` is still worth doing on its own
+      merits — Kofler 2019 gates it, and excising a copy whose own silenced
+      transposase would have to catalyse the excision is unphysical — it just is
+      not the fossil-state fix. Recorded on `tests/guards/three-phases-arm.ts`,
+      in spec §10, and `docs/pathway-mechanics.md` §7.
 - [ ] **Guard 4's bloat result is one arm at one horizon, and its direction
       reverses.** The knockout/silenced ratio decays from 2.63 at generation 120
       to 1.30 by 160, and at 180 the direction REVERSES. The guard asserts
@@ -244,6 +266,14 @@ worth keeping written down:
       top of that. **This is a calibration finding, not a missing mechanism:** the
       model expresses persistence perfectly well above the threshold, including
       persistence through the family's total extinction.
+      **REFRAMED 2026-09-03 after reading Kapitonov & Jurka 2005 in full.** The
+      biology is capture followed by "a period of intensive transformations due
+      to diversifying/positive selection", then stabilizing selection (79%
+      identity sharks to mammals). `wDom` IS that selection coefficient, so the
+      honest reading is that the MODEL IS RIGHT AND THE SHIPPED CONSTANT IS
+      UNREALISTICALLY SMALL — becoming the adaptive immune system is not a 1%
+      fitness nudge — rather than that the spec overreaches.
+      `docs/pathway-mechanics.md` §6.
       **NOT FIXED HERE ON PURPOSE.** Moving `wDom` moves every other guard's
       derivation and the golden hash in `tests/step.test.ts`. Guard 8's
       below-threshold arm IS the shipped default and asserts equality with
@@ -266,7 +296,60 @@ worth keeping written down:
 
 Still open from the reading list, and unchanged:
 
-- [~] `bio-grounding` on piRNA conscription and on domestication, against the
-  actual pathways rather than the summary — literature base built
-  (`REFERENCES.md` §3, §5); the pathway mechanics themselves still need
-  reading past the abstracts.
+- [x] **DONE 2026-09-03** — `bio-grounding` on piRNA conscription and on
+  domestication, against the actual pathways rather than the summary. Seven full
+  texts pulled from Europe PMC and read: Kofler 2019, Kofler 2020, Kofler 2018,
+  Kelleher 2012, Kelleher 2018 (the tolerance primary, previously flagged
+  unread), the 2018 Primer, and Kapitonov & Jurka 2005. Write-up with a verdict
+  per model mechanic: **`docs/pathway-mechanics.md`**. It corrected three glosses
+  in `REFERENCES.md` and one canonical statement in
+  `tests/guards/three-phases-arm.ts`. **Two sources could NOT be obtained and
+  remain abstract-level: Lavialle 2013 (syncytins, not OA via Europe PMC) and
+  de Vanssay 2012 (no PMC record)** — so §5's "domesticated independently in
+  multiple mammalian lineages", the detail the design leans on for "domestication
+  is reachable", is still unverified past the abstract, and RAG1 carries §5 alone.
+
+Opened by that read, all still open:
+
+- [ ] **The `t` dial conflates two things biology keeps separate.**
+      `sim/phases/trap.ts` gates conscription on `t`, so a tolerant host
+      mechanically cannot form a repertoire. Kelleher et al. 2018 — the primary,
+      now read — defines tolerance as mechanisms that "do not affect propagation
+      but rather limit the fitness costs to the host", mapped to *bruno* and the
+      DNA-damage response, entirely outside the piRNA pathway. `damageLoad`
+      matches that; the trap gate does not. The gate is defensible as an
+      EVOLUTIONARY argument and is implemented as a MECHANICAL one. It is also
+      the entire source of guard 9's `t = 0.99` / `t = 1` discontinuity, so that
+      guard is right about the code while the "different in kind" framing around
+      it describes a design decision, not biology. Not changed: the gate is load
+      bearing for guard 9 and for the spec's two-strategy opponent.
+      `docs/pathway-mechanics.md` §5.
+
+- [ ] **The `theta` window is grounded by nothing in the reference base.**
+      Kelleher 2012 was the intended source and argues the other way in its own
+      system ("mismatches between piRNAs and TE transcripts cannot explain the
+      pattern of TE derepression in hybrids"). The window's justification is a
+      DESIGN one — it is what makes "family" emergent rather than declared — and
+      is now labelled as design, not biology. Closing this needs a source that
+      actually addresses piRNA target-complementarity tolerance.
+      `docs/pathway-mechanics.md` §4.
+
+- [ ] **A second phase detector on Kofler's own observable.** Ours reads the
+      copy-number trajectory (`sim/phases-detect.ts`); Kofler's boundaries are
+      defined on repertoire prevalence — shotgun onset is "the moment at which
+      99% of the individuals acquired at least one cluster insertion", inactive
+      onset is a cluster insertion fixing. `Snapshot.fractionWithRepertoire`
+      already IS that observable, so `fractionWithRepertoire >= 0.99` is
+      computable today as an independent second detector. Cheap, and it would
+      make guard 3 comparable to the paper it is named for.
+      `docs/pathway-mechanics.md` §2.
+
+- [ ] **Our cluster fraction is inside the biological range, and that is NOT a
+      validation.** `defaultParams().c = 0.01` and `TOY_DEFAULTS.c = 0.005` sit
+      above Kofler 2020's "minimum size of 0.2% of the genome" and inside the
+      span real genomes cover (koala 0.17%, *Drosophila* ~3–3.5%). But his
+      threshold is a property of HIS silencing rule — one capture, whole family,
+      permanent, no escape — and ours silences a `theta` window that daughters
+      routinely escape by construction (`sigmaS/theta = 2.0`). At equal `c` our
+      trap is weaker, so the number does not transfer. Same non-transfer already
+      recorded for Charlesworth 1983. `docs/pathway-mechanics.md` §3.
