@@ -147,6 +147,12 @@ criterion is reported here and not used to site a t-test.
 
 ### 4. Why that is structural rather than a gap in the grid
 
+> ⚠️ **THIS SECTION'S ARGUMENT DID NOT SURVIVE THE EXPERIMENT. It is left
+> unedited because it is what was registered, but see "Result" below: both arms
+> are viable at `theta/sigmaS` = 3.33 and 5.00, and the pilot grid this argument
+> generalises from never went below `theta = 0.15`.**
+
+
 The two failure modes are the two sides of one mechanism, and the mechanism is
 already measured elsewhere in this repo:
 
@@ -174,6 +180,8 @@ falsification.
 
 > **Registered prediction.** Over the grid below, there is **no grid point at
 > which both arms are VIABLE.**
+
+> ⚠️ **FALSIFIED — 3 of 9 points, 2 of 6 distinct regimes. See "Result".**
 
 **VIABLE**, fixed here: fewer than half the seeds at that grid point are extinct
 (`totalCopies == 0`) at the horizon.
@@ -265,8 +273,125 @@ that the mechanism forbidding it is the one already measured in
 
 ## Deviations
 
-*(none yet — this section records changes made after this file is committed)*
+**2026-09-04, after the runner was written and run.**
+
+1. **The figure's x axis is `theta/sigmaS`, not `sigmaS` faceted by `theta`.**
+   The registration specifies only "one graph, R + ggplot2 from the house theme".
+   The axis changed because of deviation 2: plotting nine points on two axes
+   would have drawn three pairs of exactly coincident curves without saying so.
+2. **The analysis reports the grid twice — as registered on 9 points, and on the
+   6 distinct regimes those 9 collapse to.** The registered counts are reported
+   first and unchanged. See "the two axes are one axis" below.
+3. **The arms are offset vertically by 0.012 in the figure only.** They coincide
+   exactly at 0 and at 1, and an overplotted point would have hidden the finding.
+   The printed and tabulated values are unmodified.
 
 ## Result
 
-*(not yet run)*
+**Run 2026-09-04 at `12e7b08`'s model.** Runner
+`../../experiments/002-conscription-vs-innate.ts`, data
+`../../experiments/002-conscription-vs-innate.csv` (180 rows), analysis
+`../analysis/plot-002.R`, figure `../analysis/fig-002-viability.png`.
+
+### The manipulation checks passed, and check 1 was not vacuous
+
+All four passed on all 180 runs. Check 1 ran at every grid point and every seed
+— 90 configurations — and the composed loop reproduced `sim/step.ts`'s
+`stateHash` at all of them. **Its own positive control is reported with it:** the
+smallest surviving population at the control horizon was 891 copies, so no
+comparison was between two extinct worlds hashing identically. Checks 2 and 3
+separated the arms on every run (arm A always formed a non-ancestral entry; arm B
+never did), and check 4 held everywhere — no run manufactured a null by capturing
+nothing.
+
+### ⚠️ THE PRIMARY REGISTERED PREDICTION IS FALSIFIED
+
+> Registered: **no grid point at which both arms are VIABLE.** Predicted 0.
+
+**Measured: 3 of the 9 registered grid points, which are 2 of the 6 distinct
+regimes.** Both arms are viable at `theta/sigmaS` = 3.33 and 5.00.
+
+| `theta/sigmaS` | `k*` | A viable | A silenced | B viable | B silenced |
+|---|---|---|---|---|---|
+| 3.33 | 11 | **yes** | 0.945 | **yes** | 0.019 |
+| 5.00 | 25 | **yes** | 0.955 | **yes** | 0.022 |
+| 6.67 | 44 | yes | 0.868 | no | 0.008 |
+| 7.50 | 56 | no | 0.486 | no | 0.004 |
+| 10.00 | 100 | no | 0.000 | no | 0.000 |
+| 13.33 | 178 | no | 0.000 | no | 0.000 |
+
+**The pilot's grid floor was `theta = 0.15`; the registered grid went down to
+0.10, and that is where the falsification lives.** The pilot's "no grid point at
+which both arms are alive" was true of the grid it swept and did not survive
+being asked below it. Registering a grid wider than the pilot's is the only
+reason this was found.
+
+Per the registration's own terms, **that result is written up, not buried**, and
+**003 is sited at `theta/sigmaS` ∈ {3.33, 5.00}** with the two-arm test this
+registration could not place.
+
+### The secondary prediction held
+
+Arm A is viable at 5 of the 9 registered points. At **0** of them is arm B's mean
+horizon silenced fraction ≥ 0.05 (predicted: 0). The highest is 0.022. Wherever
+the tracking trap is doing anything at all, the fixed trap has stopped working.
+
+### ⚠️ BUT `VIABLE` CANNOT DISCRIMINATE, AND THAT IS THIS PROJECT'S SIGNATURE DEFECT — HERE IN THE REGISTERED CRITERION ITSELF
+
+`VIABLE` was fixed as "fewer than half the seeds extinct", a statement about the
+ELEMENT persisting. At the two both-viable regimes the arms are in states about
+as different as this model can produce:
+
+| regime | arm | copies/genome | silenced | saturated |
+|---|---|---|---|---|
+| 3.33 | A | 262.6 | 0.945 | 0/10 |
+| 3.33 | B | **1580.0** | **0.019** | **10/10** |
+| 5.00 | A | 195.5 | 0.955 | 0/20 |
+| 5.00 | B | **1593.3** | **0.022** | **20/20** |
+
+**Every single arm-B run at both regimes hit the saturation stop.** Arm B is
+"viable" there in exactly one sense: the element had not died by the time it ran
+away to the 1500-copy ceiling. Arm A sits at a seventh of that copy number, 95%
+silenced, and never saturates.
+
+So the criterion counts "controlled at an equilibrium" and "exploding into the
+stopping rule" as the same outcome. **This does not rescue the prediction** — the
+prediction was stated on this criterion and is falsified on it. It does say what
+003 has to fix: viability has to separate persistence from runaway, and the
+saturation flag already in the CSV is the obvious instrument.
+
+### The two axes are one axis
+
+`s`-space carries **no constant other than `theta` and `sigmaS`**. `s` is
+generated as `parent.s + 𝒩(0,1)·sigmaS` (`sim/phases/transpose.ts:37`), compared
+only as `|copy.s − entry| <= theta` (`sim/silencing.ts:86-87`), and otherwise only
+copied (`sim/phases/trap.ts:44`, `sim/phases/reproduce.ts:48`); `createWorld`
+founds every copy at exactly 0. So rescaling `(s, sigmaS, theta)` by any λ maps
+trajectories onto trajectories, consuming the same RNG draws in the same order —
+every branch on `s` is either a `theta`-comparison (scale-covariant) or an
+ordering (scale-invariant). Arm B is invariant too: its inserted value `0` is a
+fixed point of the rescaling.
+
+**Measured, not assumed.** The three pairs of grid points sharing a ratio are
+identical on every one of their 10 seeds, in both arms, on all five recorded
+outcomes — 6 pairs verified, exact equality, no tolerance. `plot-002.R` asserts
+this and **carries a positive control asserted first**: two points at different
+ratios must differ under the same comparison, so an equality test that could
+never report a difference cannot pass silently.
+
+**The registration built a 3×3 grid on two axes that are one.** Its own §2
+derived `k* = (theta/sigmaS)²` and still treated `theta` and `sigmaS` as
+independent. The effective grid is 6 points, not 9, and the registered count
+"3 of 9" over-counts the regime at ratio 5.00, which appears twice.
+
+### What this does to the claim
+
+The registered claim — that in this model tracking is not a refinement of
+silencing but what makes silencing survivable — **is not supported as stated.**
+A non-tracking trap is not always useless-or-lethal: at shallow traps the element
+survives without tracking. What the data do support is narrower and still worth
+having: **wherever the fixed trap leaves the element alive, it does so by not
+silencing it** (≤ 0.022 everywhere) **and every such run saturates.** Tracking is
+what converts survival-by-runaway into survival-at-an-equilibrium. That is a
+claim about the CHARACTER of persistence, not about whether persistence happens,
+and it is 003's question.

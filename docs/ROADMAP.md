@@ -183,28 +183,44 @@ live registry and the null stated as "checked HERE", naming where.
       (`experiments/001-per-copy-vs-family-rate.ts`). The result reproduces from
       its committed CSV.
 
-- [~] **REGISTERED 2026-09-04, runner not yet written** — question 002,
-      conscription versus an innate silencer. Pre-registration `82ab678`
+- [x] **ANSWERED 2026-09-04 — question 002, conscription versus an innate
+      silencer. THE REGISTERED PREDICTION WAS FALSIFIED.** Pre-registration
+      `82ab678`
       ([`pre-registrations/2026-09-04-conscription-vs-innate-silencer.md`](pre-registrations/2026-09-04-conscription-vs-innate-silencer.md)),
-      committed alone before any runner existed; the pilot behind it is
-      `58b0656` (`scripts/pilot-002-conscription.ts`).
-      **The pilot killed the design this started as, and the registration says
-      so.** Two of my own instruments were wrong before the model was: arm B's
-      first implementation was not a faithful translation of `trap.ts`'s no-op
-      guard (11,045 repertoire entries per genome by generation 300, 1.09 GB
-      resident, growing linearly), and the first regime criterion — 001's pooled
-      device — scored 0.407 from `(0.813 + 0.001)/2`, one healthy arm carrying a
-      dead one, at exactly the degeneracy it was written to exclude.
-      What the grid then showed is structural: **there is no point at which both
-      arms are viable.** Arm B is only viable where nothing escapes, and where
-      nothing escapes the trap silences the whole family and it dies down the
-      sexual path — the mechanism measured in
-      `scripts/explore-fossil-state.ts`. So 002 is registered as a claim about a
-      grid rather than a two-arm test, with a falsification that promotes to a
-      question 003 sited at any both-viable point the grid turns up.
-      **Next step: the runner** (9 grid points x 2 arms x seeds 1-10 x 600
-      generations = 180 runs, with the pre-specified saturation stop). Heavy
-      enough for `jobd`; two pilot runs were killed under system memory pressure.
+      committed alone before any runner existed; pilot `58b0656`; runner
+      `experiments/002-conscription-vs-innate.ts`, 180 runs, all four
+      manipulation checks passed. Figure `docs/analysis/fig-002-viability.png`.
+      Registered: **no grid point with both arms viable.** Measured: **3 of 9
+      points, at `theta/sigmaS` = 3.33 and 5.00.** The secondary prediction held
+      (arm B silencing ≤ 0.022 wherever arm A is viable).
+      **The pilot's grid floor was `theta = 0.15` and the registered grid went to
+      0.10 — the falsification lives in the range the pilot never swept.**
+      Registering wider than the pilot is the only reason it was found.
+      ⚠️ **`VIABLE` COULD NOT DISCRIMINATE, AND IT WAS THE REGISTERED CRITERION.**
+      At both both-viable regimes every arm-B run hit the saturation stop
+      (1580–1593 copies/genome, ~2% silenced) while arm A sat at ~200 and 95%
+      silenced. "Controlled at equilibrium" and "exploding into the stopping
+      rule" score the same. This does not rescue the prediction — it was stated
+      on that criterion — but it is what 003 must fix.
+
+- [ ] ⚠️ **THE `theta` AND `sigmaS` AXES ARE ONE AXIS, AND THE REGISTRATION BUILT
+      A 3x3 GRID ON THEM.** `s`-space carries no constant but `theta` and
+      `sigmaS`: `s` is made at `sim/phases/transpose.ts:37`, compared only at
+      `sim/silencing.ts:86-87`, elsewhere only copied, and every copy is founded
+      at 0. Rescaling `(s, sigmaS, theta)` by any λ maps trajectories onto
+      trajectories with the same RNG draws in the same order. Measured: the three
+      duplicate pairs are identical on all 10 seeds in both arms, exact, and
+      `plot-002.R` asserts it behind a positive control. **So the 9 registered
+      points are 6 regimes**, and 002's own §2 had `k* = (theta/sigmaS)²` in hand
+      while treating the axes as independent. Any future grid on `s`-space
+      parameters must be stated in the ratio.
+
+- [ ] **Question 003, sited by 002's falsification.** At `theta/sigmaS` ∈
+      {3.33, 5.00} both arms are gradable, which is what 002 could not place. The
+      two-arm test goes there, and viability must be redefined to separate
+      persistence from runaway — the `saturated` column in
+      `experiments/002-conscription-vs-innate.csv` is the instrument, already
+      recorded. Registration first, alone, before any runner.
 
 ## What is actually left — three of the four carried-forward limitations
 
