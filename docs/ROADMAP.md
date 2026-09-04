@@ -183,6 +183,29 @@ live registry and the null stated as "checked HERE", naming where.
       (`experiments/001-per-copy-vs-family-rate.ts`). The result reproduces from
       its committed CSV.
 
+- [~] **REGISTERED 2026-09-04, runner not yet written** — question 002,
+      conscription versus an innate silencer. Pre-registration `82ab678`
+      ([`pre-registrations/2026-09-04-conscription-vs-innate-silencer.md`](pre-registrations/2026-09-04-conscription-vs-innate-silencer.md)),
+      committed alone before any runner existed; the pilot behind it is
+      `58b0656` (`scripts/pilot-002-conscription.ts`).
+      **The pilot killed the design this started as, and the registration says
+      so.** Two of my own instruments were wrong before the model was: arm B's
+      first implementation was not a faithful translation of `trap.ts`'s no-op
+      guard (11,045 repertoire entries per genome by generation 300, 1.09 GB
+      resident, growing linearly), and the first regime criterion — 001's pooled
+      device — scored 0.407 from `(0.813 + 0.001)/2`, one healthy arm carrying a
+      dead one, at exactly the degeneracy it was written to exclude.
+      What the grid then showed is structural: **there is no point at which both
+      arms are viable.** Arm B is only viable where nothing escapes, and where
+      nothing escapes the trap silences the whole family and it dies down the
+      sexual path — the mechanism measured in
+      `scripts/explore-fossil-state.ts`. So 002 is registered as a claim about a
+      grid rather than a two-arm test, with a falsification that promotes to a
+      question 003 sited at any both-viable point the grid turns up.
+      **Next step: the runner** (9 grid points x 2 arms x seeds 1-10 x 600
+      generations = 180 runs, with the pre-specified saturation stop). Heavy
+      enough for `jobd`; two pilot runs were killed under system memory pressure.
+
 ## What is actually left — three of the four carried-forward limitations
 
 Everything in the plan is built. These are the known defects and scope limits the
