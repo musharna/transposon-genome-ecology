@@ -256,9 +256,11 @@ check 2 can compare against 002's rows bit-for-bit.
 3. **Horizon silenced fraction** (`silencedCopies / totalCopies`, zero when
    extinct).
 
-Also recorded, descriptive and NOT tested: repertoire entries per genome, mean
-and maximum `|entry|`, the generation of any saturation stop, the generation of
-extinction, and the maximum number of genomes holding a repertoire.
+Also recorded, descriptive and NOT tested: repertoire entries per genome, the
+maximum `|entry|`, the number of captures and their mean displacement
+`|entry - copy.s|` (which manipulation check 3 is stated on), the generation of
+any saturation stop, the generation of extinction, and the maximum number of
+genomes holding a repertoire.
 
 ## Manipulation checks — the experiment is void if these fail
 
@@ -277,12 +279,37 @@ extinction, and the maximum number of genomes holding a repertoire.
    genome and stopping generation. This is what proves the dial's endpoints
    **are** 002's arms rather than resembling them, and it is a check that can
    fail loudly against data already committed to the repo.
-3. **The dial moves the entry, in the stated direction.** At every `phi` in
-   `(0, 1)`, in every run that formed a repertoire, the maximum `|entry|` must
-   exceed `1e-9` (so the cell is not silently arm B), and the mean `|entry|`
-   must be strictly less than the mean `|entry|` of the `phi = 0` run at the
-   **same ratio and seed** (so the cell is not silently arm A). Both halves are
-   required: either alone passes on a dial that is stuck at one end.
+3. **The dial moves the entry, in the stated direction.** Measured at the point
+   of insertion, within a single run. Every capture records its **displacement**
+   `|entry - copy.s|`, which is `phi * |copy.s|` by construction. Then in every
+   run that formed a repertoire:
+   - at `phi = 0`, mean displacement must be **exactly 0** and the maximum
+     `|entry|` must exceed `1e-9` — the entry is the copy's own coordinate;
+   - at `phi = 1`, the maximum `|entry|` must be **exactly 0** — every entry is
+     the ancestral sequence;
+   - at every `phi` in `(0, 1)`, mean displacement must be **> 0** (the cell is
+     not silently arm A) **and** the maximum `|entry|` must exceed `1e-9` (the
+     cell is not silently arm B).
+
+   Both halves of the interior case are required: either alone passes on a dial
+   stuck at one end.
+
+   > **Amendment 1 — 2026-09-04, made before any data existed and before the
+   > runner was written.** Check 3's second half first read: "the mean `|entry|`
+   > must be strictly less than the mean `|entry|` of the `phi = 0` run at the
+   > **same ratio and seed**". **That is a comparison between two different
+   > worlds.** The instant two `phi` values disagree on one `valueCovered` test
+   > they consume different numbers of RNG draws, and every later draw is
+   > displaced — the two runs share a seed and nothing else. A run at
+   > `phi = 0.5` whose element happened to wander three times as far as the
+   > `phi = 0` run would have a larger mean `|entry|` despite the dial working
+   > exactly as specified, and the check would void a sound experiment. A check
+   > that can fail for a reason unrelated to what it tests is not a control. The
+   > replacement measures the dial where the dial acts — at insertion, inside one
+   > run — and cannot fail for that reason. Recorded here rather than in
+   > "Deviations" because it was made **before any data existed**, which is the
+   > only time a registration may be changed without the change being a
+   > deviation.
 4. **No cell manufactures a null by capturing nothing.** In every run of every
    cell, the number of genomes holding a repertoire must exceed zero at some
    point. Carried forward from 002 check 4: without it, a cell where nothing is
