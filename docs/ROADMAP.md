@@ -213,14 +213,36 @@ live registry and the null stated as "checked HERE", naming where.
       `plot-002.R` asserts it behind a positive control. **So the 9 registered
       points are 6 regimes**, and 002's own §2 had `k* = (theta/sigmaS)²` in hand
       while treating the axes as independent. Any future grid on `s`-space
-      parameters must be stated in the ratio.
+      parameters must be stated in the ratio. **Question 003 is the first grid
+      to comply**; the rule stays open because it binds every later grid too.
 
-- [ ] **Question 003, sited by 002's falsification.** At `theta/sigmaS` ∈
-      {3.33, 5.00} both arms are gradable, which is what 002 could not place. The
-      two-arm test goes there, and viability must be redefined to separate
-      persistence from runaway — the `saturated` column in
-      `experiments/002-conscription-vs-innate.csv` is the instrument, already
-      recorded. Registration first, alone, before any runner.
+- [~] **REGISTERED 2026-09-04, RUNNER PENDING — question 003, how fresh must the
+      trap be?** Sited by 002's falsification, at `theta/sigmaS` ∈ {3.33, 5.00}.
+      Pre-registration
+      [`pre-registrations/2026-09-04-how-fresh-must-the-trap-be.md`](pre-registrations/2026-09-04-how-fresh-must-the-trap-be.md),
+      committed alone before any runner exists, at the same model freeze
+      `12e7b08` (`sim/` is byte-identical to it).
+      **002's two arms become one dimensionless dial `phi` ∈ [0,1]**, the trap's
+      infidelity: the captured entry is `(1 - phi) * copy.s`, so `phi = 0` is the
+      shipped trap (002 arm A) and `phi = 1` is the ancestral-fixed trap (002
+      arm B), both **bit-exact**, same RNG draws in the same order.
+      ⚠️ **002's pre-committed two-arm t-test is a foregone conclusion and is
+      NOT the primary**, stated before any new data: recomputed from 002's
+      committed CSV under CONTROLLED (alive and never saturated), **arm B is
+      CONTROLLED in 0 of all 90 runs** and arm A in 53 of 90 — at the two
+      registered ratios it is 30/30 against 0/30. Registering that contrast as
+      the headline would be this project's signature defect installed on
+      purpose. It is run at the endpoints on fresh seeds and reported as a
+      non-primary confirmation.
+      Fixes 002's criterion defect with a three-way exhaustive class
+      **EXTINCT / CONTROLLED / RUNAWAY**. Primary prediction: the CONTROLLED set
+      in `phi` is a contiguous down-set from 0 (falsified by re-entrant
+      control). Grid **stated in the ratio**, `phi` swept closed so no region of
+      the registered axis is unswept — 002's falsification lived below its
+      pilot's floor, and ratio 2.00 is included as a **pre-registered
+      exploratory** point below every ratio 002 swept.
+      Runner does not exist yet and must not be written before this line is
+      committed.
 
 ## What is actually left — three of the four carried-forward limitations
 
