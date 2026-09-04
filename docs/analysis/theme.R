@@ -22,3 +22,8 @@ theme_tge <- function(base_size = 11) {
       legend.position = "top"
     )
 }
+
+# The two arms of registered question 002. Named, not positional, for the same
+# reason as above. Deliberately NOT 001's two colours: a figure from one question
+# should not be mistakable for a figure from the other at a glance.
+palette_002 <- c("A-conscription" = "#a3be8c", "B-innate" = "#d08770")
