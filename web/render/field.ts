@@ -312,6 +312,15 @@ export interface SpanGeometry {
  * Both spans are derived from `siteX`, the same mapping the marks use, so
  * `pxPerSite` agreeing between them is a property the test can assert rather
  * than a convention to remember.
+ *
+ * ⚠️ "and there is no width floor anywhere in this file any more" STOOD ABOVE
+ * AND WAS FALSE when written or soon after: `markWidth` floors at 1px and the
+ * domesticated glyph floors at 3px in both axes. Three floors. The RULE the
+ * sentence was defending is intact and is restated without the false claim: a
+ * place-marker may be emphasised outside the data plane, never inside it. What
+ * the floors do inside the plane is measured rather than asserted --
+ * `scripts/explore-field-undercount.ts`, and the guard in
+ * `tests/render-field.test.ts` pins the one cost that is real.
  */
 export function spanGeometry(
   p: Params,
@@ -344,22 +353,42 @@ export function spanGeometry(
 }
 
 /**
- * ⚠️ KNOWN DEFECT — THE FIELD UNDERCOUNTS BY ROUGHLY 12%, AND THIS FLOOR IS WHY.
+ * ⚠️ THE "ROUGHLY 12% UNDERCOUNT, AND THIS FLOOR IS WHY" THAT STOOD HERE WAS
+ * WRONG IN BOTH HALVES. Corrected 2026-09-03, by measurement.
  *
- * At the toy's defaults the field is ~919 px wide for `S = 1000` sites, so the
- * true pitch is 0.919 px/site. `Math.max(1, ...)` floors the mark at 1 px, which
- * is wider than the pitch, so adjacent occupied sites OVERLAP and the one drawn
- * second hides part of the first. Measured by counting distinguishable marks
- * against `totalCopies` on three worlds: 1383 / 1714 / 1237 detected against
- * 1551 / 1923 / 1416 actual — an 11%..13% shortfall.
+ * It read: "the field is ~919 px wide for S = 1000 sites... Measured by counting
+ * distinguishable marks against `totalCopies` on three worlds: 1383 / 1714 /
+ * 1237 detected against 1551 / 1923 / 1416 actual — an 11%..13% shortfall."
+ * NOTHING IN THE REPO PRODUCED THOSE NUMBERS. There is now a producer:
+ * `scripts/explore-field-undercount.ts`, on the instrument in
+ * `tests/guards/field-undercount-arm.ts` that the render guard also uses.
  *
- * The floor is not removable as-is: below 1 px a mark can land entirely between
- * two device pixels and vanish, which trades a consistent undercount for an
- * inconsistent one. THE UNDERCOUNT IS CONSISTENT AND MONOTONE — it never
- * reverses the direction of a change a visitor is watching — which is why the
- * hero panel ships with it. It is still a real defect and it is listed in
- * `docs/ROADMAP.md`; it is recorded HERE because a note that lives only in an
- * untracked report does not survive a clone.
+ * THE MAGNITUDE IS 0.4%..4.9%, not 11%..13%. Two threshold-free observables
+ * bracket it from both sides — exact rectangle geometry, which ignores
+ * antialiasing and so bounds countability from above, and device-column ink
+ * runs, which merge anything contiguous and so bound it from below. Twelve
+ * world states, generations 300..6000, copy counts 1157..1893, which brackets
+ * the density the retired figure was quoted at. It never approaches 12%.
+ *
+ * AND THE FLOOR IS NOT THE CAUSE. Sweeping the mark width (ARM 2) at seed 1,
+ * generation 3000: at exact pitch (x1.000) the shortfall is 1.5%, and at the
+ * shipped floor (x1.185 here) it is ALSO 1.5% — identical. On the device grid
+ * narrowing the mark makes it slightly WORSE, 2.2% at x0.25 against 2.2% at the
+ * floor, peaking at 2.7% around x0.75. Removing the floor buys nothing.
+ *
+ * What is left is the real mechanism: copies at ADJACENT SITES merge into one
+ * blob, and no mark width separates them, because 1000 sites do not fit in
+ * ~844 px. It is a resolution limit, not a defect. It is also VIEWPORT
+ * DEPENDENT — the canvas is `width: 100%`, so the pitch tracks the window, and
+ * at a canvas wider than about 1056 CSS px the floor stops binding at all.
+ *
+ * (The floor's own stated justification — that below 1px a mark could land
+ * between two device pixels and vanish — is UNTESTED here; a sub-pixel rect
+ * dims rather than disappears. It is moot either way, since narrowing gains
+ * nothing measurable.)
+ *
+ * The defect that WAS real is burial, and it was elsewhere: `DOMESTICATED_HALO`
+ * painted after the marks erased whole copies. That is fixed above and guarded.
  *
  * Do not quote a mark count off this panel as a copy number. `observe()` is the
  * count; this is the picture.
@@ -544,6 +573,56 @@ export function drawField(
   const domX: number[] = [];
   const domY: number[] = [];
 
+  // ⚠️ THE HALO IS PAINTED BEFORE THE MARKS, AND THAT ORDER IS THE WHOLE POINT.
+  //
+  // It used to be painted after them, and it is the ONLY thing in this panel
+  // that ever buried a copy completely. Measured by
+  // `scripts/explore-field-undercount.ts` ARM 5 across 21 world states: zero
+  // buried marks in 17 of them, and 1..4 in the other four -- every single one
+  // under `DOMESTICATED_HALO`, never under a mark or a span. A halo is 5px wide
+  // against a ~0.84px pitch, so it spans about six sites, and a plain mark under
+  // it vanished outright rather than merging with a neighbour.
+  //
+  // That is annotation claiming territory inside the data plane, which is the
+  // rule `spanGeometry` above states and the failure this file has already been
+  // through twice (the cluster tint at 3.3x true scale; the edge rules landing
+  // on 40% of the cluster's sites). The magnitude here is far smaller and the
+  // rule is the same, so the fix is the same: the emphasis goes UNDER the data.
+  // The glyph itself still paints over its neighbours, and that is left alone --
+  // a domesticated copy IS data, and data covering data at this pitch is the
+  // resolution limit, not a layering mistake.
+  //
+  // The cost is that a plain mark can now nick the halo's edge. That reads
+  // correctly: the copy is in front, which is what it is.
+  for (let row = 0; row < order.length; row++) {
+    const genome = world.genomes[order[row]!]!;
+    const y = field.y + row * rowH;
+    for (const copy of genome.copies) {
+      if (!copy.domesticated) continue;
+      // Centred on the mark it replaces, so an enlarged glyph does not
+      // systematically overhang the right-hand end of its own span, and
+      // clamped so it can never leave the field.
+      domX.push(
+        Math.min(
+          Math.max(field.x, siteX(copy.site) - (domW - markW) / 2),
+          field.x + field.w - domW,
+        ),
+      );
+      domY.push(y);
+    }
+  }
+
+  ctx.fillStyle = DOMESTICATED_HALO;
+  for (let i = 0; i < domX.length; i++) {
+    const hx = Math.max(field.x, domX[i]! - 1);
+    ctx.fillRect(
+      hx,
+      domY[i]! - 1,
+      Math.min(domW + 2, field.x + field.w - hx),
+      domH + 2,
+    );
+  }
+
   // Any 1px column a full-height edge rule occupies. A mark landing on one
   // would blend with it rather than cover it -- a 1px rect at a fractional
   // offset paints two device columns partially -- so such a mark gets a
@@ -564,19 +643,8 @@ export function drawField(
     const sorted = sortedRepertoire(genome);
     for (const copy of genome.copies) {
       const x = siteX(copy.site);
-      if (copy.domesticated) {
-        // Centred on the mark it replaces, so an enlarged glyph does not
-        // systematically overhang the right-hand end of its own span, and
-        // clamped so it can never leave the field.
-        domX.push(
-          Math.min(
-            Math.max(field.x, x - (domW - markW) / 2),
-            field.x + field.w - domW,
-          ),
-        );
-        domY.push(y);
-        continue;
-      }
+      // Collected and haloed in the pre-pass above; the glyph is painted last.
+      if (copy.domesticated) continue;
       if (onRule(x, markW)) {
         ctx.fillStyle = FIELD_BG;
         ctx.fillRect(x - 0.5, y, markW + 1, markH);
@@ -588,16 +656,6 @@ export function drawField(
     }
   }
 
-  ctx.fillStyle = DOMESTICATED_HALO;
-  for (let i = 0; i < domX.length; i++) {
-    const hx = Math.max(field.x, domX[i]! - 1);
-    ctx.fillRect(
-      hx,
-      domY[i]! - 1,
-      Math.min(domW + 2, field.x + field.w - hx),
-      domH + 2,
-    );
-  }
   ctx.fillStyle = DOMESTICATED_COLOUR;
   for (let i = 0; i < domX.length; i++) {
     ctx.fillRect(domX[i]!, domY[i]!, domW, domH);
