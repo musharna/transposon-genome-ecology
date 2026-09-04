@@ -27,3 +27,11 @@ theme_tge <- function(base_size = 11) {
 # reason as above. Deliberately NOT 001's two colours: a figure from one question
 # should not be mistakable for a figure from the other at a glance.
 palette_002 <- c("A-conscription" = "#a3be8c", "B-innate" = "#d08770")
+
+# The three ratios of registered question 003. Named, not positional, for the
+# same reason as above, and deliberately a third set of hues: 001, 002 and 003
+# figures should not be mistakable for one another at a glance. The exploratory
+# ratio is distinguished by LINETYPE rather than by colour, so that its status
+# survives being printed or read in greyscale.
+palette_003 <- c("2.00" = "#b48ead", "3.33" = "#88c0d0", "5.00" = "#ebcb8b")
+linetype_003 <- c("registered" = "solid", "exploratory" = "22")
