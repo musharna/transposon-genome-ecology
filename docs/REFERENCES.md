@@ -120,11 +120,24 @@ quantitative support, so there is no excuse for taking it from a summary.
   The **acquisition event** itself: a locus becoming a piRNA producer, heritably.
 - **Kelleher, Edelman & Barbash 2012**, "Drosophila interspecific hybrids phenocopy
   piRNA-pathway mutants", _PLoS Biol_, [10.1371/journal.pbio.1001428](https://doi.org/10.1371/journal.pbio.1001428), 115 cites.
-  **The defence is maternally inherited** — females deposit piRNAs into eggs, so
-  immunity to a specific TE propagates to future generations. If the player's
-  strategy is heritable, so is the host's; the arms race is symmetric in this
-  respect and a design that makes only the element heritable is asymmetric by
-  mistake, not by choice.
+  ⚠️ **GLOSS CORRECTED 2026-09-03 after reading the full text** — see
+  `docs/pathway-mechanics.md` §4. This entry used to read "the defence is
+  maternally inherited … so immunity to a specific TE propagates to future
+  generations". **That is background this paper CITES (its refs 18, 29), not a
+  result it produced**, and its own results cut the other way: TE families
+  under-represented in the maternal piRNA pool are NOT more likely to be
+  derepressed in interspecific hybrids (z = −0.44, df = 257, p = 0.66), and
+  verbatim, "these results demonstrate that mismatches between piRNAs and TE
+  transcripts cannot explain the pattern of TE derepression in hybrids".
+  What the paper DOES support is **functional divergence of the piRNA effector
+  proteins** — hybrids phenocopy piRNA-pathway mutants, with deficient ping-pong
+  amplification and mislocalised Aubergine and Ago3.
+  Two things follow. The design's symmetry argument (host defence is heritable,
+  so the arms race is symmetric) still stands on the maternal-deposition
+  literature, but **not on this citation** — cite its sources, not it. And this
+  paper is **NOT** grounding for our `theta` window: it argues against
+  mismatch-graded silencing in its own system. The window's justification is a
+  design one, and is labelled as such.
 - **Yamanaka, Siomi & Siomi 2014**, "piRNA clusters and open chromatin structure",
   _Mobile DNA_ 5:22, [10.1186/1759-8753-5-22](https://doi.org/10.1186/1759-8753-5-22), 123 cites.
 - **Luo & Lü 2017**, "Silencing of transposable elements by piRNAs in Drosophila:
@@ -179,9 +192,25 @@ issue — so the resistance/tolerance framing below is this piece's synthesis of
 someone else's data, not a measurement it made. That does not make it wrong, and
 the framing is standard host–parasite ecology independent of this article. But
 the `t` dial in spec §4 is the only poke whose grounding rests on a single
-secondary source, and **the primary study it comments on has not been read**.
-Read it before quoting a number, and do not cite this Primer for a quantitative
-claim.
+secondary source. ~~**the primary study it comments on has not been read**~~ —
+**READ 2026-09-03**, full text, see `docs/pathway-mechanics.md` §5. Still do not
+cite this Primer for a quantitative claim; cite the primary:
+
+**Kelleher ES, Jaweria J, Akoma U, Ortega L, Tang W (2018)**, "QTL mapping of
+natural variation reveals that the developmental regulator *bruno* reduces
+tolerance to P-element transposition in the *Drosophila* female germline",
+_PLoS Biol_ 16(10):e2006040,
+[10.1371/journal.pbio.2006040](https://doi.org/10.1371/journal.pbio.2006040).
+Same journal, same issue, same date as the Primer, and in its reference list.
+The definition, verbatim: "mechanisms of tolerance do not affect propagation but
+rather limit the fitness costs to the host." >32,000 dysgenic F1 offspring
+phenotyped across the DSPR; two allelic classes, tolerant and sensitive;
+candidate gene *bruno*, a germline developmental regulator, differing
+**regulatorily not coding** ("none of the 36 in-phase SNPs are nonsynonymous"),
+tolerant alleles carrying a 20% reduction in *bruno* expression (95% CI 14–26%).
+Effects: 39% less F1 ovarian atrophy, 54% reduction in sterility, no effect on
+brood size among fertile F1s. First demonstration of natural variation in TE
+tolerance in any organism.
 
 Before a host acquires **resistance** (silencing the element), individuals vary in
 their capacity to **tolerate** TE activity — ignoring or repairing the damage while
@@ -196,6 +225,19 @@ different costs, different equilibria, and — critically for a game — **toler
 not create a piRNA cluster, so it never triggers the §3 conscription trap.** A host
 that tolerates rather than resists is an opponent the element cannot conscript.
 Modelling only silencing collapses a two-strategy opponent into one.
+
+⚠️ **THAT LAST STEP IS OUR INFERENCE, AND THE PRIMARY DOES NOT SUPPORT IT**
+(added 2026-09-03; `docs/pathway-mechanics.md` §5). Tolerance in Kelleher et al.
+2018 is variation in germline development and the DNA-damage response, sitting
+entirely OUTSIDE the piRNA pathway — nothing in it prevents a cluster insertion
+from happening or from being transmitted. "A tolerant host builds no cluster" is
+defensible at the EVOLUTIONARY scale (a host paying little for TE activity is
+under weak selection to maintain resistance); `sim/phases/trap.ts` implements it
+at the MECHANICAL scale, as a per-capture gate, which is the stronger claim.
+That gate is also the entire source of guard 9's `t = 0.99` / `t = 1`
+discontinuity — so guard 9 is correct about the code, and the framing that
+resistance and tolerance are "different in kind" describes a design decision,
+not a result about biology.
 
 ---
 

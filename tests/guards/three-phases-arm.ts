@@ -79,10 +79,32 @@ import {
  * figures, which is three places for one measurement to go stale.
  *
  * Full inactivation implies the family eventually DIES in this model.
- * `sim/phases/lifecycle.ts`'s `lose` exempts only domesticated copies from
- * excision, so silenced copies keep being lost at rate `v` while silencing
- * prevents them from replacing themselves; decay to zero is then guaranteed.
- * ARM 4 of the sweep prints it: measured at these parameters, total copies fall
+ *
+ * ⚠️ THE MECHANISM NAMED HERE WAS WRONG UNTIL 2026-09-03, AND IT WAS MEASURED
+ * RATHER THAN REASONED. This paragraph used to read: "`lose` exempts only
+ * domesticated copies from excision, so silenced copies keep being lost at rate
+ * `v` while silencing prevents them from replacing themselves; decay to zero is
+ * then guaranteed." That names EXCISION as the cause, and it is not.
+ * `scripts/explore-fossil-state.ts` swaps one phase at a time, aligned on the
+ * first generation with zero active copies, 11 seeds, with a positive control
+ * that the composed loop reproduces `sim/step.ts`'s `stateHash` on 11/11 seeds.
+ * Copies still held 400 generations after inactivation:
+ *
+ *   shipped                                          0/11
+ *   excision gated (Kofler 2019's own rule)          0/10
+ *   + d = 0 (no damage term)                         0/11
+ *   + a = b = d = 0 (NO selection on copy number)    0/10
+ *   excision gated + ASEXUAL, shipped costs         10/11, mean 884.9, FLAT
+ *
+ * So it is neither excision nor selection: it is the SEXUAL PATH. A copy that
+ * cannot transpose cannot restore its own frequency, and here that is fatal
+ * whatever stopped it. This is the SAME mechanism guard 8 discriminated for
+ * domesticated copies (asexual 2761 -> 2800, sexual 169 -> 0) — two subsystems,
+ * two independent experiments, one mechanism. Not separated and not claimed:
+ * drift-to-absorption versus `sim/phases/reproduce.ts`'s site dedup, both of
+ * which live on that path. Full write-up: `docs/pathway-mechanics.md` §7.
+ *
+ * ARM 4 of the sweep prints the trajectory: measured at these parameters, total copies fall
  * from a peak of 3400..6847 to 249..818 by generation 120 and 9..201 by
  * generation 200, and 8 of the 11 seeds reach `totalCopies: 0` on or before
  * generation 300 (earliest generation 205, seeds 4 and 202); the other three
@@ -105,7 +127,12 @@ import {
  *   ASSUMPTION, NOT A FACT ABOUT BIOLOGY. That piRNA-SILENCED copies
  *   specifically persist, i.e. that silencing and removal are decoupled. This
  *   model applies one excision rate `v` to every copy regardless of silencing
- *   state, so a fully silenced family is excised to zero. Note also that Brouha's
+ *   state — which Kofler 2019 does NOT (verbatim, Methods: "we assume that TEs
+ *   are inactive (transpositions as well as excisions) in individuals with a
+ *   cluster insertion"), and which is mechanistically wrong for a cut-and-paste
+ *   element whose excision its own silenced transposase would have to catalyse.
+ *   Correcting it is still worth doing; what the measurement above shows is that
+ *   it is NOT what drives the family to zero. Note also that Brouha's
  *   L1 is a RETROtransposon and copies by copy-and-paste — it has no excision
  *   mechanism at all, so its persistence is partly structural and does not
  *   transfer wholesale to a cut-and-paste element. The right reading is that
