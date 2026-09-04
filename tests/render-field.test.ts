@@ -44,6 +44,12 @@ import {
   type World,
 } from "../sim/index.js";
 import { TOY_DEFAULTS } from "../web/params.js";
+import {
+  BURIAL_STATES,
+  MARK_COLOURS,
+  analyse,
+  recordingCtx as instrumentCtx,
+} from "./guards/field-undercount-arm.js";
 import { BAR_FLOOR_PX, barLength, sharePercent } from "../web/tally.js";
 import {
   ACTIVE_COLOUR,
@@ -493,6 +499,81 @@ describe("drawField: the marked places are visible AND do not blind their conten
     // ...and the wash that IS full height is the capped composite.
     const washes = fills.filter((f) => f.h >= field.h && (f.colour === CLUSTER_FILL || f.colour === BENEFICIAL_FILL));
     expect(washes.length).toBe(2);
+  });
+
+  it("lets no ANNOTATION bury a copy, and prices the one thing that does", () => {
+    // THE FAILURE THIS EXISTS TO CATCH, measured rather than hypothetical:
+    // DOMESTICATED_HALO used to be painted AFTER the marks. A halo is 5px wide
+    // against a ~0.84px pitch, so it spans about six sites, and a plain mark
+    // under one vanished outright. `scripts/explore-field-undercount.ts` ARM 5
+    // found it in 4 of 21 world states. The three states below are exactly the
+    // failing ones, so this is asserted against known-bad worlds and not
+    // against worlds chosen after the fix. Move the halo back to a trailing
+    // pass and BURIED_BY_ANNOTATION goes to 8.
+    //
+    // TWO COUNTS, BECAUSE THEY ARE TWO DIFFERENT THINGS.
+    //
+    //   ANNOTATION burying data is a RULE, and the rule is `spanGeometry`'s:
+    //   emphasis may be applied outside the data plane, never inside it. Zero,
+    //   and no tolerance.
+    //
+    //   DATA burying data is a PRICED TRADE. The domesticated glyph is drawn at
+    //   `Math.max(3, markW)` = 3px against a 0.844px pitch, i.e. 3.6x true site
+    //   scale, because a domesticated copy at true scale is a sub-pixel smear
+    //   and it is the rarest state the toy has to show. That enlargement costs
+    //   exactly the 6 buried copies pinned here, out of 4718 marks across these
+    //   three worlds. It is pinned rather than bounded so that enlarging the
+    //   glyph turns this red instead of quietly costing more; whether the trade
+    //   is worth making at all is an open item in docs/ROADMAP.md.
+    //
+    // MERGING IS NOT ASSERTED. Copies at adjacent sites blur into one blob and
+    // NO mark width prevents it — ARM 4 sweeps the width and countability does
+    // not improve; narrowing it makes the device-pixel figure slightly worse.
+    // 1000 sites do not fit in ~844 px. That is a resolution limit, not a bug.
+    let buriedByAnnotation = 0;
+    let buriedByData = 0;
+    let totalMarks = 0;
+    for (const { seed, generations } of BURIAL_STATES) {
+      const world = createWorld(defaultParams({ ...TOY_DEFAULTS, seed }));
+      for (let i = 0; i < generations; i++) step(world);
+
+      // The instrument's own stub, not this file's copy of one, so the guard
+      // and `scripts/explore-field-undercount.ts` record identically.
+      const { ctx, fills } = instrumentCtx();
+      drawField(ctx, world, W, H);
+      const { marks } = analyse(fills);
+      totalMarks += marks.length;
+
+      // POSITIVE CONTROLS, asserted first: without marks and without
+      // domesticated copies there is no halo painted at all, and "nothing was
+      // buried" would be true of an empty canvas.
+      expect(marks.length, `seed ${seed}: no marks drawn`).toBeGreaterThan(500);
+      expect(
+        marks.filter((m) => m.fill.colour === DOMESTICATED_COLOUR).length,
+        `seed ${seed}: no domesticated copies, so no halo is painted at all`,
+      ).toBeGreaterThan(0);
+
+      for (const m of marks) {
+        if (m.visible) continue;
+        if (m.hiddenBy && MARK_COLOURS.has(m.hiddenBy)) buriedByData++;
+        else {
+          buriedByAnnotation++;
+          expect.soft(
+            m.hiddenBy,
+            `seed ${seed} gen ${generations}: annotation ${m.hiddenBy} completely covers a copy`,
+          ).toBe(null);
+        }
+      }
+    }
+    expect(totalMarks).toBe(4718);
+    expect(
+      buriedByAnnotation,
+      "no annotation may completely cover a copy",
+    ).toBe(0);
+    expect(
+      buriedByData,
+      "the enlarged domesticated glyph's measured cost; re-derive if it moves",
+    ).toBe(6);
   });
 });
 

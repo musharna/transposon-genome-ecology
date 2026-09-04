@@ -208,13 +208,45 @@ worth keeping written down:
   reorder sim state were the ones the change actually broke, because a sorted
   repertoire cannot be re-sorted and their fixture controls said so.
 
-- [ ] **The field render undercounts copies by ~12%.** `markWidth` in
-      `web/render/field.ts` floors a mark at 1 px against a 0.919 px/site pitch,
-      so adjacent occupied sites overlap. Measured 1383/1714/1237 marks against
-      1551/1923/1416 actual copies. The undercount is consistent and monotone, so
-      it never reverses the direction of a change a visitor is watching — but it
-      is on the hero panel, and a visitor counts. Fix needs sub-pixel accumulation
-      rather than a wider mark. Recorded on `markWidth`.
+- [x] **RESOLVED 2026-09-03, and the item was wrong in both halves.** It read
+      "the field render undercounts copies by ~12%... `markWidth` floors a mark at
+      1 px against a 0.919 px/site pitch, so adjacent occupied sites overlap.
+      Measured 1383/1714/1237 marks against 1551/1923/1416 actual copies... Fix
+      needs sub-pixel accumulation rather than a wider mark."
+      **Nothing in the repo produced those numbers.** There is a producer now:
+      `scripts/explore-field-undercount.ts`, on the instrument in
+      `tests/guards/field-undercount-arm.ts` that the render guard shares.
+      - **The magnitude is 0.4%–4.9%, not 11%–13%**, bracketed by two
+        threshold-free observables — exact rectangle geometry (ignores
+        antialiasing, so bounds countability from above) and device-column ink
+        runs (merges anything contiguous, so bounds it from below) — over twelve
+        world states, generations 300–6000, copy counts 1157–1893, which brackets
+        the density the retired figure was quoted at.
+      - **The 1px floor is not the cause.** Sweeping the width: at exact pitch
+        the shortfall is 1.5%, at the shipped floor it is also 1.5%; on the
+        device grid narrowing the mark makes it slightly worse. Removing the
+        floor buys nothing, so "sub-pixel accumulation rather than a wider mark"
+        was right that a wider mark is not the answer and wrong about why.
+      - **What remains is a resolution limit, not a defect.** Copies at adjacent
+        sites merge and no width separates them: 1000 sites do not fit in ~844 px.
+        It is also viewport-dependent — the canvas is `width: 100%`, and above a
+        canvas of about 1056 CSS px the floor stops binding at all.
+      - **The defect that WAS real was somewhere else.** `DOMESTICATED_HALO` was
+        painted AFTER the marks and erased whole copies — 8 across the three
+        states now in `BURIAL_STATES`, in 4 of 21 states swept. The halo now goes
+        under the marks, and `tests/render-field.test.ts` asserts zero annotation
+        burials, having been seen to fail at 8 on the pre-fix renderer.
+
+- [ ] **The domesticated glyph is drawn at 3.6x true site scale, and it buries
+      6 copies.** `Math.max(3, markW)` against a 0.844 px pitch. It is data over
+      data rather than annotation over data, so it does not break the rule
+      `spanGeometry` states, and the enlargement is why the rarest state the toy
+      shows is visible at all — but it is the same shape as the cluster tint that
+      was fixed for being 3.3x true scale. The cost is pinned by the render guard
+      rather than bounded, so enlarging the glyph turns it red. **Open question,
+      not a bug: is the trade worth making, or should the emphasis move outside
+      the data plane** (a gutter tick) the way every other place-marker in that
+      file already did?
 - [x] **The piRNA repertoire scan is unbounded.** ~~Nothing removes a repertoire
       entry, so one silencing pass costs `O(copies × repertoire)` and the cost
       grows.~~ CLOSED — see the note above this list. Nothing still removes a
