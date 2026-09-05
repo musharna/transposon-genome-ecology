@@ -346,11 +346,37 @@ holding a repertoire.
    an independent run to 600 must agree **bit-for-bit** on `stateHash` at
    generation 600. This is what licenses reading two horizons out of one run;
    without it the dual-horizon design is an assumption wearing a result's
-   clothes. **And the horizon must actually be reached:** for every `phi = 0`
-   cell, each run must either record generation 1800 or record a saturation stop
-   at a generation in `(600, 1800]`. A run recording `stopped_at = 600` with no
-   stop reason is a silently truncated horizon, and would make secondary 1
-   unfalsifiable in the direction it predicts.
+   clothes. **And the horizon must actually be reached:** a run recording
+   `stopped_at = 600` with **no stop reason recorded** is a silently truncated
+   horizon, and would make secondary 1 unfalsifiable in the direction it
+   predicts.
+
+   > **Amendment 1 — 2026-09-05, made before any data existed and while the
+   > runner was being written.** Check 3's second half first read: "for every
+   > `phi = 0` cell, each run must either record generation 1800 or record a
+   > saturation stop at a generation in `(600, 1800]`." **That form can fail for
+   > a reason unrelated to what it tests.** A `phi = 0` run that legitimately
+   > saturated at generation 400 on one of the new seeds would void the entire
+   > experiment — but an early saturation is a *scientific* outcome, not an
+   > instrument failure, and 004's seeds 3001–3010 are ones 003 never ran. What
+   > the check exists to catch is a **truncated horizon**: the loop stopping at
+   > the checkpoint because the checkpoint stopped it. The replacement fires only
+   > on that — `stopped_at == 600` with no saturation recorded — and cannot fire
+   > on a real early saturation, which is instead **REPORTED as a surprise**
+   > alongside the check. Same defect class as 003's Amendment 1 and as this
+   > registration's own evaluability precondition; third instance in this
+   > project. Recorded here rather than under "Deviations" because it was made
+   > **before any data existed**, which is the only time a registration may be
+   > changed without the change being a deviation.
+
+   > **Note on how 3a is implemented, added at the same time.** The 600-generation
+   > comparison run must **not itself take a checkpoint**. If it did, both sides
+   > of the comparison would execute the checkpoint code and any side effect of
+   > taking a checkpoint would be present on both and cancel — the check would
+   > pass on exactly the bug it exists to detect. The runner guards the
+   > checkpoint with `horizon > CHECKPOINT`, so the comparison is genuinely
+   > "with checkpoint" against "without". This is an implementation requirement
+   > the registration did not state and now does.
 4. **The dial is live at the smallest registered setting.** The risk unique to
    004 is that `phi = 0.001` is not a small perturbation but *no* perturbation.
    **Positive control asserted first:** at `phi = 0` mean displacement must be
