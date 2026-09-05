@@ -256,13 +256,36 @@ live registry and the null stated as "checked HERE", naming where.
       falsifier as the negation of the prediction, not as one scenario that
       would falsify it, and have the analysis evaluate THE PREDICTION.
 
-- [ ] **Question 004, sited by 003's cliff.** The fidelity edge is somewhere in
-      `(0, 0.125]`, estimated near `phi ~ 0.01` from `theta/phi ~ max|s|`. That
-      estimate is post-hoc and unregistered. 004 sweeps `phi` logarithmically
-      below 0.125 and asks whether a biologically reachable band of imperfect
-      fidelity still controls the element — which decides whether 003's result
-      is "the mechanic is an artefact of a limit" or "the mechanic works in a
-      narrow but real band". Registration first, alone, before any runner.
+- [ ] **REGISTERED 2026-09-04, RUNNER PENDING — question 004, a band or only a
+      delay?** Pre-registration
+      `docs/pre-registrations/2026-09-04-a-band-or-only-a-delay.md`, committed
+      alone before any runner existed, model frozen at `12e7b08` (`sim/` tree
+      `b1e69c2`, unchanged since 001).
+      003's cliff put the fidelity edge somewhere in `(0, 0.125]`, estimated
+      post-hoc near `phi ~ 0.01` from `theta/phi ~ max|s|`. 004 registers that
+      estimate as a number before testing it: `phi*` = **0.0054 / 0.0096 /
+      0.0161** at ratios 2.00 / 3.33 / 5.00, from `theta / max|s|` measured in
+      003's `phi = 0` cells. Grid is log2 in `phi` from 0.001 to 0.064 plus the
+      anchors 0 and 0.125 (both exactly 003 cells, so the reproduction control
+      runs against committed data), 3 ratios × 9 `phi` × seeds 3001–3010 = 270
+      runs, plus a 60-run reproduction control on 003's seeds.
+      ⚠️ **THE QUESTION GREW A SECOND HALF WHEN THE MECHANISM WAS WRITTEN
+      DOWN.** `s` is a random walk, so `max|s|` grows without bound while the
+      reach `theta/phi` is fixed — meaning that for any `phi > 0` there is a
+      horizon at which the walk outruns the reach, and what looks like a band
+      at 600 generations may be only a **delay**. Every run therefore goes to
+      **1800** generations and is scored at 600 as well, out of one run (which
+      manipulation check 3 licenses by requiring bit-identical `stateHash` at
+      generation 600 between an 1800-run and an independent 600-run). Secondary
+      1 registers the direction of that shrinkage, not its size.
+      Discharges both standing rules below: the grid is stated in the ratio, and
+      every falsification clause is the literal negation of its prediction.
+      Also carries an **evaluability precondition written before any data
+      existed** — all three secondaries presuppose the primary at the ratio
+      being scored, and at a ratio where the primary fails they are NOT
+      EVALUABLE rather than falsified, because an edge of 0 makes
+      `ratio/phi_edge` infinite. That is the same defect 003's secondary 2 hit
+      after the fact and the same shape as 003's Amendment 1.
 
 ## What is actually left — three of the four carried-forward limitations
 
