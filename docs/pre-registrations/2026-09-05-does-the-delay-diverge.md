@@ -375,9 +375,11 @@ cell as if it carried a magnitude._
 - **Grid:** 3 ratios × 5 `phi` × **seeds 4001–4010** × the horizon table =
   **150 runs**. Seeds 4001–4010 are disjoint from 004's 3001–3010, 003's
   2001–2010, 002's 1–10 and the 002 pilot's 1001–1006.
-- **Reproduction control:** 3 ratios × `phi ∈ {0.002, 0.004}` × **seeds
-  3001–3010** × horizon **1800** = **60 runs**, existing only to be compared
-  against 004's committed rows.
+- **Reproduction control:** 3 ratios × `phi ∈ {0.002, 0.004, 0.125}` × **seeds
+  3001–3010** × horizon **1800** = **90 runs**, existing only to be compared
+  against 004's committed rows. _(`phi = 0.125` added by Deviation 1, below,
+  before any data existed: without a control cell that actually saturates, the
+  saturation ceiling is never exercised against an oracle.)_
 - **Horizon-extension control:** 3 ratios × `phi = 0.002` × **seed 3001** ×
   horizon **8000** = **3 runs**, whose generation-600 and generation-1800
   snapshots must equal 004's committed rows.
@@ -400,12 +402,13 @@ size, so it is highest exactly where this experiment spends most of its time —
 measured to generation 1800. The budget below uses **0.74 µs** and is therefore
 an estimate that can run ~10% long at the low-`phi` cells.
 
-| arm                       | runs    | estimated hours |
-| ------------------------- | ------- | --------------- |
-| grid                      | 150     | ~13.3           |
-| reproduction control      | 60      | ~2.0            |
-| horizon-extension control | 3       | ~0.6            |
-| **total, single process** | **213** | **~16**         |
+| arm                                               | runs    | estimated hours |
+| ------------------------------------------------- | ------- | --------------- |
+| grid                                              | 150     | ~13.3           |
+| reproduction control, `phi ∈ {0.002, 0.004}`      | 60      | ~2.0            |
+| reproduction control, `phi = 0.125` (Deviation 1) | 30      | ~0.1            |
+| horizon-extension control                         | 3       | ~0.6            |
+| **total, single process**                         | **243** | **~16**         |
 
 This is registered because 004 discovered its 5-hour cost at run time. The
 runner **may** shard by ratio across three processes (~6 hours wall), and if it
@@ -462,21 +465,28 @@ the per-ratio refitted exponent with its standard error.
    which compared two runs of this experiment against each other; here the
    comparison lands on **committed data from a different experiment**.
 
-   ⚠️ The check is able to fail only because the checkpoint branch is guarded by
-   `horizon > CHECKPOINT`. Without that guard the 1800-run would also take a
-   checkpoint at 1800, both sides would execute the same branch, and any side
-   effect of taking one would cancel — the check would pass on exactly the bug
-   it exists to detect. 004 shipped this guard after finding the defect; it is
-   carried, and the mutant that removes it is in the mutation table below.
+   ⚠️ **This paragraph originally claimed the check is able to fail only because
+   the checkpoint branch is guarded by `horizon > CHECKPOINT`, carried over from 004. THAT IS FALSE HERE AND THE MUTANT PROVED IT** — see Deviation 4. The
+   guard is inert in this design and check 3 catches its removal not at all.
+   What check 3 does catch is **horizon-dependence in the trajectory**: the
+   replacement mutant consumes one extra RNG draw on any run longer than the
+   control horizon, which check 2 at horizon 1800 cannot see by construction,
+   and check 3 rejects it on all three comparisons with mismatched hashes at
+   generation 600 and 1800.
 
 4. **The dial is real, and the world uses it.** Two halves, both required:
    (a) the capture probe's mean displacement `mean|entry − copy.s|` equals
    `phi * mean|copy.s|` — the two quantities it records over the same captures —
-   to within 1e-9 at every registered `phi`; and (b) at the
-   smallest registered `phi` the run is **not** bit-identical to the same seed
-   at `phi = 0`. Half (b) exists because 004 found a mutant in which the world
-   silently used `copy.s` while the probe reported the correct displacement, and
-   **every probe-based check passed on it**.
+   to within 1e-9 at every registered `phi`; and (b) at **every** registered
+   `phi` (Deviation 2 — as registered this was "the smallest registered `phi`",
+   which is `0.002`, which is also a control cell and therefore already pinned
+   by check 2) the run is **not** bit-identical to the same seed at `phi = 0`.
+   Half (b) exists because 004 found a mutant in which the world silently used
+   `copy.s` while the probe reported the correct displacement, and **every
+   probe-based check passed on it**. A cell that saturated at or before the
+   checkpoint has no generation-600 record and is SKIPPED AND COUNTED, never
+   treated as agreement; if no cell is comparable at all, the check FAILS rather
+   than reporting success for having done no work.
 
 5. **Sharding is inert.** If the runner shards, one cell from each shard is
    re-run in a single process and its row must be byte-identical. If the runner
@@ -534,6 +544,22 @@ Registered in advance so the harness cannot be written to the mutants it finds:
 | a frozen constant mistyped                                      | check 6                        |
 | shard boundary changes a row                                    | check 5                        |
 
+**Run 2026-09-05, before any data existed. Eight mutants, plus a baseline and a
+sharded baseline, all fast-downed identically to one seed; BOTH BASELINES GREEN
+FIRST.** Six behaved as registered. Two did not, and what they exposed is
+recorded as Deviations 3 and 4 rather than quietly re-attributed:
+
+| mutation                                 | registered   | actually caught by                                               |
+| ---------------------------------------- | ------------ | ---------------------------------------------------------------- |
+| dial applies `phi + 1e-9`                | check 1      | check 1 ✓                                                        |
+| saturation ceiling 1500 → 1400           | check 2      | check 2 ✓ **only via Deviation 1**                               |
+| world uses `copy.s` at a grid-only `phi` | check 4b     | check 4b ✓ **only via Deviation 2**                              |
+| 004 oracle read at the wrong horizon     | oracle guard | oracle guard ✓ (reports the truncated file's real horizon, 1785) |
+| a frozen constant mistyped               | check 6      | check 6 ✓                                                        |
+| shard boundary changes a row             | check 5      | check 5 ✓, byte diff printed                                     |
+| dial applies half of `phi`               | check 4a     | **check 2** — see Deviation 3                                    |
+| checkpoint loses `horizon > CHECKPOINT`  | check 3      | **NOTHING. SURVIVED** — see Deviation 4                          |
+
 ## Scope, stated in advance
 
 - **One model, one freeze.** Every statement is about the model at `12e7b08`.
@@ -551,5 +577,60 @@ Registered in advance so the harness cannot be written to the mutants it finds:
 
 ## Deviations
 
-None yet. Any change after this commit is appended here with its date and
-reason, and any change made after data exists is marked as such.
+**All four below were made on 2026-09-05, BEFORE ANY DATA EXISTED**, while
+building the runner and running the mutation table above. Every one of them was
+forced by a mutant, not by a result. Any change made after data exists will be
+marked as such.
+
+**Deviation 1 — the reproduction control gains `phi = 0.125`.** As registered
+the control was `phi ∈ {0.002, 0.004}`, and the mutation table claimed a
+saturation ceiling moved from 1500 to 1400 would be caught by check 2. **It
+would not have been.** Neither control cell saturates by generation 1800 — 004
+recorded ~544 copies per genome at 1800 at `phi = 0.002`, against a ceiling of
+1500 — so the ceiling never binds there, and the mutant would have passed every
+check in the experiment. `phi = 0.125` is a 004 grid cell that saturates at
+generation ~174–219, so the ceiling is now pinned against committed data. Cost:
+30 runs of ~220 generations, about five minutes. With it, the mutant is caught.
+
+**Deviation 2 — check 4b compares EVERY grid `phi` against `phi = 0`, not only
+the smallest.** As registered it compared "the smallest registered phi", which
+in 005 is `0.002` — and `0.002` is also a reproduction-control cell, so check 2
+already pins it against committed data and check 4b was **fully redundant**.
+004's grid ran two decades below its control cells, so there the smallest
+setting was genuinely unguarded; 005's is not. Comparing every `phi` covers
+`0.0113`, `0.0226` and `0.0453`, which no oracle touches. It costs nothing — the
+`phi = 0` run is the same run whichever cell it is compared against. The mutant
+that models 004's own escape (the world using `copy.s` while the probe reports
+the displaced value, confined to grid-only `phi`) is caught at `0.0113` and
+`0.0226`; under the registered form it would have been caught by check 2
+instead, and 4b would have been dead weight carried as if it were a guard.
+
+**Deviation 3 — the "half `phi`" mutant is attributed to check 2, not check 4a.**
+Check 2 runs BEFORE the grid, and its control cells are dial cells, so any
+mis-scaling of `phi` changes them and aborts the experiment before check 4a ever
+executes. Check 4a is not redundant — re-running the same mutant with check 2
+switched off produces 9 violations reading "the dial is live but MIS-SCALED",
+with mean displacement exactly half of `phi * mean|s|` — but in the shipped
+configuration it is **shadowed**. Recorded because a check whose power is only
+ever demonstrated by an earlier check is a check nobody has actually tested.
+
+**⚠️ Deviation 4 — the `horizon > CHECKPOINT` mutant SURVIVED, and the table row
+is replaced.** Removing the guard changed nothing: check 3's three comparisons
+still matched 004's committed hashes exactly. The guard is **inert in this
+design**, and the reason is structural — no grid horizon equals a checkpoint,
+and for the control run, whose horizon IS checkpoint 1800, a checkpoint taken
+there is provably identical to the final record (the loop breaks on saturation
+BEFORE the checkpoint block, so the two can only differ for a run that
+saturated, which by construction never reaches it). The guard was load-bearing
+in **004**, whose check 3a compared against a freshly-run short arm; 005's check
+3 compares against a committed file, which removes the hazard.
+
+The guard stays — it is correct and free — but the claim that check 3 tests it
+was false, and a surviving mutant is a coverage report. **The row is replaced by
+the hazard check 3 actually exists for: horizon-dependence in the trajectory.**
+The replacement mutant consumes one extra RNG draw on any run longer than the
+control horizon, which check 2 (horizon 1800) cannot see by construction. It is
+caught by check 3 on all three comparisons, with mismatched hashes at generation
+600 **and** 1800. This is the determinism doctrine's own failure mode — the
+number of RNG draws consumed, in order, is part of reproducible state — and
+until this deviation nothing in the experiment tested for it.

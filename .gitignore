@@ -2,3 +2,6 @@ _scratch/
 node_modules/
 dist/
 dist-guard7/
+# Rscript opens a default PDF device, so any analysis script that draws leaves
+# this behind whether or not it saved a figure.
+Rplots.pdf
