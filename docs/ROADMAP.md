@@ -291,17 +291,57 @@ live registry and the null stated as "checked HERE", naming where.
       `t` (18.678 -> 61.29 from 600 to 1800 generations, factor 3.28), not as
       `sqrt(t)`. SECONDARY 2 FALSIFIED.
 
-- [ ] **Question 005, sited by 004's power law.** Time to saturation is
-      `t_sat = C * phi^(-a)` with `a` = 0.730 / 0.736 / 0.745 and R² ≈ 0.994 at
-      the three ratios — the same exponent everywhere, only the prefactor moving.
-      Setting `t_sat = T` reproduces **all six** observed edge brackets, and
-      implies the edge's ratio-dependence is 1.43x, i.e. REAL BUT SMALLER THAN
-      ONE GRID STEP — which is why 004's grid read it as zero and why secondary 3
-      came out as it did. **That model is POST-HOC: it was fitted to the data it
-      explains.** 005 registers it and tests it out of sample — predict `t_sat`
-      at `phi` values 004 never ran, and use a grid finer than a doubling so the
-      ratio-dependence is resolvable at all. Registration first, alone, before
-      any runner.
+- [ ] **REGISTERED 2026-09-05 — question 005, does the delay diverge or is there
+      a floor?**
+      [`pre-registrations/2026-09-05-does-the-delay-diverge.md`](pre-registrations/2026-09-05-does-the-delay-diverge.md),
+      committed alone before any runner exists. Runner and analysis not yet
+      written. Grid: 3 ratios × `phi ∈ {0.002, 0.004, 0.0113, 0.0226, 0.0453}` ×
+      seeds 4001–4010, per-`phi` horizons 8000/5000/2500/1500/1000, **213 runs,
+      ~16 h single-process** (cost measured before registering, ~6 h sharded by
+      ratio). 004's claim "every `phi > 0` saturates" rests on an extrapolation:
+      **no run in this project has ever observed a saturation below
+      `phi = 0.008`**, and 004's 90 runs at `phi ∈ {0.001, 0.002, 0.004}` were
+      all still CONTROLLED when their 1800-generation horizon ran out — which is
+      what BOTH the divergence and the floor reading predict.
+      ⚠️ **Two claims in 004's Result did not survive re-reading its own data,
+      and both corrections are recorded in 005's registration BEFORE any 005 run
+      exists** (they are post-hoc re-analyses of 004, not results of 005):
+      **(a)** "the exponent is the same at all three ratios" was never measured —
+      the spread is 0.0143 against SE(`a`) = 0.032, less than half of one
+      standard error. So 005 **declines to register** any prediction about it:
+      the first prospective application of the resolution rule below.
+      **(b)** the fit is measurably the wrong functional form — residuals run
+      `+ − − − +` **identically at all three ratios**, mean |residual| 5.03%
+      against a 1.78% noise floor (**2.8×**), so the curvature is systematic, and
+      at the low-`phi` end the law **underpredicts** `t_sat` by 6–7% at 3–5 SEM.
+      R² = 0.994 concealed all of it.
+
+- [ ] ⚠️ **THE FIX FOR A COARSE GRID IS USUALLY NOT A FINER GRID — IT IS TO STOP
+      SCORING THE COARSENED OBSERVABLE.** This supersedes the prescription this
+      roadmap carried until 2026-09-05 ("use a grid finer than a doubling so the
+      ratio-dependence is resolvable at all"), which was the wrong repair.
+      004's secondary 3 scored `ratio/phi_edge`, where `phi_edge` was located by
+      **bracketing on a doubling grid**, so the estimator's resolution was a
+      factor of 2 and the effect was 1.43x. But `t_sat` is a **continuous**
+      observable measured on the same runs, and the same ratio effect in it is
+      1.26x–1.33x at **z = 6.6 to 11.7 in every one of the five cells** — it was
+      decisively resolved all along. The edge is a monotone transform of `t_sat`
+      (`spread_edge = spread_tsat^(1/a)`), so nothing was missing from the data;
+      roughly an order of magnitude of resolution was thrown away by pushing a
+      continuous measurement through a threshold. **Before buying more runs to
+      resolve an effect, check whether a continuous observable already in the CSV
+      resolves it for free.** 005 scores `t_sat` directly and never brackets an
+      edge.
+
+- [ ] ⚠️ **A HIGH R² IS NOT EVIDENCE THE FUNCTIONAL FORM IS RIGHT — COMPARE THE
+      RESIDUALS TO THE SAMPLING NOISE.** 004 reported R² ≈ 0.994 and called the
+      power law "clean". Its residuals are 2.8x the SEM of the cell means and
+      carry the same sign pattern at all three ratios, which is misspecification,
+      not scatter. R² measures variance explained against the spread of the
+      predictor, which a wide log-spaced grid makes large no matter how wrong the
+      shape is. The rule: whenever cell means have a measurable standard error,
+      report **mean |residual| / mean SEM** beside R², and treat anything above
+      ~1.5 as structure the model is missing.
 
 - [ ] ⚠️ **A DEFECT FIXED AT THE INSTANCE COMES BACK AT THE CLASS.** 004's
       figure asserted control across the un-measured bracketed interval by
@@ -337,6 +377,14 @@ live registry and the null stated as "checked HERE", naming where.
       BEFORE registering a prediction about an effect size, and if the prediction
       is smaller than one step, the grid is wrong rather than the prediction
       falsified.
+      ⚠️ **"The grid is wrong" does NOT mean "buy a finer grid"** — see the
+      superseding item above. In 004's own case the grid was never the limiting
+      instrument; scoring through a bracketed threshold was, and the continuous
+      observable in the same CSV resolved the effect at z ≈ 7–12 for free. Check
+      the estimator before you buy runs. **005 applied this rule prospectively
+      for the first time, and its output was to DECLINE to register a
+      prediction** (the exponent's ratio-dependence, effect 0.0143 against
+      SE 0.032) rather than to enlarge the design.
 
 ## What is actually left — three of the four carried-forward limitations
 
@@ -370,27 +418,23 @@ worth keeping written down:
       needs sub-pixel accumulation rather than a wider mark."
       **Nothing in the repo produced those numbers.** There is a producer now:
       `scripts/explore-field-undercount.ts`, on the instrument in
-      `tests/guards/field-undercount-arm.ts` that the render guard shares.
-      - **The magnitude is 0.4%–4.9%, not 11%–13%**, bracketed by two
-        threshold-free observables — exact rectangle geometry (ignores
-        antialiasing, so bounds countability from above) and device-column ink
-        runs (merges anything contiguous, so bounds it from below) — over twelve
-        world states, generations 300–6000, copy counts 1157–1893, which brackets
-        the density the retired figure was quoted at.
-      - **The 1px floor is not the cause.** Sweeping the width: at exact pitch
-        the shortfall is 1.5%, at the shipped floor it is also 1.5%; on the
-        device grid narrowing the mark makes it slightly worse. Removing the
-        floor buys nothing, so "sub-pixel accumulation rather than a wider mark"
-        was right that a wider mark is not the answer and wrong about why.
-      - **What remains is a resolution limit, not a defect.** Copies at adjacent
-        sites merge and no width separates them: 1000 sites do not fit in ~844 px.
-        It is also viewport-dependent — the canvas is `width: 100%`, and above a
-        canvas of about 1056 CSS px the floor stops binding at all.
-      - **The defect that WAS real was somewhere else.** `DOMESTICATED_HALO` was
-        painted AFTER the marks and erased whole copies — 8 across the three
-        states now in `BURIAL_STATES`, in 4 of 21 states swept. The halo now goes
-        under the marks, and `tests/render-field.test.ts` asserts zero annotation
-        burials, having been seen to fail at 8 on the pre-fix renderer.
+      `tests/guards/field-undercount-arm.ts` that the render guard shares. - **The magnitude is 0.4%–4.9%, not 11%–13%**, bracketed by two
+      threshold-free observables — exact rectangle geometry (ignores
+      antialiasing, so bounds countability from above) and device-column ink
+      runs (merges anything contiguous, so bounds it from below) — over twelve
+      world states, generations 300–6000, copy counts 1157–1893, which brackets
+      the density the retired figure was quoted at. - **The 1px floor is not the cause.** Sweeping the width: at exact pitch
+      the shortfall is 1.5%, at the shipped floor it is also 1.5%; on the
+      device grid narrowing the mark makes it slightly worse. Removing the
+      floor buys nothing, so "sub-pixel accumulation rather than a wider mark"
+      was right that a wider mark is not the answer and wrong about why. - **What remains is a resolution limit, not a defect.** Copies at adjacent
+      sites merge and no width separates them: 1000 sites do not fit in ~844 px.
+      It is also viewport-dependent — the canvas is `width: 100%`, and above a
+      canvas of about 1056 CSS px the floor stops binding at all. - **The defect that WAS real was somewhere else.** `DOMESTICATED_HALO` was
+      painted AFTER the marks and erased whole copies — 8 across the three
+      states now in `BURIAL_STATES`, in 4 of 21 states swept. The halo now goes
+      under the marks, and `tests/render-field.test.ts` asserts zero annotation
+      burials, having been seen to fail at 8 on the pre-fix renderer.
 
 - [ ] **The domesticated glyph is drawn at 3.6x true site scale, and it buries
       6 copies.** `Math.max(3, markW)` against a 0.844 px pitch. It is data over
@@ -484,17 +528,17 @@ worth keeping written down:
 Still open from the reading list, and unchanged:
 
 - [x] **DONE 2026-09-03** — `bio-grounding` on piRNA conscription and on
-  domestication, against the actual pathways rather than the summary. Seven full
-  texts pulled from Europe PMC and read: Kofler 2019, Kofler 2020, Kofler 2018,
-  Kelleher 2012, Kelleher 2018 (the tolerance primary, previously flagged
-  unread), the 2018 Primer, and Kapitonov & Jurka 2005. Write-up with a verdict
-  per model mechanic: **`docs/pathway-mechanics.md`**. It corrected three glosses
-  in `REFERENCES.md` and one canonical statement in
-  `tests/guards/three-phases-arm.ts`. **Two sources could NOT be obtained and
-  remain abstract-level: Lavialle 2013 (syncytins, not OA via Europe PMC) and
-  de Vanssay 2012 (no PMC record)** — so §5's "domesticated independently in
-  multiple mammalian lineages", the detail the design leans on for "domestication
-  is reachable", is still unverified past the abstract, and RAG1 carries §5 alone.
+      domestication, against the actual pathways rather than the summary. Seven full
+      texts pulled from Europe PMC and read: Kofler 2019, Kofler 2020, Kofler 2018,
+      Kelleher 2012, Kelleher 2018 (the tolerance primary, previously flagged
+      unread), the 2018 Primer, and Kapitonov & Jurka 2005. Write-up with a verdict
+      per model mechanic: **`docs/pathway-mechanics.md`**. It corrected three glosses
+      in `REFERENCES.md` and one canonical statement in
+      `tests/guards/three-phases-arm.ts`. **Two sources could NOT be obtained and
+      remain abstract-level: Lavialle 2013 (syncytins, not OA via Europe PMC) and
+      de Vanssay 2012 (no PMC record)** — so §5's "domesticated independently in
+      multiple mammalian lineages", the detail the design leans on for "domestication
+      is reachable", is still unverified past the abstract, and RAG1 carries §5 alone.
 
 Opened by that read, all still open:
 
@@ -502,7 +546,7 @@ Opened by that read, all still open:
       `sim/phases/trap.ts` gates conscription on `t`, so a tolerant host
       mechanically cannot form a repertoire. Kelleher et al. 2018 — the primary,
       now read — defines tolerance as mechanisms that "do not affect propagation
-      but rather limit the fitness costs to the host", mapped to *bruno* and the
+      but rather limit the fitness costs to the host", mapped to _bruno_ and the
       DNA-damage response, entirely outside the piRNA pathway. `damageLoad`
       matches that; the trap gate does not. The gate is defensible as an
       EVOLUTIONARY argument and is implemented as a MECHANICAL one. It is also
@@ -534,7 +578,7 @@ Opened by that read, all still open:
 - [ ] **Our cluster fraction is inside the biological range, and that is NOT a
       validation.** `defaultParams().c = 0.01` and `TOY_DEFAULTS.c = 0.005` sit
       above Kofler 2020's "minimum size of 0.2% of the genome" and inside the
-      span real genomes cover (koala 0.17%, *Drosophila* ~3–3.5%). But his
+      span real genomes cover (koala 0.17%, _Drosophila_ ~3–3.5%). But his
       threshold is a property of HIS silencing rule — one capture, whole family,
       permanent, no escape — and ours silences a `theta` window that daughters
       routinely escape by construction (`sigmaS/theta = 2.0`). At equal `c` our
