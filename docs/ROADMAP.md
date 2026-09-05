@@ -294,11 +294,13 @@ live registry and the null stated as "checked HERE", naming where.
 - [ ] **REGISTERED 2026-09-05 — question 005, does the delay diverge or is there
       a floor?**
       [`pre-registrations/2026-09-05-does-the-delay-diverge.md`](pre-registrations/2026-09-05-does-the-delay-diverge.md),
-      committed alone before any runner exists. Runner and analysis not yet
-      written. Grid: 3 ratios × `phi ∈ {0.002, 0.004, 0.0113, 0.0226, 0.0453}` ×
-      seeds 4001–4010, per-`phi` horizons 8000/5000/2500/1500/1000, **213 runs,
-      ~16 h single-process** (cost measured before registering, ~6 h sharded by
-      ratio). 004's claim "every `phi > 0` saturates" rests on an extrapolation:
+      committed alone before any runner existed. **Runner
+      `experiments/005-delay-divergence.ts` and analysis
+      `docs/analysis/plot-005.R` committed together 2026-09-05, before any data.
+      NOT YET RUN.** Grid: 3 ratios × `phi ∈ {0.002, 0.004, 0.0113, 0.0226,
+0.0453}` × seeds 4001–4010, per-`phi` horizons 8000/5000/2500/1500/1000,
+      **243 runs, ~16 h single-process** (cost measured before registering, ~6 h
+      sharded by ratio; run it detached under `systemd-run --user --unit`). 004's claim "every `phi > 0` saturates" rests on an extrapolation:
       **no run in this project has ever observed a saturation below
       `phi = 0.008`**, and 004's 90 runs at `phi ∈ {0.001, 0.002, 0.004}` were
       all still CONTROLLED when their 1800-generation horizon ran out — which is
@@ -315,6 +317,44 @@ live registry and the null stated as "checked HERE", naming where.
       against a 1.78% noise floor (**2.8×**), so the curvature is systematic, and
       at the low-`phi` end the law **underpredicts** `t_sat` by 6–7% at 3–5 SEM.
       R² = 0.994 concealed all of it.
+      ⚠️ **The mutation table found two defects in ITSELF, and both are recorded
+      as Deviations in the registration, before any data.** (i) The registered
+      reproduction control `{0.002, 0.004}` never saturates by 1800, so the
+      saturation ceiling was **unguarded** — a 1500→1400 change would have passed
+      every check in the experiment. Fixed by adding `phi = 0.125`, a 004 cell
+      that does saturate. (ii) Check 4b as registered compared only the smallest
+      `phi`, which is also a control cell, so it was **fully redundant**; it now
+      compares every grid `phi`. (iii) One registered mutant **SURVIVED** — see
+      the standing rule below.
+
+- [ ] ⚠️ **A GUARD INHERITED FROM THE PREVIOUS EXPERIMENT IS NOT AUTOMATICALLY
+      LOAD-BEARING IN THIS ONE — MUTATE IT AND FIND OUT.** 005 carried 004's
+      `horizon > CHECKPOINT` checkpoint guard forward with a comment explaining,
+      correctly, why 004 needed it, and a registered mutant claiming check 3
+      would catch its removal. **The mutant SURVIVED**: check 3's three
+      comparisons still matched 004's committed hashes exactly. The guard is
+      inert in 005 for a structural reason — no grid horizon equals a checkpoint,
+      and the control run's 1800-checkpoint is provably identical to its final
+      record — and it was inert because 005's check 3 compares against a
+      COMMITTED FILE where 004's check 3a compared against a freshly-run short
+      arm. The prose was true about 004 and false about the experiment shipping
+      it. The rule: when a guard is copied forward, the mutant that justified it
+      must be re-run, not re-quoted; and when it survives, replace the table row
+      with the hazard the check actually covers here (for 005, horizon-dependence
+      in the trajectory — one extra RNG draw on any run longer than the control
+      horizon, invisible to check 2 by construction, caught by check 3 on all
+      three comparisons). **Nothing in the experiment had tested the determinism
+      doctrine's own failure mode until that replacement.**
+
+- [ ] ⚠️ **A CHECK CAN BE PERMANENTLY SHADOWED BY AN EARLIER ONE AND LOOK
+      TESTED.** 005's "dial applies half of `phi`" mutant is registered against
+      check 4a but is caught by check 2, which runs first and whose control cells
+      are dial cells — so check 4a never executes on it. Re-running the same
+      mutant with check 2 switched off produces 9 violations reading "the dial is
+      live but MIS-SCALED", so 4a has real power; it simply never gets to
+      demonstrate it. The rule: if a mutant is caught by an EARLIER check than
+      the one it was written for, the intended check is still untested — isolate
+      it and re-run, or admit the check is unexercised.
 
 - [ ] ⚠️ **THE FIX FOR A COARSE GRID IS USUALLY NOT A FINER GRID — IT IS TO STOP
       SCORING THE COARSENED OBSERVABLE.** This supersedes the prescription this
