@@ -25,6 +25,7 @@ suppressPackageStartupMessages({
 source("docs/analysis/theme.R")
 
 CSV      <- "experiments/004-fidelity-band.csv"
+CSV_003  <- "experiments/003-trap-fidelity.csv"
 FIG_MAIN <- "docs/analysis/fig-004-band.png"
 
 # ---------------------------------------------------------------------------
@@ -172,6 +173,46 @@ ratio_exact <- vapply(RATIOS, function(r) {
   v
 }, numeric(1))
 
+# ---------------------------------------------------------------------------
+# THE POST-HOC POWER LAW, FITTED HERE RATHER THAN QUOTED.
+#
+# ⚠️ The numbers that decide how claim (c) reads -- "the post-hoc edges move
+# 1.4x", "miss by 1.8x to 3.8x", "the spread is 1.74x and HOLDS" (cut 7 s literals)
+# -- were typed literals in cut 7, with no estimator anywhere in this script.
+# They are the numbers that turn SECONDARY 3 from FALSIFIED into NOT RESOLVED.
+# Under this script's own doctrine they are computed and asserted.
+sat <- d[!is.na(d$saturation_generation), ]
+PL <- t(vapply(RATIOS, function(r) {
+  z <- aggregate(saturation_generation ~ phi, data = sat[sat$ratio == r, ], FUN = mean)
+  m <- stats::lm(log(saturation_generation) ~ log(phi), data = z)
+  c(a = -unname(coef(m)[2]), C = unname(exp(coef(m)[1])), n = nrow(z),
+    r2 = summary(m)$r.squared)
+}, numeric(4)))
+# The registration records a = 0.730 / 0.736 / 0.745 and R^2 ~ 0.994. If this
+# ever drifts, every post-hoc number below is stale and the figure must not ship.
+stopifnot(abs(PL[, "a"] - c(0.730, 0.736, 0.745)) < 0.005, PL[, "r2"] > 0.99,
+          PL[, "n"] == 5)
+pl_edge <- function(r, T) unname((PL[r, "C"] / T)^(1 / PL[r, "a"]))
+PL600  <- vapply(RATIOS, pl_edge, numeric(1), T = 600)
+PL_SPREAD_EDGE <- max(PL600) / min(PL600)                 # "the edges move 1.4x"
+PL_K     <- ratio_exact[RATIOS] / PL600
+PL_SPREAD_K <- max(PL_K) / min(PL_K)                      # the secondary-3 spread
+PL_MISS  <- PL600 / PHI_STAR[RATIOS]                      # "miss by 1.8x to 3.8x"
+# ⚠️ NOT `stopifnot(PL_SPREAD_K <= SPREAD_TOL)`. That was cut 8's form, and it
+# ABORTS THE SCRIPT ON THE ONE OUTCOME THAT WOULD CHANGE THE FIGURE'S MESSAGE --
+# an assertion that can only pass if the desired conclusion holds is not a check,
+# it is a ratchet. These are computed and the text branches on them.
+PL_S3_WORD   <- if (PL_SPREAD_K   <= SPREAD_TOL) "HOLDS" else "ALSO FAILS"
+PL_MISS_WORD <- if (all(PL_MISS > 1)) "ALL THREE phi* miss" else "not all phi* miss"
+cat(sprintf("post-hoc fit: a = %s; edges@600 = %s (spread %.2fx); K spread %.2fx -> %s; misses %.1fx-%.1fx\n",
+            paste(sprintf("%.3f", PL[, "a"]), collapse = " / "),
+            paste(sprintf("%.5f", PL600), collapse = " / "),
+            PL_SPREAD_EDGE, PL_SPREAD_K, PL_S3_WORD, min(PL_MISS), max(PL_MISS)))
+# M6: the same estimator applied to BOTH horizons, so claim (b)'s magnitude is
+# not a point value quoted against bracketed edges.
+PL1800 <- vapply(RATIOS, pl_edge, numeric(1), T = 1800)
+PL_SHRINK <- PL600 / PL1800
+
 cells <- do.call(rbind, lapply(HORIZONS, function(h) {
   col <- if (h == 600) "outcome_600" else "outcome"
   do.call(rbind, lapply(RATIOS, function(r) {
@@ -211,6 +252,8 @@ for (h in HORIZONS) {
     s <- s[match(GRID, s$phi), ]
     cat(sprintf("%-8s", r),
         sprintf("%9s", sprintf("%dC/%dR/%dE", s$n_controlled, s$n_runaway, s$n_extinct)), "\n")
+    cat(sprintf("%-8s", ""),
+        sprintf("%9s", sprintf("%.2f-%.2f", s$lo, s$hi)), " Wilson 95%\n")
   }
 }
 
@@ -331,94 +374,345 @@ if (nrow(ties) > 0) {
 # ---------------------------------------------------------------------------
 # THE FIGURE
 #
-# ⚠️ ONE PRE-REGISTERED PLOTTING DECISION, BECAUSE IT CAN ENCODE A LIE.
-# The phi axis is logarithmic and phi = 0 CANNOT BE PLACED ON IT. phi = 0 is
-# therefore drawn in its own narrow left-hand panel, NOT at some small positive
-# position on the log axis. Placing it at, say, 0.0005 would assert a location
-# the point does not have and would let the eye interpolate between 0 and 0.001
-# — which is the exact inference this whole question exists to avoid, since the
-# difference between "control at 0 only" and "control on a band above 0" is the
-# question. Registered in advance; see the registration's analysis section.
+# ⚠️ TENTH CUT. Nine independent adversarial critics, nine NO-GO verdicts. The
+# full round-by-round table is in the registration's Result; the items that
+# recurred, and the controls now standing against them, are below. None of it
+# was visible to the author.
 #
-# Series are dodged HORIZONTALLY (multiplicatively, because the axis is log), not
-# vertically. 003's first figure copied a vertical offset onto a FRACTION axis
-# and put one series above 1.0 and another below 0.0; an adversarial critic
-# caught it and the author did not.
+#  1. Cut 1 marked only the FALSIFIED predictions, never the observed edge -- and
+#     one prediction fell 2 px from the true edge, so the panel read as partial
+#     confirmation of a prediction reported as refuted.
+#  2. Cut 2's multiplicative x-dodge MANUFACTURED ratio-ordered edge separation in
+#     the predicted direction, from data with zero between-ratio variation.
+#  3. Cut 3 claimed "byte-identical outcomes", which is FALSE and threw away the
+#     best evidence: only the CLASSIFICATION is identical.
+#  4. Cut 4 PRINTED AN ARITHMETIC A READER CAN CHECK AND FIND WRONG. It labelled
+#     each prediction with 004's own max|s| (61.3 / 35.7 / 22.6) while saying
+#     phi* is computed from max|s| -- but 0.10/61.3 = 0.00163, not the 0.0054
+#     printed beside it. phi* was computed from 003's max|s| AT 600 GENERATIONS
+#     (18.678 / 10.367 / 6.211), numbers cut 4 never showed. On a figure whose
+#     whole premise is auditable pre-registration, an arithmetic claim that fails
+#     in five seconds discredits everything else on the panel. The two quantities
+#     are now printed SEPARATELY and each is labelled with its horizon.
+#     Cut 4 also showed only ONE of the four registered verdicts -- the one that
+#     reads as failure -- and clipped its own caption mid-word.
 #
-# No plotmath anywhere: 003's `expression(theta/sigma[S])` rendered the "/" as
-# the division LAYOUT operator, stacking the symbols.
+# ⚠️ ONE PRE-REGISTERED PLOTTING DECISION, KEPT THROUGHOUT. phi = 0 is drawn in
+# its own panel, never at a small positive position on the log axis.
+# No plotmath: 003's expression(theta/sigma[S]) rendered "/" as division layout.
 
-DODGE <- c("2.00" = 1 / 1.07, "3.33" = 1, "5.00" = 1.07)   # multiplicative, log axis
-Y_LO <- -0.04
-Y_HI <- 1.06
+X_LEFT  <- 0.00072
+X_RIGHT <- 0.135
+Y_LO <- -0.58
+Y_HI <- 1.12
+ROW  <- c("2.00" = -0.150, "3.33" = -0.310, "5.00" = -0.470)
+BAR  <- 0.013          # half-height of a strip bar
+OFF  <- 0.026          # observed sits this far above predicted, WITHIN a row
+# ⚠️ THE GAP IS 2*(OFF - BAR), NOT 2*OFF. Cut 7's comment measured centre-to-
+# centre and reported 0.052 while the drawn gap was 0.002 -- one pixel -- so the
+# paired bars fused into a single two-tone object and the guard against cut 5's
+# defect was measuring the wrong quantity. Now 2*(0.026-0.013) = 0.026 within a
+# row against 0.160 between rows.
 
-cells$ratio <- factor(cells$ratio, levels = RATIOS)
-cells$horizon_lab <- factor(sprintf("%d generations", cells$horizon),
-                            levels = sprintf("%d generations", HORIZONS))
-cells$xd <- cells$phi * DODGE[as.character(cells$ratio)]
+# ⚠️ ASSERTED, NOT ASSUMED: one curve is honest only if the CLASSIFICATIONS are
+# identical across ratios. The figure refuses to render otherwise.
+ident <- do.call(rbind, lapply(HORIZONS, function(h) {
+  do.call(rbind, lapply(GRID, function(ph) {
+    v <- cells$n_controlled[cells$horizon == h & cells$phi == ph]
+    stopifnot(length(v) == length(RATIOS))
+    data.frame(horizon = h, phi = ph, k = v[1], agree = length(unique(v)) == 1)
+  }))
+}))
+stopifnot(all(ident$agree), all(ident$k %in% c(0, N_SEEDS)))
+cat(sprintf("figure precondition: %d cells agree on class across ratios and are unanimous\n",
+            nrow(ident) * length(RATIOS)))
 
-zero <- cells[cells$phi == 0, ]
-pos  <- cells[cells$phi > 0, ]
+# THE TWO max|s| VALUES ARE DIFFERENT QUANTITIES AND ARE KEPT APART.
+#  - WALK_003: 003's phi = 0 cells at 600 generations. phi* was computed FROM
+#    these, so these are the ones whose division must check out on the figure.
+#  - walk_004: this experiment's own phi = 0 cells at 1800 generations.
+# ⚠️ DERIVED FROM 003's OWN CSV AND ASSERTED. The rendered note used to say
+# "003's grid started at phi = 0.125", which is FALSE -- 003's grid was
+# {0, 0.125, 0.25, ...}: it sampled phi = 0 and was 30/30 CONTROLLED there, which
+# is its entire positive result and is plotted in this figure's left panel. The
+# true statement is about its smallest POSITIVE phi, and the word was dropped.
+g003 <- sort(unique(read.csv(CSV_003)$phi))
+P003_MIN_POS <- min(g003[g003 > 0])
+stopifnot(0 %in% g003, P003_MIN_POS == 0.125)
+P003_NOTE <- sprintf(paste0("003 sampled phi = 0 (the left panel, 30/30 controlled)\n",
+                            "and then nothing until phi = %s (dashed).\n",
+                            "The whole band found here lives in that gap."),
+                     format(P003_MIN_POS, scientific = FALSE, trim = TRUE))
+WALK_003 <- c("2.00" = 18.678, "3.33" = 10.367, "5.00" = 6.211)
+walk_004 <- vapply(RATIOS, function(r) mean(d$max_abs_entry[d$ratio == r & d$phi == 0]), numeric(1))
+stopifnot(all(abs(0.10 / WALK_003[RATIOS] - PHI_STAR[RATIOS]) < 5e-5))   # the printed arithmetic
 
-star <- data.frame(
+ident$horizon_lab <- factor(sprintf("%d generations\n(same 10 runs)", ident$horizon),
+                            levels = sprintf("%d generations\n(same 10 runs)", HORIZONS))
+ident$frac <- ident$k / N_SEEDS
+ident$count <- sprintf("%d/%d", ident$k, N_SEEDS)
+HL <- levels(ident$horizon_lab)
+zero <- ident[ident$phi == 0, ]
+stopifnot(all(zero$k == N_SEEDS))   # claim (a)'s baseline, asserted not assumed
+pos  <- ident[ident$phi > 0, ]
+
+region <- do.call(rbind, lapply(seq_along(HORIZONS), function(j) {
+  e <- unique(edges$edge[edges$horizon == HORIZONS[j]]); stopifnot(length(e) == 1)
+  iv <- edge_interval(e)
+  data.frame(horizon_lab = factor(HL[j], levels = HL),
+             edge = e, slo = iv[["lo"]], shi = iv[["hi"]])
+}))
+iv600 <- edge_interval(region$edge[region$horizon_lab == HL[1]])
+
+pred <- data.frame(
   ratio = factor(RATIOS, levels = RATIOS),
-  phi_star = as.numeric(PHI_STAR[RATIOS])
+  phi_star = as.numeric(PHI_STAR[RATIOS]),
+  w003 = as.numeric(WALK_003[RATIOS]),
+  w004 = as.numeric(walk_004[RATIOS]),
+  y = as.numeric(ROW[RATIOS]),
+  horizon_lab = factor(HL[1], levels = HL)
 )
+pred$plo    <- vapply(pred$phi_star, function(x) max(GRID[GRID < x]), numeric(1))
+pred$phi_hi <- vapply(pred$phi_star, function(x) min(GRID[GRID >= x]), numeric(1))
+pred$hit    <- factor(vapply(pred$phi_star, function(x) interval_contains(iv600, x), logical(1)))
+pred$olo <- iv600[["lo"]]; pred$ohi <- iv600[["hi"]]
+# The arithmetic, printed so it can be checked: theta / (003's max|s|) = phi*.
+pred$left <- sprintf("ratio %s:  phi* = 0.10 / %.3f ~= %s",
+                     pred$ratio, pred$w003,
+                     format(pred$phi_star, scientific = FALSE, trim = TRUE))
+pred$right <- ifelse(pred$hit == "TRUE",
+                     sprintf("same cell - by %.1f%%; but misses the post-hoc edge by %.1fx",
+                             100 * (pred$phi_star / iv600[["lo"]] - 1),
+                             PL_MISS[as.character(pred$ratio)]),
+                     sprintf("a DIFFERENT cell - %.1fx below the observed edge",
+                             iv600[["lo"]] / pred$phi_star))
+# Distinct border linetypes: the fills are 1.00:1 under deuteranopia.
+# PLINE removed: a 1-on/1-off border on a 6 px rect consumed both long edges,
+# so ratio 5.00 rendered as a dotted rule beside two solid slabs -- the third
+# channel through which the landing prediction kept being de-weighted.
+
+# ⚠️ BUILT FROM THE COMPUTED VERDICTS, NOT RETYPED. Cut 6 hard-coded these
+# strings and "guarded" them with `stopifnot(nrow(verdicts) == length(verdicts$lab))`,
+# which is TRUE for every data.frame that has ever existed -- A CHECK THAT CANNOT
+# FAIL, added while fixing another defect. Values now come from `prim`, `v1`,
+# `v2`, `v3` and `region$edge`, and are asserted against them.
+pv <- if (all(prim)) "HELD" else "FALSIFIED"
+e600  <- region$edge[region$horizon_lab == HL[1]]
+e1800 <- region$edge[region$horizon_lab == HL[2]]
+# ⚠️ The four `%in%` membership tests cut 8 had here were exhaustive over the
+# codomain of the expressions that produced them, and `e600 > e1800` asserted
+# secondary 1's own verdict -- the script could only ever render a figure in
+# which it held. Both classes removed; the cross-checks below do the work.
+fmt <- function(x) format(x, scientific = FALSE, trim = TRUE)
+vlab <- c(
+  sprintf("PRIMARY:      %-10s- control does exist above phi = 0, up to %s at 600 generations", pv, fmt(e600)),
+  sprintf("SECONDARY 1:  %-10s- the edge falls to %s by 1800 generations; the post-hoc power law", v1, fmt(e1800)),
+  sprintf("                           puts that shrink at %.1fx to %.1fx. It shrinks with the horizon.", min(PL_SHRINK), max(PL_SHRINK)),
+  sprintf("SECONDARY 2:  %-10s- it named three different cells; the observed edge is one cell. On the", v2),
+  sprintf("                           post-hoc power-law edges %s, by %.1fx to %.1fx, so THIS", PL_MISS_WORD, min(PL_MISS), max(PL_MISS)),
+  "                           falsification is the robust one.",
+  sprintf("SECONDARY 3:  %-9s* - as registered: ratio/phi_edge spans 2.50x, tolerance was 2x. BUT phi_edge", v3),
+  "                           is ONE grid point at all three ratios, so 2.50x is exactly theta/sigmaS's",
+  "                           own spread (5.00/2.00) and measures nothing; and the grid brackets the edge",
+  "                           to a factor of 2, the same size as the tolerance. On the post-hoc power-law",
+  sprintf("                           edges the spread is %.2fx and it %s.  * NOT RESOLVED BY THIS EXPERIMENT.", PL_SPREAD_K, PL_S3_WORD),
+  "",
+  "NOTE: SECONDARY 2 and SECONDARY 3 are not independent. K_obs/K_pred = phi*/phi_edge exactly,",
+  "      so they are one test in two framings, and the ratio-5.00 near-hit in both is ONE fact.")
+# ⚠️ ALL FOUR RE-DERIVED FROM THE RAW CSV. Cut 9's versions re-executed the same
+# expressions on the same `cells` object -- `chk_prim` was literally the body of
+# `band_nonempty`, `chk_s1`/`chk_s2` called the `edge_at` that had built `edges`.
+# A reviewer DEMONSTRATED they cannot fail: injecting a wrong class into `cells`
+# let the script run to completion with all four guards green, a different green
+# extent, and a DIFFERENT prediction "landing" -- a different answer to the
+# question, silently. The failure mode is a wrong `cells`, which only a route
+# that never touches `cells` can catch.
+raw <- read.csv(CSV, colClasses = c(ratio = "character"), stringsAsFactors = FALSE)
+raw_edge <- function(r, col) {
+  ph <- sort(unique(raw$phi))
+  ok <- ph[vapply(ph, function(x) {
+    v <- raw[[col]][raw$ratio == r & raw$phi == x]
+    sum(v == "CONTROLLED") > length(v) / 2
+  }, logical(1))]
+  if (length(ok) == 0) 0 else max(ok)
+}
+raw_band <- function(r) {
+  ph <- sort(unique(raw$phi)); ph <- ph[ph > 0]
+  any(vapply(ph, function(x) {
+    v <- raw$outcome_600[raw$ratio == r & raw$phi == x]
+    sum(v == "CONTROLLED") > length(v) / 2
+  }, logical(1)))
+}
+chk_prim <- all(vapply(RATIOS, raw_band, logical(1)))
+chk_s1 <- all(vapply(RATIOS, function(r) raw_edge(r, "outcome") < raw_edge(r, "outcome_600"), logical(1)))
+chk_s2 <- all(vapply(RATIOS, function(r)
+  interval_contains(edge_interval(raw_edge(r, "outcome_600")), PHI_STAR[[r]]), logical(1)))
+raw_k  <- vapply(RATIOS, function(r) (raw$theta[raw$ratio == r][1] /
+                   raw$sigma_s[raw$ratio == r][1]) / raw_edge(r, "outcome_600"), numeric(1))
+chk_s3 <- (max(raw_k) / min(raw_k)) <= SPREAD_TOL
+# And the rendered edges themselves, not just the verdict words.
+stopifnot(e600 == raw_edge(RATIOS[1], "outcome_600"), e1800 == raw_edge(RATIOS[1], "outcome"),
+          pv == if (chk_prim) "HELD" else "FALSIFIED",
+          v1 == if (chk_s1)  "HELD" else "FALSIFIED",
+          v2 == if (chk_s2)  "HELD" else "FALSIFIED",
+          v3 == if (chk_s3)  "HELD" else "FALSIFIED")
+verdicts <- data.frame(
+  horizon_lab = factor(HL[2], levels = HL),
+  y = seq(0.985, by = -0.0555, length.out = length(vlab)),
+  lab = vlab)
+
+INK <- "#2f3640"; GREEN <- "#739873"
+# ⚠️ ASSERTED, NOT COMMENTED. Three successive cuts wrote a contrast figure into
+# a comment and two of them were wrong (#cfe0cf claimed fixed at 1.38:1;
+# #8fae8f commented "3.0:1", actually 2.44:1).
+stopifnot(contrast_ratio(GREEN) >= WCAG_NONTEXT_FLOOR)
 
 common <- list(
-  scale_colour_manual(values = palette_003, name = "theta / sigmaS"),
-  scale_shape_manual(values = shape_003, name = "theta / sigmaS"),
+  scale_y_continuous(breaks = c(0, 0.5, 1), labels = c("0", "0.5", "1")),
   coord_cartesian(ylim = c(Y_LO, Y_HI)),
-  theme_tge()
-)
+  theme_tge())
 
-p_zero <- ggplot(zero, aes(x = "0", y = frac, colour = ratio, shape = ratio)) +
-  geom_errorbar(aes(ymin = lo, ymax = hi), width = 0.18,
-                position = position_dodge(width = 0.55), linewidth = 0.4) +
-  geom_point(position = position_dodge(width = 0.55), size = 2.4) +
-  facet_grid(horizon_lab ~ .) +
-  common +
-  labs(x = "exact", y = "fraction of seeds CONTROLLED") +
-  theme(legend.position = "none",
-        strip.text.y = element_blank(),
-        plot.margin = margin(5, 2, 5, 5))
+p_zero <- ggplot(zero, aes(x = "0", y = frac)) +
+  # ⚠️ DATA-DRIVEN, not annotate(). As a constant this rect was drawn at full
+  # height in both facets whatever the phi = 0 cells said -- the baseline for
+  # claim (a), painted by something that could not disagree with the data.
+  geom_rect(data = zero, inherit.aes = FALSE,
+            aes(xmin = -Inf, xmax = Inf, ymin = 0, ymax = frac),
+            fill = GREEN, colour = "grey55", linewidth = 0.3) +
+  geom_point(size = 2.8, colour = INK) +
+  geom_text(aes(label = count), vjust = -1.2, size = 2.7, colour = INK) +
+  facet_grid(horizon_lab ~ .) + common +
+  labs(x = "phi = 0\n(exact)", y = "fraction of 10 seeds CONTROLLED") +
+  theme(strip.text.y = element_blank(), plot.margin = margin(5, 1, 5, 5))
 
-p_pos <- ggplot(pos, aes(x = xd, y = frac, colour = ratio, shape = ratio)) +
-  geom_vline(data = star, aes(xintercept = phi_star, colour = ratio),
-             linetype = "22", linewidth = 0.4, alpha = 0.8, show.legend = FALSE) +
-  geom_line(aes(group = ratio), linewidth = 0.4, alpha = 0.85) +
-  geom_errorbar(aes(ymin = lo, ymax = hi), width = 0.05, linewidth = 0.4) +
-  geom_point(size = 2.4) +
+p_pos <- ggplot(pos, aes(x = phi, y = frac)) +
+  geom_rect(data = region, inherit.aes = FALSE,
+            aes(xmin = X_LEFT, xmax = edge, ymin = 0, ymax = 1),
+            fill = GREEN, colour = "grey55", linewidth = 0.3) +
+  # ⚠️ ymax MUST STAY BELOW 1. At ymax = 1 this rect's top edge drew a dashed
+  # line at fraction 1.0 across the bracketed interval, butted onto the end of
+  # the solid 10/10 line -- reading as "still controlled, just less certain"
+  # across a span whose right end is measured 0/10. That is the SAME assertion
+  # geom_step was removed for making; the defect returned in a different geom.
+  geom_rect(data = region, inherit.aes = FALSE,
+            aes(xmin = slo, xmax = shi, ymin = 0.14, ymax = 0.90),
+            fill = NA, colour = "grey40", linetype = "22", linewidth = 0.4) +
+  geom_text(data = region, inherit.aes = FALSE, size = 2.5, colour = "grey30",
+            aes(x = sqrt(slo * shi), y = 1.08, label = "edge is\nin here"), lineheight = 0.95) +
+  # Claim (a) is only news against 003's grid, whose smallest positive phi was
+  # 0.125 -- the RIGHT-HAND END of this axis. Without it on the canvas a reader
+  # cannot see why "control above phi = 0" is a new result.
+  # ⚠️ xintercept AS AN AESTHETIC, not a parameter: passed as a parameter it is a
+  # constant and ggplot draws it in EVERY facet, so it ran through the verdict
+  # block in the other row.
+  # ⚠️ A SEGMENT, NOT A VLINE. As a full-height vline this struck through the
+  # 0/10 count label at 0.125. Cut 8 "fixed" that with a white mask whose
+  # xmax = 0.139 sat outside scale_x_log10(limits = c(X_LEFT, 0.135)), so the
+  # scale CENSORED IT TO NA AND GGPLOT DROPPED THE LAYER WITHOUT A WARNING --
+  # a fix that never once rendered, under a comment asserting it had. Bounding
+  # the line so it cannot reach the label needs no mask.
+  geom_segment(data = region[1, ], inherit.aes = FALSE,
+               aes(x = 0.125, xend = 0.125, y = 0.14, yend = Y_HI),
+               colour = "grey45", linetype = "42", linewidth = 0.4) +
+
+  geom_text(data = region[1, ], inherit.aes = FALSE, hjust = 0, size = 2.4,
+            colour = "grey30", lineheight = 1.05,
+            aes(x = 0.036, y = 0.42, label = P003_NOTE)) +
+  geom_hline(data = region[1, ], inherit.aes = FALSE, aes(yintercept = -0.03),
+             colour = "grey75", linewidth = 0.3) +
+  geom_text(data = region[1, ], inherit.aes = FALSE, hjust = 0, size = 2.4,
+            colour = "grey30",
+            aes(x = X_LEFT * 1.06, y = -0.048,
+                label = "below: grey = the OBSERVED edge cell, identical at all three ratios; colour = the grid cell each predicted phi* falls in; point = phi* itself; at ratio 5.00 the predicted and observed bars span the SAME cell")) +
+  geom_line(aes(group = frac), linewidth = 0.6, colour = INK) +
+  geom_point(size = 2.8, colour = INK) +
+  geom_text(aes(label = count), vjust = -1.2, size = 2.7, colour = INK) +
+  # ---- all four registered verdicts, one block, equal weight ---------------
+  geom_text(data = verdicts, inherit.aes = FALSE, hjust = 0, size = 2.2,
+            colour = "grey15", fontface = "bold", family = "mono",
+            aes(x = 0.0088, y = y, label = lab)) +
+  geom_rect(data = pred, inherit.aes = FALSE,
+            aes(xmin = X_LEFT, xmax = X_RIGHT, ymin = y - 0.098, ymax = y + 0.070),
+            fill = "grey96", colour = NA) +
+  # ---- THREE observed bars against THREE predicted bars -------------------
+  # The observed cell is identical at all three ratios; drawing it three times,
+  # opposite three predictions that sit in three different cells, IS the
+  # falsification. Cut 4 asserted the identity in a sentence instead.
+  geom_rect(data = pred, inherit.aes = FALSE,
+            aes(xmin = olo, xmax = ohi, ymin = y + OFF - BAR, ymax = y + OFF + BAR),
+            fill = "grey55", colour = "grey30", linewidth = 0.25) +
+  geom_rect(data = pred, inherit.aes = FALSE,
+            aes(xmin = plo, xmax = phi_hi, ymin = y - OFF - BAR, ymax = y - OFF + BAR,
+                fill = ratio, alpha = hit),
+            colour = "grey25", linewidth = 0.4) +
+  # ⚠️ ALL THREE AT FULL ALPHA. De-weighting the landing prediction to 0.18 and
+  # then 0.30 put it at 1.25:1 and 1.47:1 -- below the 3:1 floor this same script
+  # asserts for the green -- so the one prediction that hit became the least
+  # visible object. The registration licenses PARITY, not suppression; the caveat
+  # is carried by its label.
+  scale_alpha_manual(values = c("FALSE" = 1, "TRUE" = 1), guide = "none") +
+  # The marker sits ABOVE its bar: at ratio 5.00 phi* is 2 px from the cell
+  # boundary, and drawn on the bar it rendered as an end-cap rather than a point.
+  geom_point(data = pred, inherit.aes = FALSE, size = 2.1, stroke = 0.7,
+             aes(x = phi_star, y = y - OFF - BAR - 0.030, colour = ratio, shape = ratio)) +
+  geom_text(data = pred, inherit.aes = FALSE, hjust = 1, size = 2.45,
+            show.legend = FALSE, colour = "grey20",
+            aes(x = pmin(plo, olo) / 1.12, y = y, label = left)) +
+  geom_text(data = pred, inherit.aes = FALSE, hjust = 0, size = 2.45,
+            show.legend = FALSE, colour = "grey20",
+            aes(x = phi_hi * 1.08, y = y - OFF - 0.012, label = right)) +
+  geom_text(data = pred, inherit.aes = FALSE, hjust = 0, size = 2.45,
+            show.legend = FALSE, colour = "grey30",
+            aes(x = ohi * 1.08, y = y + OFF + 0.012, label = "observed edge cell")) +
+  scale_fill_manual(values = palette_003, guide = "none") +
+  scale_colour_manual(values = palette_003, name = "predicted phi* for theta/sigmaS =") +
+  scale_shape_manual(values = shape_003, name = "predicted phi* for theta/sigmaS =") +
   facet_grid(horizon_lab ~ .) +
-  scale_x_log10(breaks = GRID[GRID > 0],
+  scale_x_log10(breaks = GRID[GRID > 0], limits = c(X_LEFT, X_RIGHT), expand = c(0, 0),
                 labels = format(GRID[GRID > 0], scientific = FALSE, trim = TRUE)) +
   common +
-  labs(x = "trap infidelity phi (log scale)", y = NULL) +
-  theme(axis.text.y = element_blank(),
-        axis.ticks.y = element_blank(),
-        plot.margin = margin(5, 5, 5, 2))
+  labs(x = "trap infidelity phi (log scale; the grid steps by 2, so the edge is bracketed to one step)", y = NULL) +
+  theme(axis.text.y = element_blank(), axis.ticks.y = element_blank(),
+        plot.margin = margin(5, 5, 5, 1))
 
-fig <- (p_zero | p_pos) +
-  plot_layout(widths = c(1, 7), guides = "collect") +
+fig <- (p_zero | p_pos) + plot_layout(widths = c(1, 9)) +
   plot_annotation(
-    title = "Does any imperfect trap control the element, and does it last?",
+    title = "An imperfect trap does control the element - but only for a while",
     subtitle = paste0(
-      "Fraction of 10 seeds CONTROLLED, per cell, with Wilson intervals. Dashed verticals mark each ratio's\n",
-      "registered edge prediction phi* = theta / max abs(s). phi = 0 is EXACT and sits in its own panel: it\n",
-      "has no position on a log axis, and interpolating toward it is the inference this question exists to test."
-    ),
+      "ONE curve, because all three theta/sigmaS ratios gave the SAME CONTROLLED/RUNAWAY classification in every one of the 54 cells, and every cell is unanimous\n",
+      "(10/10 or 0/10 - no intermediate cell anywhere). The runs are NOT otherwise identical: phi* = theta / max abs(s) was computed from 003's max abs(s) at 600\n",
+      sprintf("generations, which spans %.1fx across the ratios (%s); this experiment's own at 1800 spans %.1fx (%s).\n",
+              max(WALK_003)/min(WALK_003), paste(sprintf("%.1f", WALK_003[RATIOS]), collapse = " / "),
+              max(walk_004)/min(walk_004), paste(sprintf("%.1f", walk_004[RATIOS]), collapse = " / ")),
+      sprintf("SECONDARY 2 IS %s: phi* named three DIFFERENT grid cells and the observed edge is ONE cell; on the post-hoc power-law edges %s, by %.1fx to %.1fx.\n",
+              v2, PL_MISS_WORD, min(PL_MISS), max(PL_MISS)),
+      sprintf("That prediction spanned %.1fx, which is ABOVE this grid's 2x resolution - the grid was adequate to it and rejected it. The resolution caveat attaches only to\n",
+              max(PHI_STAR)/min(PHI_STAR)),
+      sprintf("the post-hoc %.1fx movement of the edge itself, and hence to SECONDARY 3. Green = the controlled region: phi = %s at 600 generations and %s at 1800, a shrink\n",
+              PL_SPREAD_EDGE, fmt(e600), fmt(e1800)),
+      sprintf("the same power law puts at %.1fx to %.1fx (the grid itself brackets it at 2x to 8x). A DELAY over these two horizons - nothing here shows the band closes in\n",
+              min(PL_SHRINK), max(PL_SHRINK)),
+      "the limit. One prediction does land in the observed cell, by 0.6%, at the ratio the registration named\n",
+      "in advance as the LEAST informative of the three and said was not to be quoted as if it were the strongest - and it misses the post-hoc edge by 1.8x."),
     caption = paste0(
-      "Registered question 004. Pre-registration committed alone at cec9955 before the runner existed; ",
-      "this analysis committed with the runner, before any data.\nModel frozen at 12e7b08. ",
-      "Seeds 3001-3010. Every run goes to 1800 generations and is scored at 600 as well, out of one run ",
-      "(manipulation check 3a)."
-    ),
-    theme = theme_tge() + theme(
-      plot.title = element_text(face = "bold", size = 13),
-      plot.subtitle = element_text(size = 8.5, lineheight = 1.25),
-      plot.caption = element_text(size = 7, lineheight = 1.25, hjust = 0)
-    )
-  )
+      "Registered question 004. Pre-registration committed alone at cec9955 before the runner existed; analysis committed with the runner, before any data. Model frozen at 12e7b08, seeds 3001-3010.\n",
+      "CONTROLLED = alive and never saturated at the scored generation; RUNAWAY = copies per genome exceeded 1500, half the genome's sites, and the run was stopped there. NO RUN WENT EXTINCT at either horizon (0 of 270), so every 0/10 is RUNAWAY.\n",
+      "theta = 0.10, the silencing window in sequence space; sigmaS = the per-transposition step in that space; max abs(s) = the largest coordinate a captured lineage reached. 003 measured it at 600 generations, 004 at 1800; the two are printed separately above.\n",
+      "Both rows are the SAME 10 runs per cell, scored twice out of a single run (manipulation check 3a), so they are not independent samples: 60 of the 270 runs are CONTROLLED at 600 and RUNAWAY at 1800."),
+    theme = theme_tge_annotation())
 
-ggsave(FIG_MAIN, fig, width = 10.5, height = 7.4, dpi = 150, bg = "white")
+# ⚠️ GUARD FOR THE CLASS. scale_x_log10(limits = ...) censors out-of-range
+# positions to NA and ggplot DROPS THE LAYER WITHOUT WARNING -- cut 8 shipped a
+# "fix" that never rendered once, under a comment asserting it had.
+for (nm in c("p_zero", "p_pos")) {
+  ld <- ggplot_build(get(nm))$data
+  for (i in seq_along(ld)) {
+    for (col in intersect(c("x", "xmin", "xmax", "xend"), names(ld[[i]]))) {
+      if (anyNA(ld[[i]][[col]])) {
+        stop(sprintf("%s layer %d: %s censored to NA by the scale limits; the layer would be silently dropped", nm, i, col))
+      }
+    }
+  }
+}
+ggsave(FIG_MAIN, fig, width = 14, height = 9.8, dpi = 150, bg = "white")
 cat(sprintf("\nwrote %s\n", FIG_MAIN))
