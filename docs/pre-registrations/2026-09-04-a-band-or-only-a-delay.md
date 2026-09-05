@@ -346,11 +346,37 @@ holding a repertoire.
    an independent run to 600 must agree **bit-for-bit** on `stateHash` at
    generation 600. This is what licenses reading two horizons out of one run;
    without it the dual-horizon design is an assumption wearing a result's
-   clothes. **And the horizon must actually be reached:** for every `phi = 0`
-   cell, each run must either record generation 1800 or record a saturation stop
-   at a generation in `(600, 1800]`. A run recording `stopped_at = 600` with no
-   stop reason is a silently truncated horizon, and would make secondary 1
-   unfalsifiable in the direction it predicts.
+   clothes. **And the horizon must actually be reached:** a run recording
+   `stopped_at = 600` with **no stop reason recorded** is a silently truncated
+   horizon, and would make secondary 1 unfalsifiable in the direction it
+   predicts.
+
+   > **Amendment 1 — 2026-09-05, made before any data existed and while the
+   > runner was being written.** Check 3's second half first read: "for every
+   > `phi = 0` cell, each run must either record generation 1800 or record a
+   > saturation stop at a generation in `(600, 1800]`." **That form can fail for
+   > a reason unrelated to what it tests.** A `phi = 0` run that legitimately
+   > saturated at generation 400 on one of the new seeds would void the entire
+   > experiment — but an early saturation is a *scientific* outcome, not an
+   > instrument failure, and 004's seeds 3001–3010 are ones 003 never ran. What
+   > the check exists to catch is a **truncated horizon**: the loop stopping at
+   > the checkpoint because the checkpoint stopped it. The replacement fires only
+   > on that — `stopped_at == 600` with no saturation recorded — and cannot fire
+   > on a real early saturation, which is instead **REPORTED as a surprise**
+   > alongside the check. Same defect class as 003's Amendment 1 and as this
+   > registration's own evaluability precondition; third instance in this
+   > project. Recorded here rather than under "Deviations" because it was made
+   > **before any data existed**, which is the only time a registration may be
+   > changed without the change being a deviation.
+
+   > **Note on how 3a is implemented, added at the same time.** The 600-generation
+   > comparison run must **not itself take a checkpoint**. If it did, both sides
+   > of the comparison would execute the checkpoint code and any side effect of
+   > taking a checkpoint would be present on both and cancel — the check would
+   > pass on exactly the bug it exists to detect. The runner guards the
+   > checkpoint with `horizon > CHECKPOINT`, so the comparison is genuinely
+   > "with checkpoint" against "without". This is an implementation requirement
+   > the registration did not state and now does.
 4. **The dial is live at the smallest registered setting.** The risk unique to
    004 is that `phi = 0.001` is not a small perturbation but *no* perturbation.
    **Positive control asserted first:** at `phi = 0` mean displacement must be
@@ -444,4 +470,274 @@ amendment, as 003's Amendment 1 was, and is not a deviation.
 
 ## Result
 
-Not yet run. This registration was committed alone, before any runner existed.
+Run 2026-09-05. 270 grid runs at horizon 1800 plus 60 reproduction-control runs,
+18,008 s of wall clock. Data `../../experiments/004-fidelity-band.csv` and
+`../../experiments/004-reproduction-control.csv`; figure
+`../../docs/analysis/fig-004-band.png`.
+
+### All four manipulation checks passed
+
+- **Check 1** at all 60 configurations, smallest surviving population **3280
+  copies**, so no hash comparison was between two extinct worlds.
+- **Check 2 — the one that matters — passed on all 60 anchor runs.** `phi = 0`
+  and `phi = 0.125` reproduce `003-trap-fidelity.csv` **exactly**, at all three
+  ratios, on 003's own seeds 2001–2010. The oracle was already committed and was
+  written by a different runner.
+- **Check 3a** at all three ratios: the 600-generation run and the
+  1800-generation run's generation-600 checkpoint are **bit-identical**
+  (`102b19d1`, `01140c25`, `9d5d9cda`), at 357.4 / 259.0 / 204.4 copies per
+  genome, so the comparison was not between empty worlds. Reading two horizons
+  out of one run is licensed.
+- **Check 3b**: 30 of 30 `phi = 0` runs reached generation 1800. No truncated
+  horizons, and no early-saturation surprises to report.
+- **Check 4 / 4c** on all 270 runs, including the world-level test that
+  `phi = 0.001` is not bit-identical to `phi = 0`.
+
+### The answer: there is a band, and it is a delay
+
+Counts are CONTROLLED out of 10 seeds. **No run went extinct at either horizon
+(0 of 270)**, so every non-controlled cell is RUNAWAY.
+
+| horizon | ratio | 0 | 0.001 | 0.002 | 0.004 | 0.008 | 0.016 | 0.032 | 0.064 | 0.125 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 600 | all three | 10 | 10 | 10 | 10 | 10 | **10** | 0 | 0 | 0 |
+| 1800 | all three | 10 | 10 | 10 | **10** | 0 | 0 | 0 | 0 | 0 |
+
+Identical at 2.00, 3.33 and 5.00 — not similar, identical.
+
+> **PRIMARY: HELD.** At every registered ratio at horizon 600 the CONTROLLED set
+> reaches `phi = 0.016`, 10/10 seeds. **003's headline was a resolution
+> artefact**: "control at exact fidelity and nowhere else" came from a grid whose
+> first step above zero was 0.125, four doublings above the real edge.
+
+> **SECONDARY 1: HELD, at every ratio.** The edge falls from **0.016 at 600
+> generations to 0.004 at 1800**. The band contracts as the horizon grows. On the
+> evidence registered here it is a **delay**, not a band.
+
+> **SECONDARY 2: FALSIFIED.** `phi* = theta / max|s|` (0.0054 / 0.0096 / 0.0161)
+> lands in the horizon-600 edge interval `(0.016, 0.032]` at ratio 5.00 only, and
+> that is a coincidence of where a doubling grid put its boundary — the
+> adversarial figure review measured the 0.0161 prediction line falling **2 px
+> from the 0.016 tick**, which is why the first figure read as partial
+> confirmation of a prediction being reported as refuted.
+
+> **SECONDARY 3: FALSIFIED as registered — and the verdict does not survive
+> inspection.** `(theta/sigmaS) / phi_edge` = 125.0, 208.3, 312.5; spread
+> **2.50×**, outside the registered factor of 2.
+
+### The lone "hit" is a grid coincidence, and the horizon proves it
+
+Secondary 2's one apparent success — `phi*` = 0.0161 at ratio 5.00 landing in
+the observed cell `(0.016, 0.032]` — is a coincidence of where a doubling grid
+put a boundary, and 004's second horizon demonstrates that rather than arguing
+it. The registration's own 1800-generation `phi*` column is 0.0031 / 0.0056 /
+0.0093, and the observed 1800 cell is `(0.004, 0.008]`:
+
+| ratio | `phi*` at 600 | in the 600 cell? | `phi*` at 1800 | in the 1800 cell? |
+|---|---|---|---|---|
+| 2.00 | 0.0054 | no | 0.0031 | no |
+| 3.33 | 0.0096 | no | 0.0056 | **yes** |
+| 5.00 | 0.0161 | **yes** | 0.0093 | no |
+
+**The ratio that "lands" changes with the horizon.** Exactly one of three hits at
+each horizon and it is a different one each time — which is what a coincidence
+looks like and a mechanism does not. Found by the ninth figure review, from data
+already in the registration.
+
+### ⚠️ SECONDARY 3'S VERDICT IS AN ARTEFACT OF THE GRID, NOT A MEASUREMENT
+
+Two things are wrong with taking that FALSIFIED at face value, and the
+adversarial figure review found them, not the analysis.
+
+**First, 2.50× is not a measured quantity.** `phi_edge` is the same grid point,
+0.016, at all three ratios, so `(theta/sigmaS)/phi_edge` is just
+`(theta/sigmaS)/0.016` — and its spread is *identically* the spread of the
+ratios themselves, 5.00/2.00 = 2.50. The number contains no information beyond
+"the edge did not move a grid cell", which the primary table already says.
+
+**Second, the estimator's resolution is the same size as the tolerance being
+tested.** The grid doubles, so `phi_edge` is bracketed to a factor of 2, and the
+registered tolerance is a factor of 2. Scored on the post-hoc power-law edge
+estimates from the same data (0.02061 / 0.02420 / 0.02951), the same quantity is
+97.0 / 137.7 / 169.4 — **spread 1.75×, which HOLDS**.
+
+**So the verdict flips with the estimator, and the registered estimator is the
+coarser one.** FALSIFIED stands as the registered result, because that is what
+was registered and this document does not get to re-score itself after the fact.
+But it must be reported as what it is: **this experiment does not resolve
+secondary 3.**
+
+### ⚠️ Which means the claim I wrote first — "I reversed 003 and 003 was right" — is NOT supported
+
+Secondary 3 was written to **overturn** 003's secondary 2, which said the
+boundary would *not* sit at constant `ratio/phi`. I reversed it on the strength
+of the mechanism, labelled the reversal the least risky of the four, and
+registered it anyway. The first draft of this Result then read the FALSIFIED
+verdict as settling the matter against me and for 003.
+
+**It does not.** On the registered estimator my reversal fails; on the finer
+estimate from the same data it holds. Whether `phi` is an independent axis or
+nearly a third name for the ratio is **unresolved**, and the honest report is
+that 004 was not designed to answer it — the grid it used cannot separate a 1.75×
+spread from a 2.50× one. Secondary 2, by contrast, is falsified robustly: under
+the power-law edges all three `phi*` miss by 1.8× to 3.8×, wider than under the
+grid estimate.
+
+That the first draft got this wrong in the direction of a *cleaner story* — a
+crisp "I was wrong and the earlier question was right" — is the part worth
+keeping. Self-criticism that overstates is still overstatement.
+
+### ⚠️ Secondaries 2 and 3 are the same test written twice
+
+Registered as two predictions, they are algebraically one. Per ratio:
+
+    K_observed / K_predicted  =  (ratio/phi_edge) / (max|s|/sigmaS)
+                              =  theta / (phi_edge * max|s|)
+                              =  phi* / phi_edge
+
+Measured, the two columns are identical to three decimals — 0.335, 0.603, 1.006
+at ratios 2.00, 3.33, 5.00. So secondary 2's "does `phi*` fall in the observed
+cell" and secondary 3's "do the three `ratio/phi_edge` agree" are the same
+quantity asked twice, and **the ratio-5.00 near-hit that shows up in both is one
+fact, not two independent confirmations**. Four registered predictions carried
+three bits of information, and the count was never checked.
+
+The rule this earns, on the ROADMAP with the others: **before registering more
+than one prediction, verify they are not reparameterisations of each other.**
+Two framings of one claim inflate the apparent evidential weight of whichever way
+it comes out — here, of a falsification, which is the direction that flatters
+this write-up rather than the model.
+
+### The mechanism is refuted on its own diagnostic
+
+The registered mechanism said control needs the self-coverage reach `theta/phi`
+to exceed the lineage's wander `max|s|`. Measured at horizon 1800:
+
+| ratio | `phi` | reach `theta/phi` | mean max abs(s) | outcome |
+|---|---|---|---|---|
+| 2.00 | 0.004 | 25.0 | **60.8** | **CONTROLLED 10/10** |
+| 2.00 | 0.008 | 12.5 | 40.4 | RUNAWAY 10/10 |
+| 5.00 | 0.004 | 25.0 | 23.6 | CONTROLLED 10/10 |
+
+At ratio 2.00, `phi = 0.004`, **the reach is less than half the wander and the
+element is controlled on every seed**. The criterion is not merely mis-calibrated,
+it is the wrong criterion. Two supporting failures: `max|s|` at `phi = 0` grew
+from 18.678 at 600 generations (003) to 61.29 at 1800 — a factor of **3.28**,
+which is **linear in `t`, not `sqrt(t)`** (3.44 and 3.64 at the other two
+ratios); and the mechanism demands the edge scale with the ratio across a factor
+of 3, while the grid resolved no movement at all.
+
+### What actually governs it — POST-HOC, and 005's to register
+
+Time to saturation is a clean power law in `phi`:
+
+    t_sat = C * phi^(-a)
+
+| ratio | `a` | `C` | R² |
+|---|---|---|---|
+| 2.00 | 0.730 | 35.2 | 0.9933 |
+| 3.33 | 0.736 | 38.8 | 0.9949 |
+| 5.00 | 0.745 | 43.5 | 0.9944 |
+
+Fitted on the five saturating cells per ratio. The exponent is the same at all
+three ratios; only the prefactor moves. Setting `t_sat = T` gives
+`phi_edge(T) = (C/T)^(1/a)`, and **that reproduces all six observed edge
+brackets** — 0.02061 / 0.02420 / 0.02951 at T = 600 and 0.0046 / 0.0054 / 0.0068 at
+T = 1800, every one inside the bracket the grid measured.
+
+It also explains secondary 3's failure precisely: the law implies a ratio-spread
+in the edge of **1.43×**, and the grid doubles, so **the ratio-dependence is real
+but smaller than one grid step**. "The edge is identical at all three ratios" is
+the coarse reading; the accurate one is "the edge varies by less than this grid
+can resolve".
+
+**This model is post-hoc and is not a result of this registration.** It was
+fitted to the data it explains. What it earns is a registered successor, not a
+claim: 005 should predict `t_sat` at `phi` values 004 never ran and check the
+exponent out of sample.
+
+### Control degrades continuously, then collapses
+
+Ratio 2.00, horizon 1800, across the controlled cells: copies per genome
+345 → 401 → 489 → 564 while silenced fraction falls 0.927 → 0.909 → 0.863 →
+0.669; the next cell is 1557 copies at 0.406 silenced. **A staler trap holds a
+larger population at equilibrium rather than failing gradually**, and then the
+equilibrium stops existing. 003 recorded the same smooth-mechanism /
+discontinuous-outcome split from the other side of the edge.
+
+### What this does to the claim
+
+003 concluded that "in this model that conversion requires the trap to track
+EXACTLY", and offered an escape hatch: a band near `phi ~ 0.01` its grid could
+not see. **The band is real and 004 found it — and it does not save the claim.**
+Every `phi > 0` saturates; `phi` sets *when*, not *whether*. Extrapolating the
+power law, `phi = 0.001` at ratio 2.00 saturates near generation 5470. Only
+`phi = 0` is a genuine equilibrium, because only there is the reach infinite.
+
+So the honest position hardens rather than softens: **the controlled state in
+this model exists at exactly one point of a continuous parameter, and everywhere
+else the mechanic buys time**. Whether "buys time" is biologically interesting is
+a real question — a delay of thousands of generations is not nothing — but it is
+a different claim from the one spec §3.3 makes, and §3.3 should be rewritten to
+make it.
+
+### The figure took ten cuts and nine NO-GO verdicts, and the review changed the SCIENCE
+
+The independent-critic gate is a project rule. It found, in eight rounds, things
+the author could not see once — let alone eight times.
+
+| cut | what a fresh reviewer found |
+|---|---|
+| 1 | Marked only the falsified predictions, never the observed edge — and one prediction fell **2 px** from the true edge, so the panel read as partial confirmation of a prediction being reported as refuted. |
+| 2 | The horizontal dodge **manufactured ratio-ordered edge separation in the predicted direction**, from data with zero between-ratio variation. Also recycled 600-generation constants into the 1800 row, and drew Wilson intervals as columns implying ~28% control at cells that are 0 of 10. |
+| 3 | Claimed "byte-identical outcomes", **which is false** — only the classification is identical. Stated no verdict; never drew what the prediction predicted; printed the lone hit at the weight of the two misses. |
+| 4 | **Printed an arithmetic that fails in five seconds**: `max abs(s) = 61.3` beside `phi* = 0.0054`, when `0.10/61.3 = 0.00163`. `phi*` came from 003's 600-generation values, never shown. |
+| 5 | Right-hand labels sat beside the **observed** bars while belonging to the **predicted** ones, so "a DIFFERENT cell" appeared next to the three identical observed bars — **asserting the opposite of the claim**. |
+| 6 | Re-drew a line at "controlled" across the bracketed interval — **the same defect the log four rows up records as fixed**, returned in a different geom. Its new guard, `nrow(df) == length(df$col)`, cannot fail. |
+| 9 | The note carrying claim (a)'s novelty said "003's grid started at phi = 0.125" — **false**: 003's grid was {0, 0.125, …}, it sampled phi = 0 and was 30/30 CONTROLLED there. The legend named a "PALE bar" that the previous fix had deleted. The conclusion words were computed and then **not used by the figure** — the ratchet moved from  into the rendered text. And three of four verdict guards still could not fail, **demonstrated** by injecting a wrong cell class and watching the script finish green with a different answer. |
+| 8 | **The previous round's fix had never rendered once.** The white mask meant to stop the 0.125 reference line striking a count label had `xmax` outside `scale_x_log10`'s limits, so the scale censored it to `NA` and ggplot **dropped the layer with no warning** — under a comment asserting the fix worked. Also: several `stopifnot`s pinned the post-hoc *conclusion*, aborting the script on the one outcome that would have changed its message; and the subtitle reported both HELDs and never once used the word FALSIFIED. |
+| 7 | A sed of mine dropped the word "least", inverting the registration's own caveat. De-weighting the lone hit overshot to 1.25:1, making the one prediction that landed the least visible object. **Six new guards were tautologies** of the form `grepl(v, sprintf("…v…"))`. A comment claimed a contrast of 3.0:1 for a colour that measures 2.44:1. |
+
+**Three of these are worth more than the figure.**
+
+**The review corrected the science.** Round five observed that secondary 3's
+`2.50×` is identically `5.00/2.00`, that the estimator's resolution equals the
+tolerance, and that the verdict flips on finer edges. The retraction above — "I
+reversed 003 and 003 was right" — exists because a *figure* reviewer read a
+number harder than the analysis did.
+
+**I fixed instances, not classes.** The line-at-controlled defect was found,
+named in this very log, fixed by removing `geom_step`, and reintroduced two cuts
+later as a `geom_rect` with the same top edge.
+
+**And an assertion must not pin the conclusion.** Several guards were of the
+form `stopifnot(PL_SPREAD_K <= SPREAD_TOL)` — so had the post-hoc fit disagreed
+with the figure's message, the script would have aborted rather than reported
+it. A check that can only pass when the desired answer holds is a ratchet, not a
+control. Those now compute, branch and print.
+
+**And I kept writing checks that cannot fail** — twice, in the controls added to
+prevent the previous round's defect. The response was to stop asserting in
+comments and start computing: the printed arithmetic is now asserted
+(`theta/WALK_003 == PHI_STAR`), the contrast is measured by a `contrast_ratio()`
+helper against a named floor rather than described, the post-hoc power law is
+**fitted in the script** and its exponents checked against the registration's
+table, each verdict is re-derived by recounting the raw CSV rather than re-executing
+the same expression — **a claim this document made one round before it was true**:
+round 9 showed three of the four guards were still re-running the same
+expression on the same object, and *demonstrated* it by injecting a wrong cell
+class and watching the script finish with every guard green and a different
+answer. All four now recount the CSV, and that injection aborts the build. A
+second build-time guard fails the render if any layer has a position censored to
+`NA` — the class the round-8 defect belonged to,
+mutation-tested by putting the bad `xmax` back and confirming it aborts.
+
+### Scope
+
+Three ratios, one base configuration, two horizons, ten seeds, nine `phi`. The
+dial is still linear shrinkage toward the ancestral coordinate. The grid doubles,
+so every edge here is bracketed to a factor of 2 and no edge is a point. Two
+horizons show contraction between 600 and 1800; they do not prove the band
+closes in the limit, and the power law that says it does is post-hoc. `sqrt(3)`
+was registered as not under test and was wrong — the walk grows linearly in `t`
+here, not as its square root.

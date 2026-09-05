@@ -256,36 +256,87 @@ live registry and the null stated as "checked HERE", naming where.
       falsifier as the negation of the prediction, not as one scenario that
       would falsify it, and have the analysis evaluate THE PREDICTION.
 
-- [ ] **REGISTERED 2026-09-04, RUNNER PENDING — question 004, a band or only a
-      delay?** Pre-registration
-      `docs/pre-registrations/2026-09-04-a-band-or-only-a-delay.md`, committed
-      alone before any runner existed, model frozen at `12e7b08` (`sim/` tree
-      `b1e69c2`, unchanged since 001).
-      003's cliff put the fidelity edge somewhere in `(0, 0.125]`, estimated
-      post-hoc near `phi ~ 0.01` from `theta/phi ~ max|s|`. 004 registers that
-      estimate as a number before testing it: `phi*` = **0.0054 / 0.0096 /
-      0.0161** at ratios 2.00 / 3.33 / 5.00, from `theta / max|s|` measured in
-      003's `phi = 0` cells. Grid is log2 in `phi` from 0.001 to 0.064 plus the
-      anchors 0 and 0.125 (both exactly 003 cells, so the reproduction control
-      runs against committed data), 3 ratios × 9 `phi` × seeds 3001–3010 = 270
-      runs, plus a 60-run reproduction control on 003's seeds.
-      ⚠️ **THE QUESTION GREW A SECOND HALF WHEN THE MECHANISM WAS WRITTEN
-      DOWN.** `s` is a random walk, so `max|s|` grows without bound while the
-      reach `theta/phi` is fixed — meaning that for any `phi > 0` there is a
-      horizon at which the walk outruns the reach, and what looks like a band
-      at 600 generations may be only a **delay**. Every run therefore goes to
-      **1800** generations and is scored at 600 as well, out of one run (which
-      manipulation check 3 licenses by requiring bit-identical `stateHash` at
-      generation 600 between an 1800-run and an independent 600-run). Secondary
-      1 registers the direction of that shrinkage, not its size.
-      Discharges both standing rules below: the grid is stated in the ratio, and
-      every falsification clause is the literal negation of its prediction.
-      Also carries an **evaluability precondition written before any data
-      existed** — all three secondaries presuppose the primary at the ratio
-      being scored, and at a ratio where the primary fails they are NOT
-      EVALUABLE rather than falsified, because an edge of 0 makes
-      `ratio/phi_edge` infinite. That is the same defect 003's secondary 2 hit
-      after the fact and the same shape as 003's Amendment 1.
+- [x] **ANSWERED 2026-09-05 — question 004, a band or only a delay? THE BAND IS
+      REAL AND IT IS A DELAY.** Pre-registration
+      `docs/pre-registrations/2026-09-04-a-band-or-only-a-delay.md` (committed
+      alone at `cec9955`, amended `5468d97`, both before any runner). Runner
+      `experiments/004-fidelity-band.ts`, analysis `docs/analysis/plot-004.R`,
+      both committed at `9201d74` before any data. Data
+      `experiments/004-fidelity-band.csv` (270 runs) and
+      `experiments/004-reproduction-control.csv` (60). Figure
+      `docs/analysis/fig-004-band.png`.
+      All four manipulation checks passed, including the strongest: `phi = 0` and
+      `phi = 0.125` reproduce 003's committed CSV **exactly** on 003's own seeds.
+      ⚠️ **003's HEADLINE WAS A RESOLUTION ARTEFACT.** Control reaches
+      `phi = 0.016` at 600 generations, 10/10 seeds at every ratio — four
+      doublings above 003's first grid step, which is why 003 saw control only at
+      exactly 0. PRIMARY HELD.
+      ⚠️ **BUT THE EDGE MOVES WITH THE HORIZON: 0.016 at 600 generations, 0.004
+      at 1800.** SECONDARY 1 HELD at every ratio. It is a delay, not a band.
+      ⚠️⚠️ **SECONDARY 3 IS FALSIFIED AS REGISTERED AND THE VERDICT DOES NOT
+      SURVIVE INSPECTION — 004 DOES NOT RESOLVE IT.** Measured
+      125.0 / 208.3 / 312.5, spread 2.50x. But `phi_edge` is the same grid point
+      at all three ratios, so that spread is IDENTICALLY the ratio spread
+      (5.00/2.00 = 2.50) and carries no information; and the estimator is
+      quantised to a factor of 2 while the registered tolerance IS a factor of 2.
+      Scored on the post-hoc power-law edges the same quantity spans 1.75x and
+      HOLDS. **The verdict flips with the estimator.** The first draft of the
+      Result read FALSIFIED as settling the matter against me and for 003's
+      secondary 2; that reading is retracted. Whether `phi` is an independent
+      axis is UNRESOLVED. Secondary 2, by contrast, is falsified robustly (all
+      three `phi*` miss by 1.8x-3.8x under the finer estimate too).
+      ⚠️ **THE MECHANISM IS REFUTED ON ITS OWN DIAGNOSTIC.** It said control needs
+      reach `theta/phi` > wander `max|s|`. At ratio 2.00, `phi = 0.004`: reach
+      25.0 against wander 60.8, CONTROLLED 10/10. Also `max|s|` grows LINEARLY in
+      `t` (18.678 -> 61.29 from 600 to 1800 generations, factor 3.28), not as
+      `sqrt(t)`. SECONDARY 2 FALSIFIED.
+
+- [ ] **Question 005, sited by 004's power law.** Time to saturation is
+      `t_sat = C * phi^(-a)` with `a` = 0.730 / 0.736 / 0.745 and R² ≈ 0.994 at
+      the three ratios — the same exponent everywhere, only the prefactor moving.
+      Setting `t_sat = T` reproduces **all six** observed edge brackets, and
+      implies the edge's ratio-dependence is 1.43x, i.e. REAL BUT SMALLER THAN
+      ONE GRID STEP — which is why 004's grid read it as zero and why secondary 3
+      came out as it did. **That model is POST-HOC: it was fitted to the data it
+      explains.** 005 registers it and tests it out of sample — predict `t_sat`
+      at `phi` values 004 never ran, and use a grid finer than a doubling so the
+      ratio-dependence is resolvable at all. Registration first, alone, before
+      any runner.
+
+- [ ] ⚠️ **A DEFECT FIXED AT THE INSTANCE COMES BACK AT THE CLASS.** 004's
+      figure asserted control across the un-measured bracketed interval by
+      drawing a line at fraction 1.0 through it. That was found, named in the
+      Result's own defect log, and fixed by removing `geom_step` — and then
+      returned two cuts later as a `geom_rect` whose top edge was also at
+      fraction 1.0. The rule: when a defect is found, state the CLASS ("no mark
+      may sit at the controlled level inside the bracketed interval") and grep
+      for every geom that can produce it, rather than editing the one that did.
+
+- [ ] **BEFORE REGISTERING MORE THAN ONE PREDICTION, CHECK THEY ARE NOT
+      REPARAMETERISATIONS OF EACH OTHER.** 004's instance: secondary 2 asked
+      whether `phi*` falls in the observed edge cell, secondary 3 whether the
+      three `ratio/phi_edge` agree. Algebraically
+      `K_obs/K_pred = phi*/phi_edge` exactly, and the measured columns are
+      identical to three decimals (0.335 / 0.603 / 1.006). Four registered
+      predictions carried three bits, and the same ratio-5.00 near-hit appeared
+      in both as if it were two independent confirmations. The inflation flatters
+      whichever way the result goes — here a falsification, which flatters the
+      write-up rather than the model, and is no more acceptable for that.
+
+- [ ] ⚠️ **A GRID THAT DOUBLES CANNOT MEASURE AN EFFECT SMALLER THAN A
+      DOUBLING, AND WILL REPORT IT AS ZERO — AND A VERDICT SCORED ON SUCH A GRID
+      CAN FLIP WITH THE ESTIMATOR.** 004's instance is the sharpest available:
+      the edge's ratio-dependence is 1.43x against a 2x grid step, so three
+      genuinely different edges were recorded as one identical value; the
+      quantity secondary 3 tested then reduced to the ratio spread itself
+      (exactly 5.00/2.00) and carried no information; and re-scoring the SAME
+      DATA on a finer edge estimate turns FALSIFIED into HELD. The registered
+      tolerance was a factor of 2 and the estimator's own resolution was a factor
+      of 2 — a test cannot resolve an effect the size of its own quantisation. The rule
+      for every later grid here: state the smallest effect the grid can resolve
+      BEFORE registering a prediction about an effect size, and if the prediction
+      is smaller than one step, the grid is wrong rather than the prediction
+      falsified.
 
 ## What is actually left — three of the four carried-forward limitations
 
