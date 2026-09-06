@@ -291,41 +291,95 @@ live registry and the null stated as "checked HERE", naming where.
       `t` (18.678 -> 61.29 from 600 to 1800 generations, factor 3.28), not as
       `sqrt(t)`. SECONDARY 2 FALSIFIED.
 
-- [ ] **REGISTERED 2026-09-05 — question 005, does the delay diverge or is there
-      a floor?**
+- [x] **ANSWERED 2026-09-05 — question 005, does the delay diverge or is there a
+      floor? THERE IS NO FLOOR ABOVE `phi = 0.002`, AND THE PUBLISHED LAW DOES
+      NOT PREDICT WHEN.**
       [`pre-registrations/2026-09-05-does-the-delay-diverge.md`](pre-registrations/2026-09-05-does-the-delay-diverge.md),
-      committed alone before any runner existed. **Runner
-      `experiments/005-delay-divergence.ts` and analysis
-      `docs/analysis/plot-005.R` committed together 2026-09-05, before any data.
-      NOT YET RUN.** Grid: 3 ratios × `phi ∈ {0.002, 0.004, 0.0113, 0.0226,
-0.0453}` × seeds 4001–4010, per-`phi` horizons 8000/5000/2500/1500/1000,
-      **243 runs, ~16 h single-process** (cost measured before registering, ~6 h
-      sharded by ratio; run it detached under `systemd-run --user --unit`). 004's claim "every `phi > 0` saturates" rests on an extrapolation:
-      **no run in this project has ever observed a saturation below
-      `phi = 0.008`**, and 004's 90 runs at `phi ∈ {0.001, 0.002, 0.004}` were
-      all still CONTROLLED when their 1800-generation horizon ran out — which is
-      what BOTH the divergence and the floor reading predict.
-      ⚠️ **Two claims in 004's Result did not survive re-reading its own data,
-      and both corrections are recorded in 005's registration BEFORE any 005 run
-      exists** (they are post-hoc re-analyses of 004, not results of 005):
-      **(a)** "the exponent is the same at all three ratios" was never measured —
-      the spread is 0.0143 against SE(`a`) = 0.032, less than half of one
-      standard error. So 005 **declines to register** any prediction about it:
-      the first prospective application of the resolution rule below.
-      **(b)** the fit is measurably the wrong functional form — residuals run
-      `+ − − − +` **identically at all three ratios**, mean |residual| 5.03%
-      against a 1.78% noise floor (**2.8×**), so the curvature is systematic, and
-      at the low-`phi` end the law **underpredicts** `t_sat` by 6–7% at 3–5 SEM.
-      R² = 0.994 concealed all of it.
-      ⚠️ **The mutation table found two defects in ITSELF, and both are recorded
-      as Deviations in the registration, before any data.** (i) The registered
-      reproduction control `{0.002, 0.004}` never saturates by 1800, so the
-      saturation ceiling was **unguarded** — a 1500→1400 change would have passed
-      every check in the experiment. Fixed by adding `phi = 0.125`, a 004 cell
-      that does saturate. (ii) Check 4b as registered compared only the smallest
-      `phi`, which is also a control cell, so it was **fully redundant**; it now
-      compares every grid `phi`. (iii) One registered mutant **SURVIVED** — see
-      the standing rule below.
+      registered alone before any runner; runner + analysis committed together
+      before any data; 243 runs, **all seven manipulation checks passed**,
+      including 90 control runs reproducing 004's committed CSV exactly — on both
+      records for the 60 non-saturating ones; the 30 at `phi = 0.125` saturate
+      before generation 600, so their two records are one record checked twice and a horizon-8000 run reproducing its generation-600 and -1800
+      hashes. **150/150 saturated, 0 censored, 0 extinct.**
+      PRIMARY **HELD**, SECONDARY 1 **FALSIFIED**, SECONDARY 2 **HELD**,
+      SECONDARY 3 **HELD** — the one combination the registration named in
+      advance as carrying two bits rather than one.
+      Deviations 1-4, all made before any data and all forced by the mutation
+      table, are in the registration — **plus Deviation 5 (figure spec) and
+      Deviation 6 (the ANALYSIS: four verdict-path functions changed after the
+      data existed), both POST-DATA and both marked as such**, covering the
+      figure spec (no tolerance bands on figure 1; a
+      ratio axis instead of the registered log-residual; both figures faceted, where
+      the spec says three ratios on one panel).
+
+- [ ] ⚠️⚠️ **`t_sat` IS NOT A POWER LAW IN `phi`, AND THE EXPONENT YOU MEASURE IS
+      A PROPERTY OF THE WINDOW YOU FIT IN.** 004 fitted `phi` in [0.008, 0.125]
+      and got `a` = 0.73; 005 fitted [0.002, 0.0453] and got **0.87** — a gap of
+      0.132-0.139, **3.2-3.8 standard errors** once both fits' errors are counted (5.1-7.3 treating
+      004's exponent as exact; an earlier draft said "about seven"). Both fits have R² >= 0.993,
+      and **both leave a convex residual pattern at 1.9-2.9x the noise floor** —
+      `+ − − − +` at 004's three ratios and at 005's 2.00 and 5.00, with 005's
+      3.33 showing `+ − − 0 +` (its mid-cell at +0.04%, inside its own SEM).
+      ⚠️ An earlier version of this line claimed the identical sign sequence at
+      all three; that was false for 005. Against its own refit 005's worst
+      cell deviates 5.0-7.8%; against 004's law, 43%. So the whole discrepancy is
+      one exponent — the law's SHAPE (a shared exponent, ratio entering only
+      through the prefactor) survives — but the number is not a property of the
+      system. **005's exponent will not extrapolate either.** A question 006 that
+      froze `a = 0.87` and tested below 0.002 should expect to falsify it exactly
+      as 005 falsified 004. **The next registration must test a functional FORM,
+      not refit the same one on a third window.** Declaring the corrected
+      exponent the answer is the precise mistake 004 made.
+
+- [ ] ⚠️ **A HORIZON SIZED FROM THE MODEL UNDER TEST INHERITS THAT MODEL'S
+      ERROR.** 005 set every horizon at >= 1.75x the **predicted** `t_sat` and
+      called that the headroom that made the "too late" direction observable. The
+      prediction was 43% low, so the realised headroom at `phi = 0.002` was
+      **1.31x, not 1.80x** like for like (1.21x is horizon over the worst observed
+      SEED; 1.80x is horizon over the PREDICTED cell mean — two different bases), and the worst SEED consumed **82% of its horizon** (6593/8000); the worst cell MEAN
+      consumed 76%.
+      At +80% instead of +43% the cells would have censored and the falsified
+      prediction's magnitude would have been unmeasurable. The sizing rule is
+      circular: it assumes the thing being tested. Size a horizon from the
+      model's **worst plausible error**, which here was knowable in advance from
+      004's own residual structure.
+
+- [ ] ⚠️ **A GUARD THAT CHECKS SOME OF WHAT IT IS TRUSTED FOR IS THE SAME DEFECT
+      AS ONE THAT CHECKS NONE — AND THIS ONE FAILED TWICE THE SAME WAY.** 005's
+      contrast guard (a) measured the RAW hex while the figure composited over
+      white, passing at 6.49/5.80/4.68 while the marks it protected rendered at
+      1.26/1.25/1.23; then, fixed for alpha, (b) still looped over `palette_003`
+      only, so the two tolerance fills — the most load-bearing marks on the
+      verdict figure — went unchecked at 1.12:1 vs white and **1.014:1 vs each
+      other**. A colour guard must enumerate **every colour handed to any scale**,
+      at the alpha it is drawn with. Related: `theme.R`'s claim that darkening
+      `palette_003` fixed the deuteranopia collapse was FALSE — 2.00 vs 3.33 collapses under
+      Viénot (no specific ratio is quoted: two implementations disagreed, 1.02:1
+      against 1.71:1, so the number is not established — the collapse is); darkening fixed contrast vs WHITE, which
+      is a different quantity from contrast vs EACH OTHER.
+
+- [ ] ⚠️ **THE "NO MARK AT AN UNMEASURED LEVEL" RULE APPLIES ON BOTH AXES, AND A
+      CAPTION MUST NAME A CUE THAT ACTUALLY RENDERS.** Two 005 figure defects,
+      both caught by review, both of classes this roadmap already carried.
+      (i) The rule was enforced on y and then the tolerance was drawn as a
+      continuous rect across x, spanning `phi` where no tolerance was registered
+      and swallowing two 004 points, which then read as having passed a test they
+      were never subject to. (ii) A caption said "open marks are 004's" beside
+      `fill = NA` on shapes 15/16/17 — fill is a **no-op** on those glyphs, so
+      there were no open marks. The previous review round had flagged the
+      previous caption for the same lie; the wording was changed and the
+      rendering was not. Use `shape_003_open`.
+
+- [ ] **RE-RENDER `fig-001` … `fig-004` UNDER THE CURRENT HOUSE STYLE.** 005's
+      review changed `theme.R` materially — the gridline went from `grey90`
+      (measured 1.26:1, under this project's own 3:1 floor) to `#8c95a0` at
+      `linewidth 0.4`, and `contrast_ratio()` gained the `alpha` argument
+      without which every earlier contrast check measured a colour the figure
+      never drew. The four committed figures predate all of it, so "ONE house
+      style per project" is currently false: 001-004 are in the old style and
+      005 in the new. Re-running each `plot-00N.R` is the whole fix; the
+      question is whether the earlier Results' figure-review findings still
+      hold once the grid changes under them.
 
 - [ ] ⚠️ **A GUARD INHERITED FROM THE PREVIOUS EXPERIMENT IS NOT AUTOMATICALLY
       LOAD-BEARING IN THIS ONE — MUTATE IT AND FIND OUT.** 005 carried 004's
