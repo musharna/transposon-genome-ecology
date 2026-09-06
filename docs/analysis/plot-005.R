@@ -613,12 +613,19 @@ marker_extent_px <- function(pch, size, dpi = SHIP_DPI) {
 stopifnot(marker_extent_px(17, 2.2)$up > marker_extent_px(16, 2.2)$up,
           marker_extent_px(18, 4.0)$half_w > marker_extent_px(18, 2.0)$half_w)
 
+# The clearance the break SELECTOR uses. It cannot be the probe-measured marker
+# reach, because the probe needs a rendered glyph and this runs first — so it is
+# a deliberately GENEROUS bound, asserted below to be at least the measured one.
+BREAK_SELECT_CLEARANCE <- 0.035
+# The facet strip's wording, in ONE place: both figures label with it and the
+# guard that reads the rendered strips compares against it.
+strip_fmt <- function(r) paste("theta/sigmaS =", r)
 Y_BREAKS <- local({
   cand <- as.vector(outer(c(1, 1.5, 2, 2.5, 3, 4, 5, 6, 8), 10^(2:4)))
   cand <- sort(cand[cand > min(cells$t_sat, na.rm = TRUE) * 0.72 &
                     cand < max(cells$t_sat, na.rm = TRUE) * 1.28])
   ok <- cand[vapply(cand, function(b)
-    min(abs(log10(b) - log10(cells$t_sat[!is.na(cells$t_sat)]))) > 0.030, logical(1))]
+    min(abs(log10(b) - log10(cells$t_sat[!is.na(cells$t_sat)]))) > BREAK_SELECT_CLEARANCE, logical(1))]
   if (length(ok) < 3) stop("no y break set clears every cell mean by a marker half-height")
   # Thin to a readable set: keep breaks at least 0.28 decades apart.
   keep <- ok[1]
@@ -652,6 +659,16 @@ MARKER_UP_PX <- max(vapply(unname(shape_003),
                            function(pch) marker_extent_px(pch, 2.2)$up, numeric(1)))
 PX_PER_DECADE_Y_NOMINAL <- 370
 MARKER_HALF_LOG10 <- MARKER_UP_PX / PX_PER_DECADE_Y_NOMINAL
+# ⚠️⚠️ AND THE SELECTOR MUST NOT BE LOOSER THAN THE ASSERTION IT FEEDS. `Y_BREAKS`
+# is chosen above with a hard-typed 0.030 clearance because it is defined before
+# this probe runs; the assertion below then demands the MEASURED 0.0311. A dataset
+# whose candidate break lands in the 0.0300-0.0311 gap would be SELECTED and then
+# ABORT the run — exit 1, no figure — which is exactly the failure this file
+# already records for the censored case: the pre-specified analysis unable to
+# render one of the two outcomes it was registered to distinguish. Latent today
+# (the measured minimum gap is 0.0714 decades) but latent is not closed, so the
+# relationship is asserted rather than hoped for.
+stopifnot(BREAK_SELECT_CLEARANCE >= MARKER_HALF_LOG10)
 cat(sprintf("  tallest figure-1 marker reaches %.1f px above its datum = %.4f decades at the nominal y scale.\n",
             MARKER_UP_PX, MARKER_HALF_LOG10))
 # ⚠️ A FUNCTION WITH CANARIES, LIKE EVERY OTHER GUARD. The first cut of this
@@ -773,7 +790,7 @@ p_main <- ggplot() +
   # under a comment claiming the class was gone. Faceting removes the
   # POSSIBILITY rather than the instance.
   facet_wrap(~ratio, nrow = 1,
-             labeller = labeller(ratio = function(x) paste("theta/sigmaS =", x))) +
+             labeller = labeller(ratio = strip_fmt)) +
   expand_limits(y = c(Y_LO, Y_HI)) +
   guides(linetype = guide_legend(keywidth = unit(1.7, "cm")),
          colour = guide_legend(keywidth = unit(1.7, "cm"))) +
@@ -1150,7 +1167,7 @@ p_rel <- ggplot() +
   # re-read off the built panel for exactly this reason; figure 2's were not.
   scale_y_log10(breaks = REL_BREAKS, labels = REL_LABELS) +
   expand_limits(y = c(0.74, max(rel_005$rel + rel_005$sem_rel) * 1.06)) +
-  facet_wrap(~ratio, nrow = 1, labeller = labeller(ratio = function(x) paste("theta/sigmaS =", x))) +
+  facet_wrap(~ratio, nrow = 1, labeller = labeller(ratio = strip_fmt)) +
   labs(x = "trap infidelity  phi", y = "observed t_sat / predicted t_sat",
        # ⚠️ "every cell" IS A COUNT, SO IT IS DERIVED FROM THE COUNT. `rel_005` drops
        # censored and NOT-EVALUABLE cells, so on any run where one is dropped this
@@ -1596,8 +1613,19 @@ PAIRS <- c(
   # on one figure overrides it and the reader sees the override.)
 )
 
+# ⚠️⚠️ THE CHILDREN, NOT THE PARENTS — AND THE LEGEND. `calc_element("axis.text")`
+# cannot observe `axis.text.x`, which INHERITS from it, and the shipped theme
+# already overrides `axis.text.y`. `legend.text`/`legend.title` were absent
+# entirely, and figure 1 carries a legend. Demonstrated: ghosting `axis.text.x`,
+# `legend.text` and `legend.title` to #f2f2f2 shipped figure 1 with its whole
+# x-tick row and whole legend at ~1.16:1 while the y-axis "250" stayed black —
+# the surviving y label being the proof that the guard resolved the parent and
+# never the child. Round 28 fixed this for the caption and subtitle and left the
+# two remaining text surfaces open.
 TEXT_ELEMENTS <- c("plot.title", "plot.subtitle", "plot.caption",
-                   "axis.text", "axis.title", "strip.text")
+                   "axis.text.x", "axis.text.y", "axis.title.x", "axis.title.y",
+                   "strip.text.x", "strip.text.y",
+                   "legend.text", "legend.title")
 assert_text_contrast <- function(p, nm, floor = 4.5) {
   th <- ggplot2::complete_theme(p$theme)
   n <- 0L
@@ -1620,6 +1648,13 @@ assert_text_contrast <- function(p, nm, floor = 4.5) {
 stopifnot(inherits(try(assert_text_contrast(
   ggplot(data.frame(x = 1, y = 1), aes(x, y)) + geom_point() + theme_tge() +
     theme(plot.caption = element_text(colour = "#f4f4f4")), "canary"), silent = TRUE), "try-error"))
+# ... and on a CHILD override, which is the case that walked through.
+stopifnot(inherits(try(assert_text_contrast(
+  ggplot(data.frame(x = 1, y = 1), aes(x, y)) + geom_point() + theme_tge() +
+    theme(axis.text.x = element_text(colour = "#f2f2f2")), "canary"), silent = TRUE), "try-error"))
+stopifnot(inherits(try(assert_text_contrast(
+  ggplot(data.frame(x = 1, y = 1, g = "a"), aes(x, y, colour = g)) + geom_point() + theme_tge() +
+    theme(legend.text = element_text(colour = "#f2f2f2")), "canary"), silent = TRUE), "try-error"))
 stopifnot(isTRUE(assert_text_contrast(
   ggplot(data.frame(x = 1, y = 1), aes(x, y)) + geom_point() + theme_tge(), "canary-ok")))
 
@@ -2139,6 +2174,11 @@ truth <- local({
   out <- do.call(rbind, rows)
   out$rel <- out$mean / out$pred
   out$sem_rel <- out$sem / out$pred
+  # Which cells a figure is entitled to DRAW, derived here from `d` and the
+  # registration's evaluability rule — not from any plotting frame.
+  out$n_extinct <- vapply(seq_len(nrow(out)), function(i)
+    sum(d$extinct[d$ratio == out$ratio[i] & abs(d$phi - out$phi[i]) < 1e-12]), numeric(1))
+  out$drawable <- !is.na(out$mean) & out$n_extinct <= MAX_EXTINCT_EVALUABLE
   out
 })
 # It must agree with the pipeline it is checking on today's data — if it does not,
@@ -2152,6 +2192,107 @@ local({
             isTRUE(all.equal(cells$sem, truth$sem[k])))
 })
 tr <- function(r, pp, col) truth[[col]][match(paste(r, pp), paste(truth$ratio, truth$phi))]
+# ⚠️⚠️ AND THE KEY SET COMES FROM HERE TOO, NOT FROM THE PLOTTED FRAME. Round 25
+# found "the expectations were the plotted objects" and the fix re-derived only
+# the VALUE column; `ex(measured$ratio, measured$phi, ...)` still took the (ratio,
+# phi) KEY SET from `measured`, so `nrow(b) != nrow(exp_df)` compared the layer to
+# itself and nothing asserted there were fifteen cells. Demonstrated: dropping the
+# (2.00, 0.002) row from `measured` shipped figure 1 with FOUR points in panel 1 —
+# the cell that carries the headline simply absent — exit 0, all seven guards
+# green, under a title reading "at phi = 0.002 it is wrong by +37.0% to +43.1%".
+# Guard 1 saw no NA, guard 5 found the layer inked, nothing was outside the panel,
+# and guard 7 checked 14 against 14. That is "a list of names cannot guard an open
+# set" moved from the set of LAYERS to the set of CELLS — the sixth relocation.
+DRAWABLE <- truth[truth$drawable, c("ratio", "phi"), drop = FALSE]
+DRAWABLE <- DRAWABLE[order(DRAWABLE$ratio, DRAWABLE$phi), ]
+assert_cells_drawn <- function(fr, nm) {
+  got <- sort(paste(fr$ratio, fr$phi))
+  want <- sort(paste(DRAWABLE$ratio, DRAWABLE$phi))
+  if (!identical(got, want)) {
+    stop(sprintf("%s carries %d cells and the CSV says %d are drawable; missing %s, extra %s",
+                 nm, length(got), length(want),
+                 paste(setdiff(want, got), collapse = ", "),
+                 paste(setdiff(got, want), collapse = ", ")))
+  }
+  invisible(TRUE)
+}
+# Seen to fail on a dropped cell and to pass on the real frames.
+stopifnot(inherits(try(assert_cells_drawn(DRAWABLE[-1, ], "canary"), silent = TRUE), "try-error"))
+stopifnot(isTRUE(assert_cells_drawn(DRAWABLE, "canary-ok")))
+assert_cells_drawn(measured, "figure 1's point frame")
+assert_cells_drawn(rel_005, "figure 2's cell frame")
+
+# ⚠️⚠️ THE X AXIS A READER READS THE COLUMNS AGAINST. Round 28 bound figure 2's Y
+# breaks and labels to the built panel; NEITHER figure's X scale was bound to
+# anything. Demonstrated: permuting figure 1's x labels to
+# `lab_phi(GRID)[c(2,1,3,4,5)]` exited 0 with all seven guards green and rendered
+# the axis as 0.004 / 0.002 / 0.0113 / 0.0226 / 0.0453 while the points, the
+# dashed rule, the title, the subtitle and the caption all continued to name
+# phi = 0.002 as the falsifying column — so every reader reads the +43.1% column
+# as phi = 0.004. Guard 7 binds layer DATA x, which is a different object from
+# the axis it is read against.
+assert_x_axis <- function(p, nm) {
+  pp <- ggplot2::ggplot_build(p)$layout$panel_params[[1]]$x
+  drawn <- 10^pp$breaks[!is.na(pp$breaks)]
+  labs_ <- as.character(pp$get_labels()); labs_ <- labs_[!is.na(labs_)]
+  if (length(drawn) == 0L) stop(sprintf("%s: the built panel reports no x breaks — inspected nothing", nm))
+  if (!isTRUE(all.equal(sort(drawn), sort(GRID)))) {
+    stop(sprintf("%s: the x axis breaks at %s; the registered grid is %s", nm,
+                 paste(signif(sort(drawn), 4), collapse = ", "),
+                 paste(signif(sort(GRID), 4), collapse = ", ")))
+  }
+  if (!identical(labs_[order(drawn)], as.character(lab_phi(sort(GRID))))) {
+    stop(sprintf("%s: the x axis is LABELLED %s against breaks at %s", nm,
+                 paste(labs_[order(drawn)], collapse = " | "),
+                 paste(signif(sort(drawn), 4), collapse = ", ")))
+  }
+  invisible(TRUE)
+}
+
+# ⚠️⚠️ AND THE LEGEND, WHICH NO GUARD OBSERVED AT ALL. `assert_strip_labels` exists
+# because "figure 2 carries no legend, so the strip is the ONLY thing saying which
+# panel is which" — it was scoped to the figure that LACKS a legend and never
+# extended to the one that has one. Demonstrated: `labels = rev(RATIOS)` on the
+# colour, shape and linetype scales exited 0 with all seven guards green and
+# rendered figure 1's legend as purple triangle = 5.00, teal circle = 3.33, gold
+# square = 2.00 directly above strips reading 2.00 / 3.33 / 5.00, with the purple
+# panel holding 2.00's data.
+assert_legend_labels <- function(p, nm, want) {
+  gt <- ggplot2::ggplotGrob(p)
+  ii <- grep("guide-box", gt$layout$name)
+  if (length(ii) == 0L) stop(sprintf("%s: no legend found — this guard inspected nothing", nm))
+  seen <- character(0)
+  harvest <- function(g) {
+    if (!is.null(g$label) && is.character(g$label)) seen <<- c(seen, g$label)
+    for (ch in c(g$children, g$grobs)) if (!is.null(ch)) harvest(ch)
+  }
+  for (i in ii) harvest(gt$grobs[[i]])
+  seen <- unique(seen[nzchar(seen)])
+  miss <- setdiff(want, seen)
+  if (length(miss) > 0) {
+    stop(sprintf("%s: the legend reads %s; it must name %s", nm,
+                 paste(seen, collapse = " | "), paste(miss, collapse = ", ")))
+  }
+  # order matters: the keys are read top to bottom against the series
+  keys <- seen[seen %in% want]
+  if (!identical(keys, want)) {
+    stop(sprintf("%s: the legend lists %s, the scales order them %s",
+                 nm, paste(keys, collapse = " | "), paste(want, collapse = " | ")))
+  }
+  invisible(TRUE)
+}
+local({
+  .d <- data.frame(x = 1:3, y = 1:3, g = RATIOS, stringsAsFactors = FALSE)
+  .ok <- ggplot(.d, aes(x, y, colour = g)) + geom_point() +
+    scale_colour_manual(values = palette_003) + theme_tge()
+  stopifnot(isTRUE(assert_legend_labels(.ok, "canary-ok", RATIOS)))
+  .bad <- ggplot(.d, aes(x, y, colour = g)) + geom_point() +
+    scale_colour_manual(values = palette_003, labels = rev(RATIOS)) + theme_tge()
+  stopifnot(inherits(try(assert_legend_labels(.bad, "canary", RATIOS), silent = TRUE), "try-error"))
+})
+assert_x_axis(fig_main, "fig-005-divergence")
+assert_x_axis(fig_rel, "fig-005-tolerance")
+assert_legend_labels(fig_main, "fig-005-divergence", RATIOS)
 
 # ⚠️ THE COMPLETENESS HALF. Iterating the layers that exist cannot notice a layer
 # nobody thought about; this asserts that the set of layers on the figure is
@@ -2232,6 +2373,38 @@ assert_layer_values(fig_rel, "GeomPoint", "y",
 }))))
 assert_layer_values(fig_rel, "GeomSegment", "y", .caps_exp, "fig-005-tolerance")
 assert_layer_values(fig_rel, "GeomSegment", "yend", .caps_exp, "fig-005-tolerance")
+# ⚠️ AND `xend`, WHICH NOTHING CHECKED. Guard 7 keys on the INNER x, so the cap's
+# outer end was free. ⚠️⚠️ BUT THIS READBACK IS TAUTOLOGICAL WITH RESPECT TO
+# `CAP_W` ITSELF — the expectation is computed FROM `CAP_W`, so changing it moves
+# both sides and the check passes. Measured: 0.055 -> 0.058 exits 0. That is the
+# "expectation is the plotted object" defect, committed AGAIN in the fix for the
+# round that named it. The readback still earns its place (it catches an `aes()`
+# that points `xend` somewhere else entirely), but what BOUNDS `CAP_W` has to be
+# a constraint `CAP_W` cannot move, and that is asserted below.
+.caps_xend <- do.call(rbind, lapply(RATIOS, function(r) do.call(rbind, lapply(GRID, function(pp) {
+  do.call(rbind, lapply(c(-1, 1), function(side) {
+    ex(r, 10^(log10(pp) + side * CAP_GAP), rep(10^(log10(pp) + side * CAP_W), 2))
+  }))
+}))))
+assert_layer_values(fig_rel, "GeomSegment", "xend", .caps_xend, "fig-005-tolerance")
+# ⚠️ THE CONSTRAINT `CAP_W` CANNOT MOVE: A BRACKET MUST READ AS A BRACKET. The file
+# already states this rationale in prose — an earlier cut made each dash ~32 px and
+# each gap ~33 px, so the corridor inside a bracket was indistinguishable from the
+# empty span between brackets — and then bounded `CAP_W` with nothing. A bracket
+# spans 2*CAP_W; the empty span to its neighbour is the adjacent phi gap minus two
+# half-brackets. Requiring the bracket to be the narrower of the two gives
+# 4*CAP_W < the smallest adjacent gap in log10(phi), which is a property of GRID.
+local({
+  gaps <- diff(sort(log10(GRID)))
+  if (length(gaps) == 0L) stop("cannot bound CAP_W: the grid has fewer than two phi")
+  lim <- min(gaps) / 4
+  if (CAP_W >= lim) {
+    stop(sprintf("CAP_W is %.4f decades; at %.4f or more a bracket is no narrower than the empty span to its neighbour and stops reading as a bracket",
+                 CAP_W, lim))
+  }
+  if (CAP_GAP >= CAP_W) stop("the corridor is not inside the bracket: CAP_GAP >= CAP_W")
+  cat(sprintf("  cap dash %.3f decades against a %.3f bound from the tightest phi spacing.\n", CAP_W, lim))
+})
 assert_layer_values(fig_rel, "GeomLinerange", "ymin",
                     ex(rel_005$ratio, rel_005$phi,
                        tr(rel_005$ratio, rel_005$phi, "rel") - tr(rel_005$ratio, rel_005$phi, "sem_rel")),
@@ -2312,7 +2485,12 @@ assert_text_contrast(fig_rel, "fig-005-tolerance")
 # Figure 2 carries no legend, so the strip is the ONLY thing in the image saying
 # which panel is which, and the subtitle names cells by ratio. Same class as
 # "the expectation WAS the plotted object", one derivation in the other direction.
-assert_strip_labels <- function(p, nm, fmt = function(r) paste("theta/sigmaS =", r)) {
+# ⚠️ THE FORMAT STRING IS THE ONE THE FIGURES USE, NOT A THIRD COPY. This default
+# re-typed `paste("theta/sigmaS =", r)`, which is the "canary re-implements the
+# predicate" shape this file names four times: a coordinated edit of all three
+# copies would pass silently. `strip_fmt` is now the single source and both
+# `facet_wrap` calls read it.
+assert_strip_labels <- function(p, nm, fmt = strip_fmt) {
   gt <- ggplot2::ggplotGrob(p)
   ii <- grep("^strip-t", gt$layout$name)
   if (length(ii) == 0L) stop(sprintf("%s: found no top strips — this guard inspected nothing", nm))
@@ -2425,7 +2603,8 @@ ADDED_POST_DATA <- c("curvature_per_ratio", "n_scored_ratio", "n_scored_cells",
                      "wrap_lines", "injection_is_live", "assert_pre_data_commit",
                      "assert_layer_values", "assert_layer_coverage", "tr",
                      "assert_nothing_clipped", "ex", "marker_extent_px",
-                     "assert_text_contrast", "assert_strip_labels")
+                     "assert_text_contrast", "assert_strip_labels", "assert_cells_drawn",
+                     "assert_x_axis", "assert_legend_labels", "strip_fmt")
 UNCHANGED_POST_DATA <- c("predicted", "all_saturated", "within_band", "curvature_up",
                          "evaluable", "raw_band", "cell_of",
                          # ⚠️ `inject` and `assert_nothing_censored` were in
