@@ -2968,7 +2968,18 @@ stopifnot(isTRUE(assert_no_edge_ink(.canary)))
 # clean and `assert_no_edge_ink` never fires — the predicate is "ink at the
 # border" and the name is "nothing is truncated". This measures each text grob
 # against the width it has.
+# ⚠️ MEASURED ON A UTF-8 DEVICE. Without one, R's default pdf device cannot
+# encode the em-dashes and multiplication signs this file's titles use, prints
+# 'conversion failure ... mbcsToSbcs: dot substituted', and measures a NARROWER
+# string than the PNG renders — so the guard against text running off the page
+# was measuring text the page does not contain, in the direction that lets a
+# clipped title pass. Found by reading this script's own stderr rather than by a
+# review, which is the only reason it is in this file at all.
 assert_text_fits <- function(p, nm, w_in) {
+  dev_f <- tempfile(fileext = ".png")
+  grDevices::png(dev_f, width = w_in, height = 1, units = "in", res = SHIP_DPI,
+                 type = if (capabilities("cairo")) "cairo" else "Xlib")
+  on.exit({ grDevices::dev.off(); unlink(dev_f) }, add = TRUE)
   g <- ggplotGrob(p)
   avail <- grid::unit(w_in, "in")
   for (lab in c("title", "subtitle", "caption")) {
