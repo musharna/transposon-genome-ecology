@@ -218,6 +218,17 @@ f_all <- read.csv(CSV_004, colClasses = c(ratio = "character"), stringsAsFactors
 f <- f_all[!is.na(f_all$saturation_generation), ]   # the FITTED cells only
 N_004_SUB <- sum(f_all$phi > 0 & f_all$phi < 0.008)
 H_004_SUB <- max(f_all$stopped_at[f_all$phi > 0 & f_all$phi < 0.008])
+PHI_004_SUB <- sort(unique(f_all$phi[f_all$phi > 0 & f_all$phi < 0.008]))
+# The panel's left edge: min(GRID) widened by ggplot's default 5% expansion on a
+# continuous (here log10) scale. Derived from the expansion RULE, and checked
+# against the built panel below once `fig_main` exists — because the claim is
+# about what a reader can see, and nothing here controls that expansion.
+PANEL_LO_PHI <- 10^(log10(min(GRID)) - 0.05 * diff(log10(range(GRID))))
+N_004_OFFPANEL <- sum(f_all$phi > 0 & f_all$phi < PANEL_LO_PHI)
+# ⚠️ THE PANEL EDGE IS READ OFF THE BUILT PANEL, NOT ASSUMED. It is min(GRID)
+# widened by ggplot's 5% log-scale expansion, which nothing here controls, so
+# "left of this panel" has to be measured against the range the panel actually
+# gets. Assigned after `fig_main` exists; declared here beside its siblings.
 stopifnot(N_004_SUB == 90, H_004_SUB == 1800,
           all(f_all$outcome[f_all$phi > 0 & f_all$phi < 0.008] == "CONTROLLED"))
 for (r in RATIOS) {
@@ -764,9 +775,15 @@ p_main <- ggplot() +
                        # full pushed this past the usable width and guard 3 aborted; the
                        # answer to a sentence that does not fit is another line, not
                        # dropping the scope that made it correct.
-                       sprintf("Left of the dashed rule is 0 < phi < 0.008, where 004 ran %d runs at phi in {0.001, 0.002, 0.004}",
-                               N_004_SUB),
-                       sprintf("— 30 of them left of this panel — all still CONTROLLED at %d. So 004 measured no t_sat there and its", H_004_SUB),
+                       # ⚠️ THE PHI SET AND THE OFF-PANEL COUNT ARE DERIVED TOO. The
+                       # previous revision derived N_004_SUB and H_004_SUB and then typed
+                       # "{0.001, 0.002, 0.004}" and "30 of them" by hand in the same
+                       # sentence — the fourth consecutive revision of this line to carry
+                       # an underived count, written to fix the third.
+                       sprintf("Left of the dashed rule is 0 < phi < 0.008, where 004 ran %d runs at phi in {%s}",
+                               N_004_SUB, paste(format(PHI_004_SUB, trim = TRUE, scientific = FALSE), collapse = ", ")),
+                       sprintf("— %d of them left of this panel — all still CONTROLLED at %d. So 004 measured no t_sat there and its",
+                               N_004_OFFPANEL, H_004_SUB),
                        "law is EXTRAPOLATED below that rule, which is the whole premise of 005.",
                        "")) +   # scope_line is in the caption; printing it here too duplicated it verbatim
   theme_tge() +
@@ -906,7 +923,14 @@ out_cells <- out_cells[order(-abs(out_cells$rel - 1)), ]
 out_subtitle <- if (nrow(out_cells) == 0) {
   "Every cell is inside its registered tolerance."
 } else {
-  hard_wrap(sprintf("%d cell%s fall%s OUTSIDE the registered tolerance, above the top of this axis: %s.",
+  # ⚠️ "ABOVE THE TOP OF THIS AXIS" WAS FALSE, AND FALSE IN THE DIRECTION THAT
+  # MATTERS. `expand_limits` puts the panel well above these cells, so they ARE
+  # drawn, inside the panel, with empty panel above them. What is true — and what
+  # round 25 actually said — is that they are above the topmost LABELLED BREAK, so
+  # there is no labelled level to read them against. Telling a reader to look off
+  # the axis for marks that are on it is worse than saying nothing: they will not
+  # connect the three diamonds at the top of each panel with the cells named here.
+  hard_wrap(sprintf("%d cell%s fall%s OUTSIDE the registered tolerance, above the topmost labelled level: %s.",
             nrow(out_cells), if (nrow(out_cells) == 1) "" else "s",
             if (nrow(out_cells) == 1) "s" else "",
             paste(sprintf("theta/sigmaS %s at phi = %s, %+.1f%%",
@@ -992,7 +1016,7 @@ p_rel <- ggplot() +
                  linewidth = 1.0) +
   # ⚠️ SIZE 2.0, NOT 3.4 — AND THE FIRST ATTEMPT TO MAKE THIS CHANGE SILENTLY
   # DID NOT APPLY. At 3.4 the diamond's half-height is 10.5 px against +-1 SEM
-  # half-lengths of 8.67 and 9.24 px at phi = 0.004, so TWO of the fifteen
+  # half-lengths of 8.71 and 9.29 px at phi = 0.004, so TWO of the fifteen
   # intervals put ZERO ink outside their own marker while the subtitle named them. A
   # comment two rounds ago claimed this was "handled by construction: the marker
   # is sized below the smallest interval"; it was wrong by measurement, because
@@ -1243,7 +1267,7 @@ stopifnot(length(INJECTION_CONTROLS) == 9L,
           all(vapply(INJECTION_CONTROLS, injection_is_live, logical(1))))
 
 # ---------------------------------------------------------------------------
-# SAVE, WITH SIX BUILD-TIME GUARDS ON WHAT ACTUALLY SHIPS (plus the cap-corridor,
+# SAVE, WITH EVERY NUMBERED BUILD-TIME GUARD ON WHAT ACTUALLY SHIPS (plus the cap-corridor,
 # break-placement and text-fit assertions, each with its own canary). ⚠️ This
 # said FIVE while six were numbered below — a fourth conflicting count in a file
 # whose own comment records that three once shipped.
@@ -1257,9 +1281,24 @@ verdict_line <- sprintf(
 # ⚠️ ONE CAPTION PER FIGURE. A single caption pasted onto both was false on each:
 # it promised "both bands" on the figure that deliberately has none, and "error
 # bars" on the figure that has none either.
+# ⚠️ AND THE MODEL COMMIT THE CAPTION NAMES. `12e7b08` was the one provenance
+# literal in this file that nothing checked, in a file whose doctrine is that
+# provenance is checked rather than asserted. The claim it makes is that the
+# simulation core has not moved since, so that is what is verified.
+MODEL_COMMIT <- "12e7b08"
+local({
+  moved <- suppressWarnings(tryCatch(
+    system2("git", c("log", "--oneline", paste0(MODEL_COMMIT, "..HEAD"), "--", "sim/"),
+            stdout = TRUE, stderr = FALSE), error = function(e) NULL))
+  if (is.null(moved)) stop(sprintf("cannot verify that sim/ is frozen at %s", MODEL_COMMIT))
+  if (length(moved) > 0) {
+    stop(sprintf("the caption says the model is frozen at %s, but sim/ has %d commit(s) since: %s",
+                 MODEL_COMMIT, length(moved), paste(moved, collapse = "; ")))
+  }
+})
 prov <- sprintf(
-  "Model frozen at 12e7b08; a and C carried from 004 and re-derived from its committed CSV.\n%d runs, seeds %d-%d, per-phi horizons %s.\n%s",
-  nrow(d), min(d$seed), max(d$seed), paste(sprintf("%s:%d", names(HORIZONS), HORIZONS), collapse = " "),
+  "Model frozen at %s; a and C carried from 004 and re-derived from its committed CSV.\n%d runs, seeds %d-%d, per-phi horizons %s.\n%s",
+  MODEL_COMMIT, nrow(d), min(d$seed), max(d$seed), paste(sprintf("%s:%d", names(HORIZONS), HORIZONS), collapse = " "),
   # ⚠️ DERIVED. This sentence was a literal chosen on the censored count alone, so
   # with extinct seeds injected it still shipped "no extinctions" verbatim — and
   # the pre-data commit DID carry a NOT-EVALUABLE line that the post-data rewrite
@@ -1331,6 +1370,19 @@ cens_rel <- if (nrow(right_censored) > 0) {
   "\nCensored cells are omitted from BOTH figures (they are also NOT EVALUABLE); the caption above counts them."
 } else ""
 fig_main <- p_main + labs(caption = paste0(cap_main, cens_main)) + SAFE_MARGIN
+# ⚠️ AND THE PANEL EDGE THE SUBTITLE'S OFF-PANEL COUNT USED. `PANEL_LO_PHI` is
+# computed from the expansion rule before the figure exists; this is where it
+# meets the panel that actually shipped. If ggplot's default expansion ever
+# changes, the sentence saying how many 004 runs sit left of this panel becomes
+# wrong silently, and this is the only thing that would notice.
+local({
+  xr <- ggplot2::ggplot_build(fig_main)$layout$panel_params[[1]]$x.range
+  if (length(xr) != 2L) stop("cannot read figure 1's x range — the off-panel count is unverifiable")
+  if (abs(10^xr[1] - PANEL_LO_PHI) / PANEL_LO_PHI > 0.01) {
+    stop(sprintf("the subtitle counts 004 runs left of phi = %.6f but the panel starts at %.6f",
+                 PANEL_LO_PHI, 10^xr[1]))
+  }
+})
 # ⚠️ RE-RUN AGAINST THE BREAKS THE FIGURE ACTUALLY DREW. The call above passes
 # `Y_BREAKS`, so the guard was severable at the scale call site: editing
 # `scale_y_log10(breaks = ...)` to any other set left the guard verifying a
@@ -1749,7 +1801,7 @@ assert_every_layer_visible(fig_rel, "fig-005-tolerance", w = SHIP_W, h = SHIP_H)
 # layer-level presence predicate. Guard 1 reads built data but only asks whether
 # it is NA. So the `aes()` itself — the one place where a drawn value can part
 # company with the value the caption names — was observed by nothing, and each of
-# these exited 0 with all six guards and every canary green:
+# these exited 0 with every guard and every canary green:
 #
 #   * `aes(..., y = 1 + (y - 1) * 2)` on the cap layer drew the tolerance ticks at
 #     +-50%/+-20% under a title naming +-25%/+-10%, putting all three cells that
@@ -1804,22 +1856,152 @@ stopifnot(inherits(try(assert_layer_values(.g7, "GeomPoint", "y", c(10, 100, 100
 stopifnot(inherits(try(assert_layer_values(.g7, "GeomPoint", "nope", c(10, 100, 1000), "canary"), silent = TRUE), "try-error"))
 stopifnot(inherits(try(assert_layer_values(.g7, "GeomRibbon", "y", c(10), "canary"), silent = TRUE), "try-error"))
 
-# (a) Figure 1's points ARE the observed cell means, not the prediction.
-assert_layer_values(fig_main, "GeomPoint", "y", measured$t_sat, "fig-005-divergence")
-# (b) Figure 2's tolerance ticks ARE the registered tolerances. Derived from
-#     GRID/LOW/MID/TOL_* alone — not from `brackets`, and not from `caps`.
+# ⚠️⚠️ TWO THINGS WERE WRONG WITH THE FIRST CUT OF THESE CALLS, AND BOTH ARE THE
+# SAME MISTAKE AT DIFFERENT SCOPES.
+#
+# (1) IT WAS A LIST OF NAMES, AND A LIST OF NAMES CANNOT GUARD AN OPEN SET. Five
+#     bindings were checked and every other positional aesthetic on both figures
+#     was not. Demonstrated, each exiting 0 with all seven guards green:
+#       * `aes(phi, rel * 0.92)` on figure 2's DIAMONDS — the mark SECONDARY 1/2/3
+#         are literally read against — drew the falsifying cells at ~+32/+31/+26%
+#         under a subtitle naming +43.1/+42.2/+37.0%, five mid cells below their
+#         -10% caps beside "SECONDARY 2 ... HELD", and every diamond detached from
+#         its own whisker.
+#       * `aes(phi, t_sat * 1.40)` on the LAW LINE put the frozen law exactly
+#         through the phi = 0.002 points, under a title saying the law is wrong
+#         there by +37% to +43%.
+#       * `xintercept = 0.03` on the dashed rule left both figures describing a
+#         rule at phi = 0.008 beside a rule at 0.03. `FITTED_LO` is pinned; the
+#         CALL SITE was free — the severable-call-site class this file diagnoses
+#         for `Y_BREAKS`.
+#     So the manifest below is CLOSED: every layer on each figure must be either
+#     bound to a value here or explicitly declared value-free with a reason, and
+#     `assert_layer_coverage` fails on any layer that is neither. Adding a layer
+#     without deciding which it is now aborts.
+#
+# (2) THE EXPECTATIONS WERE THE PLOTTED OBJECTS. The comment above claimed they
+#     were "derived from the REGISTERED constants and the CSV, never from the
+#     object the layer was built from", and for (a) the expected vector WAS
+#     `measured$t_sat` while the layer was `geom_point(data = measured, aes(phi,
+#     t_sat))` — the same object on both sides. Demonstrated: scaling
+#     `measured$t_sat` by 1.05 shipped every point 5% high, exit 0. The guard's
+#     only claim of coverage was a comment asserting a property it did not have.
+#     `truth` below is recomputed from the CSV and `FROZEN` alone.
+truth <- local({
+  rows <- lapply(RATIOS, function(r) do.call(rbind, lapply(GRID, function(pp) {
+    z <- d[d$ratio == r & abs(d$phi - pp) < 1e-12 & d$extinct == 0, ]
+    live <- z$saturation_generation
+    ok <- length(live) > 0 && !any(is.na(live))
+    data.frame(ratio = r, phi = pp,
+               pred = FROZEN[r, "C"] * pp^(-FROZEN[r, "a"]),
+               mean = if (ok) mean(live) else NA_real_,
+               sem = if (ok && length(live) > 1) stats::sd(live) / sqrt(length(live)) else NA_real_,
+               stringsAsFactors = FALSE)
+  })))
+  out <- do.call(rbind, rows)
+  out$rel <- out$mean / out$pred
+  out$sem_rel <- out$sem / out$pred
+  out
+})
+# It must agree with the pipeline it is checking on today's data — if it does not,
+# one of the two is wrong and neither may be used. This is a CROSS-CHECK of two
+# independent computations, not a definition of one from the other.
+local({
+  k <- match(paste(cells$ratio, cells$phi), paste(truth$ratio, truth$phi))
+  stopifnot(!any(is.na(k)),
+            isTRUE(all.equal(cells$pred, truth$pred[k])),
+            isTRUE(all.equal(cells$t_sat, truth$mean[k])),
+            isTRUE(all.equal(cells$sem, truth$sem[k])))
+})
+tr <- function(r, pp, col) truth[[col]][match(paste(r, pp), paste(truth$ratio, truth$phi))]
+
+# ⚠️ THE COMPLETENESS HALF. Iterating the layers that exist cannot notice a layer
+# nobody thought about; this asserts that the set of layers on the figure is
+# exactly the set the manifest accounts for.
+assert_layer_coverage <- function(p, bound, free, nm) {
+  have <- vapply(p$layers, function(l) class(l$geom)[1], character(1))
+  accounted <- c(bound, free)
+  loose <- setdiff(have, accounted)
+  if (length(loose) > 0) {
+    stop(sprintf("%s: layer(s) %s are on the figure and in neither the value-bound nor the declared-value-free list — decide which and say why",
+                 nm, paste(unique(loose), collapse = ", ")))
+  }
+  stale <- setdiff(accounted, have)
+  if (length(stale) > 0) {
+    stop(sprintf("%s: the manifest accounts for %s, which the figure does not draw",
+                 nm, paste(stale, collapse = ", ")))
+  }
+  invisible(TRUE)
+}
+stopifnot(inherits(try(assert_layer_coverage(
+  ggplot(data.frame(x = 1, y = 1), aes(x, y)) + geom_point() + geom_line(),
+  "GeomPoint", character(0), "canary"), silent = TRUE), "try-error"))
+stopifnot(isTRUE(assert_layer_coverage(
+  ggplot(data.frame(x = 1, y = 1), aes(x, y)) + geom_point() + geom_line(),
+  "GeomPoint", "GeomLine", "canary-ok")))
+
+# --- FIGURE 1 -------------------------------------------------------------
+# The points ARE the observed cell means, recomputed from the CSV.
+assert_layer_values(fig_main, "GeomPoint", "y",
+                    tr(measured$ratio, measured$phi, "mean"), "fig-005-divergence")
+# The law line IS the frozen law, checked FUNCTIONALLY at the x it actually
+# draws — a fixed expected vector would only re-state the `law` frame.
+local({
+  li <- which(vapply(fig_main$layers, function(l) class(l$geom)[1], character(1)) == "GeomLine")
+  if (length(li) != 1L) stop("figure 1: expected exactly one law-line layer — inspected nothing")
+  b <- ggplot2::ggplot_build(fig_main)$data[[li]]
+  grp <- sort(unique(b$colour))
+  if (length(grp) != length(RATIOS)) stop("figure 1: the law line does not draw one series per ratio")
+  # Map each drawn colour back to its ratio through the palette, not by position.
+  ratio_of <- names(palette_003)[match(b$colour, unname(palette_003))]
+  if (any(is.na(ratio_of))) stop("figure 1: a law-line colour is not in palette_003 — cannot attribute it to a ratio")
+  want <- log10(FROZEN[ratio_of, "C"] * (10^b$x)^(-FROZEN[ratio_of, "a"]))
+  dmax <- max(abs(b$y - want))
+  if (dmax > 1e-8) {
+    stop(sprintf("figure 1: the law line draws %.6f where the frozen law at its own x is %.6f (max divergence %.3g over %d points)",
+                 b$y[which.max(abs(b$y - want))], want[which.max(abs(b$y - want))], dmax, nrow(b)))
+  }
+})
+# The dashed rule IS phi = 0.008, read off the built layer, not the constant.
+# ⚠️ ONE PER FACET. A reference line is drawn in every panel, so the expected
+# vector is the constant repeated across the facets — and the repeat count is
+# `length(RATIOS)`, the facet variable, so changing the faceting fails loudly
+# here rather than silently comparing the wrong number of values.
+assert_layer_values(fig_main, "GeomVline", "xintercept", rep(FITTED_LO, length(RATIOS)), "fig-005-divergence")
+assert_layer_coverage(fig_main,
+  bound = c("GeomPoint", "GeomLine", "GeomVline"),
+  # GeomBlank comes from `expand_limits` and draws nothing — it moves the SCALE,
+  # which guard 1 and the break checks already observe. The censoring arrow is
+  # positional but its y is the HORIZON, not a measured quantity, and its
+  # presence is gated by REQUIRED_LAYERS.
+  free = c("GeomBlank", if (nrow(right_censored) > 0) "GeomSegment"),
+  nm = "fig-005-divergence")
+
+# --- FIGURE 2 -------------------------------------------------------------
+# The diamonds ARE observed/predicted. This is the mark the verdicts are read
+# against and the first cut of this guard did not check it.
+assert_layer_values(fig_rel, "GeomPoint", "y",
+                    tr(rel_005$ratio, rel_005$phi, "rel"), "fig-005-tolerance")
+# The tolerance ticks ARE the registered tolerances, from GRID/LOW/MID/TOL_* alone.
 .want_caps <- unlist(lapply(RATIOS, function(r) unlist(lapply(GRID, function(pp) {
   tl <- if (pp %in% LOW) TOL_LOW else TOL_MID
   rep(c(1 - tl, 1 + tl), 2)     # two ticks per bound, one each side of the mark
 }))))
 assert_layer_values(fig_rel, "GeomSegment", "y", .want_caps, "fig-005-tolerance")
 assert_layer_values(fig_rel, "GeomSegment", "yend", .want_caps, "fig-005-tolerance")
-# (c) Figure 2's whiskers ARE +-1 SEM. Recomputed here from the cell table, so a
-#     multiplier introduced at the assignment cannot travel into the guard.
-.k <- match(paste(rel_005$ratio, rel_005$phi), paste(cells$ratio, cells$phi))
-.want_sem <- cells$sem[.k] / cells$pred[.k]
-assert_layer_values(fig_rel, "GeomLinerange", "ymin", rel_005$rel - .want_sem, "fig-005-tolerance")
-assert_layer_values(fig_rel, "GeomLinerange", "ymax", rel_005$rel + .want_sem, "fig-005-tolerance")
+# The whiskers ARE +-1 SEM, from the recomputation.
+assert_layer_values(fig_rel, "GeomLinerange", "ymin",
+                    tr(rel_005$ratio, rel_005$phi, "rel") - tr(rel_005$ratio, rel_005$phi, "sem_rel"),
+                    "fig-005-tolerance")
+assert_layer_values(fig_rel, "GeomLinerange", "ymax",
+                    tr(rel_005$ratio, rel_005$phi, "rel") + tr(rel_005$ratio, rel_005$phi, "sem_rel"),
+                    "fig-005-tolerance")
+# Both rules: "on the law" at 1, and the fitted-range rule at phi = 0.008.
+assert_layer_values(fig_rel, "GeomHline", "yintercept", rep(1, length(RATIOS)), "fig-005-tolerance")
+assert_layer_values(fig_rel, "GeomVline", "xintercept", rep(FITTED_LO, length(RATIOS)), "fig-005-tolerance")
+assert_layer_coverage(fig_rel,
+  bound = c("GeomPoint", "GeomSegment", "GeomLinerange", "GeomHline", "GeomVline"),
+  free = "GeomBlank", nm = "fig-005-tolerance")
 
 # GUARD 6 — THE PROVENANCE CLAIM IN THE HEADER IS CHECKED, NOT ASSERTED.
 #
@@ -1828,6 +2010,9 @@ assert_layer_values(fig_rel, "GeomLinerange", "ymax", rel_005$rel + .want_sem, "
 # since the pre-data commit is exactly the kind of thing that should be
 # mechanical, and it never was. This extracts each named function from
 # `PRE_DATA_COMMIT` and from this file and compares them.
+# The registration this analysis reports. Named here because guard 6 reads it to
+# check that the two documents agree on how many guards ship.
+REG_PATH <- "docs/pre-registrations/2026-09-05-does-the-delay-diverge.md"
 PRE_DATA_COMMIT <- "58af15c"
 # ⚠️ AND `theme.R` IS INSIDE THE SAME WINDOW. Guard 6 checked only this script,
 # while every colour, shape and contrast number the figure guards measure is
@@ -1859,7 +2044,7 @@ ADDED_POST_DATA <- c("curvature_per_ratio", "n_scored_ratio", "n_scored_cells",
                      "layer_index", "tol_of", "wrap",
                      "rendered_colours", "assert_rendered_contrast",
                      "wrap_lines", "injection_is_live", "assert_pre_data_commit",
-                     "assert_layer_values")
+                     "assert_layer_values", "assert_layer_coverage", "tr")
 UNCHANGED_POST_DATA <- c("predicted", "all_saturated", "within_band", "curvature_up",
                          "evaluable", "raw_band", "cell_of",
                          # ⚠️ `inject` and `assert_nothing_censored` were in
@@ -2108,6 +2293,44 @@ if (length(pre_txt) < 10) {
   }
   cat(sprintf("  GUARD 6: theme.R verified against %s — %d changed, %d unchanged, %d added, 0 removed.\n",
               PRE_DATA_COMMIT, length(t_changed), length(t_unchanged), length(t_added)))
+
+  # ⚠️⚠️ THE GUARD COUNT IS COUNTED, IN BOTH PLACES THAT STATE IT. It has now been
+  # wrong four times — FIVE, then three different values across the script and the
+  # registration, then SIX after GUARD 7 shipped, each time inside the sentence
+  # written to stop it. A number that appears in prose in two files cannot be kept
+  # correct by care; it has to be read from the thing it counts.
+  n_guards <- length(grep("^# GUARD [0-9]+ —", now_txt))
+  if (n_guards < 7) stop(sprintf("only %d numbered guards found in this script — the scan is broken or guards were deleted", n_guards))
+  reg <- suppressWarnings(tryCatch(readLines(REG_PATH, warn = FALSE), error = function(e) character(0)))
+  if (length(reg) < 50) stop(sprintf("cannot read the registration at %s to check its guard count", REG_PATH))
+  words <- c("ZERO", "ONE", "TWO", "THREE", "FOUR", "FIVE", "SIX", "SEVEN", "EIGHT",
+             "NINE", "TEN", "ELEVEN", "TWELVE")
+  claim <- grep("build-time guards now ship", reg, value = TRUE)
+  if (length(claim) != 1L) stop("the registration must state its build-time guard count exactly once")
+  said <- regmatches(claim, regexpr("[A-Z]+(?= build-time guards now ship)", claim, perl = TRUE))
+  if (length(said) != 1L || !said %in% words || match(said, words) - 1L != n_guards) {
+    stop(sprintf("the registration says '%s build-time guards now ship' and the script has %d",
+                 if (length(said) == 1L) said else "(unparseable)", n_guards))
+  }
+  cat(sprintf("  GUARD 6: %d numbered guards, and the registration says %s.\n", n_guards, said))
+
+  # ⚠️ AND THE REVIEW-ROUND COUNT, FOR THE SAME REASON. The registration's own
+  # heading said "12 cuts, 12 NO-GO reviews" while the table beneath it ran to 25
+  # — in the section that declares itself the canonical record, directly under the
+  # sentence explaining that a count kept in prose drifts. The heading is now
+  # checked against the highest round number the table actually carries.
+  head_line <- grep("^### The figure gate: [0-9]+ cuts, [0-9]+ NO-GO reviews", reg, value = TRUE)
+  if (length(head_line) != 1L) stop("the registration must carry exactly one figure-gate heading stating its round count")
+  n_head2 <- as.integer(regmatches(head_line, gregexpr("[0-9]+", head_line))[[1]])
+  row_lines <- grep("^\\| [0-9]+ \\|", reg, value = TRUE)
+  rounds <- as.integer(sub("^\\| ([0-9]+) \\|.*$", "\\1", row_lines))
+  rounds <- rounds[!is.na(rounds)]
+  if (length(rounds) == 0L) stop("found no review-round rows in the registration table")
+  if (length(unique(n_head2)) != 1L || n_head2[1] != max(rounds)) {
+    stop(sprintf("the registration heading says %s cuts/reviews and the table runs to round %d",
+                 paste(unique(n_head2), collapse = "/"), max(rounds)))
+  }
+  cat(sprintf("  GUARD 6: the review table runs to round %d, and the heading says the same.\n", max(rounds)))
 }
 
 # GUARD 3 — NOTHING IS TRUNCATED AT THE CANVAS EDGE.

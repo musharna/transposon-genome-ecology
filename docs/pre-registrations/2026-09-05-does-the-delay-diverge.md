@@ -767,17 +767,33 @@ upward. Recorded as a standing rule.
   0.019-0.027 against a between-ratio spread of 0.0071. The registration's decision to
   decline that prediction was correct and remains correct.
 
-### The figure gate: 12 cuts, 12 NO-GO reviews, and the reviews changed the science
+### The figure gate: 26 cuts, 26 NO-GO reviews, and the reviews changed the science
 
 The independent-critic gate is a project rule. **This is the canonical record;
 `docs/analysis/plot-005.R` points here rather than restating a count** — an
 earlier version of this section said "three cuts and three NO-GO reviews" while
 the script separately claimed "two" in one comment and "five" in another, and
 the rounds where the real defects were found existed only in code comments.
+⚠️⚠️ **AND THIS HEADING THEN SAID 12 WHILE THE TABLE BENEATH IT RAN TO 25** — in
+the section that declares itself the canonical record, immediately under the
+sentence explaining that a count kept in prose drifts. Found by round 26.
 
 Every round used a fresh reviewer with no memory of the previous one. Every
 round found something the author could not see, and **several found defects the
 previous round's fix had created.**
+
+⚠️ **ROUNDS 13-22 HAVE NO ROWS, AND THAT IS A GAP IN THE RECORD, NOT TEN QUIET
+ROUNDS.** All ten returned NO-GO. Their findings were fixed in the script and
+described in its comments, and were never carried back into this table while it
+was being written round by round; reconstructing them faithfully after the fact
+is not something I can do from the code alone, so the gap is declared rather
+than filled. The recurring classes across those rounds, which the surviving
+comments do attest: text naming a glyph that is not rendered; a canary testing a
+re-typed expression rather than the guard; a guard severable at its call site;
+an asserted pixel measurement that was wrong; and false provenance. The sentence
+above — "every round found something the author could not see" — is therefore
+supported for 16 of the 26 rounds by rows here, and for the other ten only by
+the script's comments.
 
 | round | what a fresh reviewer found |
 |---|---|
@@ -821,10 +837,18 @@ previous round's fix had created.**
 | 25 | The falsifying cells sit **above the topmost y label with no ink at any level above it** — the y grid is blanked — and no text gave their magnitude, so a reader of figure 2 alone could not tell +30% from +60%. A 1.40 break had been deleted for yielding a margin label and no panel ink; the answer to a reference with no ink is ink. Now a derived sentence naming each cell and its percentage. |
 | 25 | `width = 13, height = 7.2` was **re-typed at five sites**, so widening the page left guard 5 ablating a 13-inch render and guard 3 measuring against the wrong usable width — the dpi fix had closed one axis of this and left two. And `445` px/decade was a hand-measurement tied to neither device, facet count nor x range; it is now measured off the render (445.5 today). |
 | 25 | **A fourth count whose scope did not match its region.** "Left of the dashed rule is phi < 0.008: 004 ran 90 runs there" — the predicate is `phi > 0 & phi < 0.008`, and the region as written holds 120; round 5 logged this exact conflation, fixed the number, and left the wording. 30 of the 90 are also left of the panel's own edge. |
+| 26 | ⚠️⚠️ **GUARD 7 was a LIST OF NAMES, and a list of names cannot guard an open set.** It checked five bindings; every other positional aesthetic on both figures was unobserved. Four bypasses, each exit 0 with all seven guards green: figure 2's **diamonds** — the mark the verdicts are literally read against — scaled 0.92, drawing the falsifying cells at ~+32/+31/+26% under a subtitle naming +43.1/+42.2/+37.0% and five mid cells below their −10% caps beside "SECONDARY 2 … HELD"; the **law line** scaled 1.40, putting the frozen law exactly through the phi = 0.002 points under a title saying it is wrong there by +37% to +43%; and the **dashed rule** moved at its call site while `FITTED_LO` stayed pinned. Fixed by a CLOSED manifest: every layer must be value-bound or declared value-free with a reason, and an unaccounted layer aborts. |
+| 26 | ⚠️⚠️ **GUARD 7's stated independence was false, in the comment that was its only claim of coverage.** It said expectations were "derived from the REGISTERED constants and the CSV, never from the object the layer was built from" — and the expected vector for figure 1 WAS `measured$t_sat` while the layer was `geom_point(data = measured, aes(phi, t_sat))`. Scaling that object by 1.05 shipped every point 5% high, exit 0. Round 25 had warned against moving a hole one derivation downstream; this moved it one derivation UPSTREAM. Fixed by recomputing `truth` from the CSV and `FROZEN` alone and cross-checking it against the pipeline. |
+| 26 | **The new out-of-tolerance sentence was false about the render.** It said the three cells are "above the top of this axis"; `expand_limits` puts the panel at 0.713–1.614 and the cells at 1.37–1.43 are drawn inside it with empty panel above them. They are above the topmost LABELLED BREAK, which is what round 25 said. A sentence telling a reader to look off the axis for marks that are on it is worse than none. |
+| 26 | **The guard count was wrong in both canonical places, a fourth time** — script and registration both said SIX after GUARD 7 shipped, each inside the ⚠️ written because an earlier version said FIVE. Now COUNTED: guard 6 counts the numbered guards in the running script and requires the registration to state that number. |
+| 26 | **This section's own heading said "12 cuts, 12 NO-GO reviews" while the table ran to 25**, in the section declaring itself the canonical record. Guard 6 now checks the heading against the highest round number the table carries. Rounds 13–22 have no rows; that gap is now declared above rather than left to imply ten quiet rounds. |
+| 26 | **Round 25's own fix re-armed its class inside the same sentence:** `N_004_SUB` and `H_004_SUB` were derived while "30 of them" and "{0.001, 0.002, 0.004}" were hand-typed beside them. Fourth consecutive revision of that line to carry an underived count. Both now derived, and the panel edge the off-panel count depends on is read off the built panel. |
+| 26 | `"Model frozen at 12e7b08"` was the one unchecked provenance literal in a file whose doctrine is that provenance is checked; now verified by asserting `sim/` has no commits since. Two comments also gave the same measurement as 8.67/9.24 and 8.71/9.29 px. |
 
-**SIX build-time guards now ship** — layer censoring, contrast pairs, canvas
-edge and text fit, mark-on-cap, layer visibility, and provenance against the
-pre-data commit — **plus canaried assertions on the cap corridor and the y-break
+**SEVEN build-time guards now ship** — layer censoring, contrast pairs, canvas
+edge and text fit, mark-on-cap, layer visibility, provenance against the
+pre-data commit, and the values each layer actually draws against the quantity
+the figure's text names — **plus canaried assertions on the cap corridor and the y-break
 placement. Each aborts and each was seen to fail on a targeted mutation.** ⚠️ An
 earlier version of this sentence said FIVE, and separately three different guard
 counts once shipped across the script and this document: no
