@@ -767,7 +767,7 @@ upward. Recorded as a standing rule.
   0.019-0.027 against a between-ratio spread of 0.0071. The registration's decision to
   decline that prediction was correct and remains correct.
 
-### The figure gate: 27 cuts, 27 NO-GO reviews, and the reviews changed the science
+### The figure gate: 28 cuts, 28 NO-GO reviews, and the reviews changed the science
 
 The independent-critic gate is a project rule. **This is the canonical record;
 `docs/analysis/plot-005.R` points here rather than restating a count** — an
@@ -792,8 +792,13 @@ comments do attest: text naming a glyph that is not rendered; a canary testing a
 re-typed expression rather than the guard; a guard severable at its call site;
 an asserted pixel measurement that was wrong; and false provenance. The sentence
 above — "every round found something the author could not see" — is therefore
-supported for 16 of the 26 rounds by rows here, and for the other ten only by
-the script's comments.
+supported by rows here for every round the table lists, and for the rounds in
+the 13-22 gap only by the script's comments. ⚠️ **THIS SENTENCE USED TO CARRY
+THE COUNT TWICE ("16 of the 26") AND BOTH NUMBERS WENT STALE ONE ROUND LATER**,
+two lines under the heading whose count guard 6 checks — the guard was scoped to
+the heading and could not see the sentence beneath it. Guard 6 now refuses any
+second count in this section, which is why this sentence names none: the
+authoritative numbers are the heading and what the script prints.
 
 | round | what a fresh reviewer found |
 |---|---|
@@ -849,6 +854,13 @@ the script's comments.
 | 27 | **The `MODEL_COMMIT` fix was severable: an unreadable ref PASSED.** `git log bad..HEAD` exits 128 and `system2` returns `character(0)` *with* `attr(,"status") = 128` — not NULL — so length-0 read a nonexistent revision as a clean history. `MODEL_COMMIT <- "deadbee"` exited 0 with both captions reading "Model frozen at deadbee". Round 24's finding verbatim, re-committed in the guard added to close the last unchecked provenance literal, twenty lines from `assert_pre_data_commit`, which already had the right shape and was not reused. |
 | 27 | **The marker half-width was still a hand-constant** — `DIAMOND_SIZE * 3.25` encoding 6.5 px. Rendering the shape at the shipped size and dpi in isolation measures **7.0 px**, so the corridor check ran ~7% below the quantity it is defined against. Two rounds had fixed the px-per-decade factor of that product and left the other asserted; measuring one factor and asserting the other is not a measured product. |
 | 27 | The guard count was a count of HEADER LINES — duplicated or gapped numbering satisfied it. Now required to be 1..N distinct. The review-table check also printed a message reading as coverage of the round COUNT while checking the heading against the highest round; and its row scan swept every numbered table in this document (47 "rows" for a 16-round table), so the agreement it reported was luck. Both scoped and restated. |
+| 28 | ⚠️⚠️ **Round 27's clipping fix relocated the same hole to the X axis.** `assert_nothing_clipped` checked y only, so `coord_cartesian(xlim = c(NA, 0.038))` on figure 1 exited 0 with all seven guards green while the entire `phi = 0.0453` COLUMN — 3 of 15 cells — was clipped away, under a caption naming the 5.00 @ 0.0453 cell in words. The two x-clip routes that WERE stopped were stopped by accident (the gridline counter; the off-panel-count check), neither of which is a clipping guard. |
+| 28 | ⚠️⚠️ **Figure 2's y breaks were hand-typed literals bound to nothing** — and those four numbers ARE the registered tolerances. A scale is not a layer, so guard 7 could not see them. One character (`1.25` → `1.5`) exited 0 with every guard green, drew the tick LABELLED "1.25" at 1.50, and put all three FALSIFYING cells below the line a reader reads as +25%. Figure 1's breaks were re-read off the built panel for exactly this reason; figure 2's — the figure the verdicts are read on — were not. Now derived from `TOL_LOW`/`TOL_MID` **and** read back, labels included. |
+| 28 | **GUARD 7 keyed on the facet VARIABLE, not the rendered strip.** A labeller of `rev(x)` exited 0 with all seven guards green and put strips reading 5.00 / 3.33 / 2.00 over panels holding 2.00 / 3.33 / 5.00's data. Figure 2 carries no legend, so the strip is the only thing in the image saying which panel is which, and the subtitle names cells by ratio. |
+| 28 | **No guard could see whether rendered text is legible.** Guard 2 reads layer ink only; guard 3 measures text geometry and never its contrast. Ghosting the caption and subtitle to `#f4f4f4` exited 0 with all seven guards green. That is worse here than elsewhere because this file twice chose TEXT over ink: the subtitle is the only place the falsifying magnitudes exist, and the caption the only place the four verdicts exist. |
+| 28 | **`MARKER_HALF_LOG10 = 0.030` was asserted and ~3% LOW, in the unsafe direction.** Rendering pch 17 at size 2.2 and measuring its apex gives 11.5 px, and figure 1's y scale measures 370.4 px/decade → 0.0311. Round 27 measured the diamond by rendering it and left the triangle asserted three hundred lines away — "measuring one factor and asserting the other is not a measured product", written about the diamond and not applied here. Both are now probe-measured, and figure 1's y scale is measured off the render. |
+| 28 | The `MODEL_COMMIT` check used a commit log, which **cannot see uncommitted changes under `sim/`** — the state an analysis script actually runs in. Now `git diff <commit> -- sim` plus an untracked-file check. (A hand-rolled tree comparison was tried first and reported a difference that did not exist, because `list.files` skips dotfiles: asking git the question git already answers beats re-implementing it.) |
+| 28 | A count whose scope did not match its sentence, one round after guard 6 was added for that: the heading was checked while a sentence two lines beneath it said "supported for 16 of the 26 rounds", and both numbers went stale immediately. Guard 6 now refuses any second round-count anywhere in the section. |
 
 **SEVEN build-time guards now ship** — layer censoring, contrast pairs, canvas
 edge and text fit, mark-on-cap, layer visibility, provenance against the

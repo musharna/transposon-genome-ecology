@@ -572,6 +572,47 @@ measured <- cells[!is.na(cells$t_sat) &
 # rows by 0.85 (the world in which secondary 1 HELD) made a break collide with a
 # cell mean and the pre-specified analysis exited 1 with no figure, unable to
 # render one of the two outcomes it was registered to distinguish.
+# The shipped page geometry, declared before anything measures against it (the
+# marker probe below renders at this dpi, and it ran before these existed).
+SHIP_DPI <- 200; SHIP_W <- 13; SHIP_H <- 7.2
+DIAMOND_SIZE <- 2.0
+DIAMOND_SHAPE <- 18
+# ⚠️ ONE PROBE FOR EVERY MARKER CONSTANT IN THIS FILE. The first cut measured
+# the diamond by rendering it and left the TRIANGLE's reach a hand-constant three
+# hundred lines away — "measuring one factor and asserting the other is not a
+# measured product", written about the diamond and not applied to the triangle.
+# Returns the ink extent of one glyph in device pixels: half-width, and the reach
+# ABOVE the datum, which for pch 17 is a full radius rather than half.
+marker_extent_px <- function(pch, size, dpi = SHIP_DPI) {
+  f <- tempfile(fileext = ".png")
+  pr <- ggplot(data.frame(x = 1, y = 1), aes(x, y)) +
+    geom_point(shape = pch, size = size, colour = "#000000") +
+    scale_x_continuous(limits = c(0, 2), expand = c(0, 0)) +
+    scale_y_continuous(limits = c(0, 2), expand = c(0, 0)) +
+    theme_void() + theme(plot.margin = margin(0, 0, 0, 0))
+  suppressWarnings(ggsave(f, pr, width = 1, height = 1, dpi = dpi, bg = "white"))
+  img <- png::readPNG(f); unlink(f)
+  g <- apply(img[, , seq_len(min(3, dim(img)[3])), drop = FALSE], c(1, 2), min)
+  ink <- g < 0.97
+  cols <- which(colSums(ink) > 0); rows <- which(rowSums(ink) > 0)
+  if (length(cols) == 0 || length(rows) == 0) {
+    stop(sprintf("the marker probe drew nothing for pch %d at size %.2f — it measured nothing", pch, size))
+  }
+  # ⚠️ (n + 1) / 2, NOT n / 2. Pixel rows are 1..n, so the centre of a 0..2 range
+  # over n rows falls at row (n + 1) / 2 — 100.5 for a 200 px image, not 100.
+  # The half-pixel matters: it is the difference between measuring this glyph's
+  # reach as 11.0 px and 11.5 px, and the constant it replaces was wrong by less
+  # than that.
+  datum_row <- (nrow(g) + 1) / 2
+  list(half_w = (max(cols) - min(cols) + 1) / 2,
+       up = datum_row - min(rows))
+}
+# Seen to discriminate: a triangle must reach FURTHER above its datum than a
+# circle of the same size, which is the whole reason a single constant could not
+# bound all three shapes.
+stopifnot(marker_extent_px(17, 2.2)$up > marker_extent_px(16, 2.2)$up,
+          marker_extent_px(18, 4.0)$half_w > marker_extent_px(18, 2.0)$half_w)
+
 Y_BREAKS <- local({
   cand <- as.vector(outer(c(1, 1.5, 2, 2.5, 3, 4, 5, 6, 8), 10^(2:4)))
   cand <- sort(cand[cand > min(cells$t_sat, na.rm = TRUE) * 0.72 &
@@ -596,7 +637,23 @@ Y_BREAKS <- local({
 # of the 5000 gridline. A per-shape constant would be better still; 0.030 bounds
 # the largest shape this figure draws, and the assertion below is what makes the
 # claim checkable rather than asserted.
-MARKER_HALF_LOG10 <- 0.030
+# ⚠️⚠️ MEASURED, NOT 0.030. The constant was hand-set to "roughly 0.029 decades"
+# for pch 17 at size 2.2; rendering that glyph and measuring its apex above the
+# datum gives a reach that works out to ~0.0310 decades on this panel — so the
+# constant sat ~3% BELOW the quantity it is defined to bound, in the unsafe
+# direction, and `assert_no_break_under_mark` would have passed a break the
+# triangle erases. Round 27 measured the DIAMOND by rendering it and left this
+# one asserted three hundred lines away, which is the same "measure one factor,
+# assert the other" the diamond fix was written about. It also mixed units: the
+# constant is in DECADES and the apex is in PIXELS, and figure 1's px per decade
+# was measured nowhere — only figure 2's x scale was. Both halves are now
+# measured, and the y scale is re-measured off the shipped render below.
+MARKER_UP_PX <- max(vapply(unname(shape_003),
+                           function(pch) marker_extent_px(pch, 2.2)$up, numeric(1)))
+PX_PER_DECADE_Y_NOMINAL <- 370
+MARKER_HALF_LOG10 <- MARKER_UP_PX / PX_PER_DECADE_Y_NOMINAL
+cat(sprintf("  tallest figure-1 marker reaches %.1f px above its datum = %.4f decades at the nominal y scale.\n",
+            MARKER_UP_PX, MARKER_HALF_LOG10))
 # ⚠️ A FUNCTION WITH CANARIES, LIKE EVERY OTHER GUARD. The first cut of this
 # check was a bare `if` whose "seen to fail" line asserted the EXPRESSION, not
 # the guard — so replacing the `if` with `if (FALSE)` left the script green.
@@ -840,11 +897,6 @@ brackets <- rbind(
 # hand-measured constant it was tied to nothing: changing the diamond from
 # size 2.0 to 4.5 left the guard green while the mark overlapped a cap by 4 px
 # on each side — the pairing guard 4 says it enforces.
-# The shipped page geometry, declared before anything measures against it (the
-# marker probe below renders at this dpi, and it ran before these existed).
-SHIP_DPI <- 200; SHIP_W <- 13; SHIP_H <- 7.2
-DIAMOND_SIZE <- 2.0
-DIAMOND_SHAPE <- 18
 # ⚠️ THE OTHER HALF OF THIS CONSTANT WAS NOT DERIVED, AND THE FIX STOPPED THERE.
 # `445` is px per decade of phi on this panel: a hand-measurement of the current
 # 13-inch, three-facet x scale, tied to neither the device, the facet count nor
@@ -866,16 +918,7 @@ PX_PER_DECADE_NOMINAL <- 445
 # antialiased edge pixels are faint, but the question here is whether a mark
 # visibly touches a cap.
 MARKER_HALF_W_PX <- local({
-  f <- tempfile(fileext = ".png")
-  pr <- ggplot(data.frame(x = 1, y = 1), aes(x, y)) +
-    geom_point(shape = DIAMOND_SHAPE, size = DIAMOND_SIZE, colour = "#000000") +
-    theme_void() + theme(plot.margin = margin(0, 0, 0, 0))
-  suppressWarnings(ggsave(f, pr, width = 1, height = 1, dpi = SHIP_DPI, bg = "white"))
-  img <- png::readPNG(f); unlink(f)
-  g <- apply(img[, , seq_len(min(3, dim(img)[3])), drop = FALSE], c(1, 2), min)
-  cols <- which(colSums(g < 0.97) > 0)
-  if (length(cols) == 0) stop("the marker probe drew nothing — the marker width was not measured")
-  (max(cols) - min(cols) + 1) / 2
+  marker_extent_px(DIAMOND_SHAPE, DIAMOND_SIZE)$half_w
 })
 # Seen to move with the thing it measures rather than being a constant wearing a
 # function: the same probe at four times the size must come back wider.
@@ -950,6 +993,13 @@ rel_005$sem_rel <- cells$sem[key] / cells$pred[key]
 # was tried and deleted for yielding a margin label and no panel ink; the answer
 # to a reference with no ink is ink, and the ink that does not re-arm round 5 is
 # TEXT that states the numbers. Derived, so it cannot drift from the panel.
+# The labelled levels on figure 2's y axis, from the registered tolerances alone.
+REL_BREAKS <- sort(c(1 - TOL_LOW, 1 - TOL_MID, 1, 1 + TOL_MID, 1 + TOL_LOW))
+REL_LABELS <- vapply(REL_BREAKS, function(v)
+  if (abs(v - 1) < 1e-12) "1.00 = on the law" else sprintf("%.2f", v), character(1))
+stopifnot(length(REL_BREAKS) == 5L, sum(abs(REL_BREAKS - 1) < 1e-12) == 1L,
+          # it must move when a tolerance moves, or it is a literal in disguise
+          !isTRUE(all.equal(REL_BREAKS, sort(c(0.5, 1 - TOL_MID, 1, 1 + TOL_MID, 1.5)))))
 out_cells <- rel_005[abs(rel_005$rel - 1) > tol_of(rel_005$phi) + 1e-12, ]
 out_cells <- out_cells[order(-abs(out_cells$rel - 1)), ]
 out_subtitle <- if (nrow(out_cells) == 0) {
@@ -962,9 +1012,18 @@ out_subtitle <- if (nrow(out_cells) == 0) {
   # there is no labelled level to read them against. Telling a reader to look off
   # the axis for marks that are on it is worse than saying nothing: they will not
   # connect the three diamonds at the top of each panel with the cells named here.
-  hard_wrap(sprintf("%d cell%s fall%s OUTSIDE the registered tolerance, above the topmost labelled level: %s.",
+  # ⚠️ "ABOVE THE TOPMOST LABELLED LEVEL" WAS A HAND-TYPED CLAIM ABOUT THE RENDER,
+  # third revision of this clause and still underived, in the one sentence whose
+  # whole job is to tell a reader where the headline marks are. It is also false
+  # in general: a mid-phi violation is below 0.90, which is INSIDE the labelled
+  # range — true today only because today's three violations happen to be the
+  # three highest values on the panel. Now derived from `REL_BREAKS`.
+  hard_wrap(sprintf("%d cell%s fall%s OUTSIDE the registered tolerance%s: %s.",
             nrow(out_cells), if (nrow(out_cells) == 1) "" else "s",
             if (nrow(out_cells) == 1) "s" else "",
+            if (all(out_cells$rel > max(REL_BREAKS))) ", all above the topmost labelled level"
+            else if (all(out_cells$rel < min(REL_BREAKS))) ", all below the lowest labelled level"
+            else "",
             paste(sprintf("theta/sigmaS %s at phi = %s, %+.1f%%",
                           out_cells$ratio, out_cells$phi, 100 * (out_cells$rel - 1)),
                   collapse = "; ")), 118)
@@ -1079,8 +1138,17 @@ p_rel <- ggplot() +
   # MARGIN LABEL AND NO PANEL INK, so it referenced nothing. It was also
   # formatted identically to the registered bounds, the exact argument used three
   # lines above to delete "+50%". The magnitudes are in `scope_line`, derived.
-  scale_y_log10(breaks = c(0.75, 0.9, 1, 1.1, 1.25),
-                labels = c("0.75", "0.90", "1.00 = on the law", "1.10", "1.25")) +
+  # ⚠️⚠️ DERIVED FROM THE REGISTERED TOLERANCES, NOT RE-TYPED. These four numbers
+  # ARE the tolerances — and they were hand-typed literals bound to nothing, on
+  # the figure the registration says the verdicts are read on. A scale is not a
+  # layer, so guard 7 could not see them. Demonstrated with one character:
+  # `1.25` -> `1.5` in `breaks` exited 0 with all seven guards green, drew the
+  # tick LABELLED "1.25" at 1.50, and put all three cells that FALSIFY SECONDARY 1
+  # BELOW the line a reader reads as +25%, under a caption printing FALSIFIED.
+  # Round 1 / 24 / 25's finding — the figure containing its falsifying cells
+  # inside their own tolerance — reached through the AXIS. Figure 1's breaks are
+  # re-read off the built panel for exactly this reason; figure 2's were not.
+  scale_y_log10(breaks = REL_BREAKS, labels = REL_LABELS) +
   expand_limits(y = c(0.74, max(rel_005$rel + rel_005$sem_rel) * 1.06)) +
   facet_wrap(~ratio, nrow = 1, labeller = labeller(ratio = function(x) paste("theta/sigmaS =", x))) +
   labs(x = "trap infidelity  phi", y = "observed t_sat / predicted t_sat",
@@ -1335,16 +1403,28 @@ local({
     stop(sprintf("the caption names %s as the frozen model commit and it does not resolve to a commit in this repository",
                  MODEL_COMMIT))
   }
-  moved <- suppressWarnings(system2("git", c("log", "--oneline",
-                                             paste0(MODEL_COMMIT, "..HEAD"), "--", "sim/"),
-                                    stdout = TRUE, stderr = FALSE))
-  st <- attr(moved, "status")
-  if (!is.null(st) && st != 0L) {
-    stop(sprintf("cannot verify that sim/ is frozen at %s — git exited %d", MODEL_COMMIT, st))
+  # ⚠️ THE WORKING TREE, NOT A COMMIT LOG. `git log A..HEAD -- sim/` cannot see
+  # UNCOMMITTED modifications under sim/ — which is exactly the state an analysis
+  # script runs in, and the state every review of this file ran it in. `git diff
+  # <commit> -- sim` compares the WORKING TREE against that commit for tracked
+  # paths, and `ls-files --others` catches files that are there but not tracked.
+  # ⚠️ A hand-rolled version of this hashed `list.files("sim")`, which SKIPS
+  # DOTFILES, so it reported a difference that did not exist (`.gitkeep`). Asking
+  # git the question git already answers beats re-implementing it.
+  suppressWarnings(system2("git", c("diff", "--quiet", MODEL_COMMIT, "--", "sim"),
+                           stdout = TRUE, stderr = FALSE))
+  dirty <- attr(suppressWarnings(system2("git", c("diff", "--quiet", MODEL_COMMIT, "--", "sim"),
+                                         stdout = TRUE, stderr = FALSE)), "status")
+  if (!is.null(dirty) && dirty != 0L) {
+    stop(sprintf("the caption says the model is frozen at %s, but sim/ in the WORKING TREE differs from sim/ at that commit",
+                 MODEL_COMMIT))
   }
-  if (length(moved) > 0) {
-    stop(sprintf("the caption says the model is frozen at %s, but sim/ has %d commit(s) since: %s",
-                 MODEL_COMMIT, length(moved), paste(moved, collapse = "; ")))
+  untracked <- suppressWarnings(system2("git", c("ls-files", "--others",
+                                                 "--exclude-standard", "--", "sim"),
+                                        stdout = TRUE, stderr = FALSE))
+  if (length(untracked) > 0) {
+    stop(sprintf("the caption says the model is frozen at %s, but sim/ carries untracked file(s): %s",
+                 MODEL_COMMIT, paste(untracked, collapse = ", ")))
   }
 })
 prov <- sprintf(
@@ -1501,7 +1581,47 @@ PAIRS <- c(
   list(list(mark = tge_ink[["gridline"]],        bg = BG_WHITE, a = 1, what = "panel gridline")),
   list(list(mark = tge_ink[["rule"]],            bg = BG_WHITE, a = 1, what = "'on the law' rule")),
   list(list(mark = tge_ink[["extrapolation_rule"]], bg = BG_WHITE, a = 1, what = "phi = 0.008 rule"))
+  # ⚠️⚠️ AND THE THEME'S TEXT, which this guard also omitted while claiming to
+  # cover "every rendered mark" — it reads `ggplot_build()$data`, i.e. LAYER ink
+  # only, and guard 3 measures text GEOMETRY and never its contrast. Demonstrated:
+  # setting the caption and subtitle to #f4f4f4 exited 0 with all seven guards
+  # green and shipped a ghost subtitle and a ghost caption. That is worse here
+  # than it would be anywhere else, because this file twice chose TEXT over ink:
+  # the three falsifying cells sit above the topmost labelled break with the y
+  # grid blanked, so the subtitle is the ONLY place their magnitudes exist, and
+  # the caption is the ONLY place the four verdicts exist. Text gets the 4.5:1
+  # WCAG floor for body text, not the 3:1 non-text floor.
+  # (the per-FIGURE text check is `assert_text_contrast` below: reading the theme
+  # file here would repeat this file's oldest mistake, since an inline `theme()`
+  # on one figure overrides it and the reader sees the override.)
 )
+
+TEXT_ELEMENTS <- c("plot.title", "plot.subtitle", "plot.caption",
+                   "axis.text", "axis.title", "strip.text")
+assert_text_contrast <- function(p, nm, floor = 4.5) {
+  th <- ggplot2::complete_theme(p$theme)
+  n <- 0L
+  for (el in TEXT_ELEMENTS) {
+    e <- ggplot2::calc_element(el, th)
+    col <- if (is.null(e)) NULL else e$colour
+    if (is.null(col) || is.na(col)) next
+    n <- n + 1L
+    cr <- contrast_ratio(col, BG_WHITE)
+    if (cr < floor) {
+      stop(sprintf("%s: %s renders at %s = %.2f:1 against the page, below the %.1f:1 floor for text",
+                   nm, el, col, cr, floor))
+    }
+  }
+  if (n == 0L) stop(sprintf("%s: resolved no text colours — this guard inspected nothing", nm))
+  invisible(TRUE)
+}
+# Seen to fail on a ghosted caption and to pass on the shipped theme. It reads
+# the FIGURE's resolved theme, so an inline override is visible to it.
+stopifnot(inherits(try(assert_text_contrast(
+  ggplot(data.frame(x = 1, y = 1), aes(x, y)) + geom_point() + theme_tge() +
+    theme(plot.caption = element_text(colour = "#f4f4f4")), "canary"), silent = TRUE), "try-error"))
+stopifnot(isTRUE(assert_text_contrast(
+  ggplot(data.frame(x = 1, y = 1), aes(x, y)) + geom_point() + theme_tge(), "canary-ok")))
 
 # ⚠️ THE MARK-OVER-REFERENCE-RULE PAIRINGS ARE REPORTED, NOT ENFORCED, AND HERE
 # IS THE DISTINCTION — because "exempt the inconvenient case" is how a guard
@@ -1517,12 +1637,16 @@ for (h in unname(palette_003)) {
   cat(sprintf("  note: series %s over the on-the-law rule %.2f:1, over the phi=0.008 rule %.2f:1 (reference rules, not thresholds; see above).\n",
               h, contrast_ratio(h, tge_ink[["rule"]]), contrast_ratio(h, tge_ink[["extrapolation_rule"]])))
 }
+# ⚠️ A PAIR MAY CARRY ITS OWN FLOOR. Text is held to WCAG's 4.5:1 for body text,
+# not the 3:1 non-text floor; defaulting silently to the lower one would have let
+# a mid-grey caption pass as if it were a gridline.
 assert_contrast_pairs <- function(pairs) {
   for (q in pairs) {
+    fl <- if (is.null(q$floor)) WCAG_NONTEXT_FLOOR else q$floor
     cr <- contrast_ratio(q$mark, q$bg, alpha = q$a, bg = q$bg)
-    if (cr < WCAG_NONTEXT_FLOOR) {
-      stop(sprintf("%s: %s on %s renders at %.2f:1, below the %d:1 floor",
-                   q$what, q$mark, q$bg, cr, WCAG_NONTEXT_FLOOR))
+    if (cr < fl) {
+      stop(sprintf("%s: %s on %s renders at %.2f:1, below the %.1f:1 floor",
+                   q$what, q$mark, q$bg, cr, fl))
     }
   }
   invisible(TRUE)
@@ -2141,15 +2265,25 @@ assert_nothing_clipped <- function(p, nm) {
   n <- 0L
   for (li in seq_along(bd$data)) {
     b <- bd$data[[li]]
-    for (cl in intersect(c("y", "ymin", "ymax", "yend"), names(b))) {
+    # ⚠️⚠️ BOTH AXES. The first cut checked y only, so round 27's fix for "a Coord
+    # is not a layer" relocated the same hole to the x axis: adding
+    # `coord_cartesian(xlim = c(NA, 0.038))` to figure 1 exited 0 with all seven
+    # guards green while the entire phi = 0.0453 COLUMN — 3 of 15 cells — was
+    # clipped away, under a caption naming the 5.00 @ 0.0453 cell in words. The
+    # two x-clip routes that were stopped were stopped by ACCIDENT (the gridline
+    # counter, and the off-panel-count check), neither of which is a clipping
+    # guard; the one axis nobody guarded is the one that walked through.
+    for (cl in intersect(c("y", "ymin", "ymax", "yend",
+                           "x", "xmin", "xmax", "xend"), names(b))) {
+      ax <- if (substr(cl, 1, 1) == "x") "x" else "y"
       for (pn in unique(b$PANEL)) {
-        rng <- pp[[as.integer(pn)]]$y.range
+        rng <- if (ax == "x") pp[[as.integer(pn)]]$x.range else pp[[as.integer(pn)]]$y.range
         v <- b[[cl]][b$PANEL == pn]; v <- v[is.finite(v)]
         if (length(v) == 0L) next
         n <- n + length(v)
         if (min(v) < rng[1] - 1e-9 || max(v) > rng[2] + 1e-9) {
-          stop(sprintf("%s: the %s layer draws %s outside the panel's y range [%.4f, %.4f] — it will be clipped and the figure's text describes a mark the reader cannot see",
-                       nm, have[li], cl, rng[1], rng[2]))
+          stop(sprintf("%s: the %s layer draws %s outside the panel's %s range [%.4f, %.4f] — it will be clipped and the figure's text describes a mark the reader cannot see",
+                       nm, have[li], cl, ax, rng[1], rng[2]))
         }
       }
     }
@@ -2167,6 +2301,86 @@ local({
 })
 assert_nothing_clipped(fig_main, "fig-005-divergence")
 assert_nothing_clipped(fig_rel, "fig-005-tolerance")
+assert_text_contrast(fig_main, "fig-005-divergence")
+assert_text_contrast(fig_rel, "fig-005-tolerance")
+
+# ⚠️⚠️ AND THE STRIP A READER ATTRIBUTES THE PANEL BY. Guard 7 recovers the ratio
+# from `bd$layout$layout$ratio` — the facet VARIABLE — which is one derivation
+# upstream of the text printed on the strip. Demonstrated: a labeller of
+# `paste("theta/sigmaS =", rev(x))` exited 0 with all seven guards green and put
+# strips reading 5.00 / 3.33 / 2.00 over panels holding 2.00 / 3.33 / 5.00's data.
+# Figure 2 carries no legend, so the strip is the ONLY thing in the image saying
+# which panel is which, and the subtitle names cells by ratio. Same class as
+# "the expectation WAS the plotted object", one derivation in the other direction.
+assert_strip_labels <- function(p, nm, fmt = function(r) paste("theta/sigmaS =", r)) {
+  gt <- ggplot2::ggplotGrob(p)
+  ii <- grep("^strip-t", gt$layout$name)
+  if (length(ii) == 0L) stop(sprintf("%s: found no top strips — this guard inspected nothing", nm))
+  # left-to-right in the rendered page
+  ii <- ii[order(gt$layout$l[ii])]
+  # ⚠️ RECURSE OVER ALL CHILDREN. Walking only the FIRST child returned NA on every
+  # strip — the label grob is not first — and a guard that cannot read its subject
+  # is not a guard, it is an abort waiting to be mistaken for coverage.
+  find_label <- function(g) {
+    lab <- attr(g, "label")
+    if (!is.null(g$label) && is.character(g$label) && nzchar(g$label[1])) return(g$label[1])
+    if (!is.null(g$children)) {
+      for (ch in g$children) { r <- find_label(ch); if (!is.na(r)) return(r) }
+    }
+    if (!is.null(g$grobs)) {
+      for (ch in g$grobs) { r <- find_label(ch); if (!is.na(r)) return(r) }
+    }
+    NA_character_
+  }
+  txt <- vapply(ii, function(i) find_label(gt$grobs[[i]]), character(1))
+  if (any(is.na(txt))) stop(sprintf("%s: could not read a strip's text — inspected nothing", nm))
+  lay <- ggplot2::ggplot_build(p)$layout$layout
+  want <- fmt(as.character(lay$ratio[order(lay$PANEL)]))
+  if (!identical(as.character(txt), as.character(want))) {
+    stop(sprintf("%s: the strips read %s left to right, over panels holding %s",
+                 nm, paste(txt, collapse = " | "), paste(want, collapse = " | ")))
+  }
+  invisible(TRUE)
+}
+local({
+  .d <- data.frame(x = 1:6, y = 1:6, ratio = rep(c("2.00", "3.33", "5.00"), each = 2),
+                   stringsAsFactors = FALSE)
+  .p <- ggplot(.d, aes(x, y)) + geom_point() +
+    facet_wrap(~ratio, nrow = 1, labeller = labeller(ratio = function(z) paste("theta/sigmaS =", z)))
+  stopifnot(isTRUE(assert_strip_labels(.p, "canary-ok")))
+  .bad <- ggplot(.d, aes(x, y)) + geom_point() +
+    facet_wrap(~ratio, nrow = 1, labeller = labeller(ratio = function(z) paste("theta/sigmaS =", rev(z))))
+  stopifnot(inherits(try(assert_strip_labels(.bad, "canary"), silent = TRUE), "try-error"))
+})
+assert_strip_labels(fig_main, "fig-005-divergence")
+assert_strip_labels(fig_rel, "fig-005-tolerance")
+
+# ⚠️⚠️ AND FIGURE 2's Y BREAKS ARE READ BACK OFF THE BUILT PANEL. Deriving
+# `REL_BREAKS` from the tolerances was not enough: the SCALE CALL SITE is still
+# severable, and `scale_y_log10(breaks = replace(REL_BREAKS, 5, 1.5))` exited 0
+# with every guard green — drawing the tick LABELLED "1.25" at 1.50 and putting
+# all three cells that FALSIFY SECONDARY 1 below the line a reader reads as +25%.
+# Figure 1's breaks were re-read off the built panel for exactly this reason and
+# figure 2's, the figure the verdicts are read on, were not. The LABELS are
+# checked too, because a break at the right value under the wrong label is the
+# same lie told the other way round.
+local({
+  pp <- ggplot2::ggplot_build(fig_rel)$layout$panel_params[[1]]$y
+  drawn <- 10^pp$breaks[!is.na(pp$breaks)]
+  labs_ <- as.character(pp$get_labels())
+  labs_ <- labs_[!is.na(labs_)]
+  if (length(drawn) == 0L) stop("figure 2's built panel reports no y breaks — this guard inspected nothing")
+  if (!isTRUE(all.equal(sort(drawn), sort(REL_BREAKS)))) {
+    stop(sprintf("figure 2 draws y breaks at %s; the registered tolerances give %s",
+                 paste(sprintf("%.4f", sort(drawn)), collapse = ", "),
+                 paste(sprintf("%.4f", sort(REL_BREAKS)), collapse = ", ")))
+  }
+  if (!identical(labs_[order(drawn)], REL_LABELS[order(REL_BREAKS)])) {
+    stop(sprintf("figure 2's y labels read %s against breaks at %s",
+                 paste(labs_[order(drawn)], collapse = " | "),
+                 paste(sprintf("%.4f", sort(drawn)), collapse = ", ")))
+  }
+})
 
 # GUARD 6 — THE PROVENANCE CLAIM IN THE HEADER IS CHECKED, NOT ASSERTED.
 #
@@ -2210,7 +2424,8 @@ ADDED_POST_DATA <- c("curvature_per_ratio", "n_scored_ratio", "n_scored_cells",
                      "rendered_colours", "assert_rendered_contrast",
                      "wrap_lines", "injection_is_live", "assert_pre_data_commit",
                      "assert_layer_values", "assert_layer_coverage", "tr",
-                     "assert_nothing_clipped", "ex")
+                     "assert_nothing_clipped", "ex", "marker_extent_px",
+                     "assert_text_contrast", "assert_strip_labels")
 UNCHANGED_POST_DATA <- c("predicted", "all_saturated", "within_band", "curvature_up",
                          "evaluable", "raw_band", "cell_of",
                          # ⚠️ `inject` and `assert_nothing_censored` were in
@@ -2519,6 +2734,18 @@ if (length(pre_txt) < 10) {
   # round %d, and the heading says the same", which reads as coverage of the round
   # COUNT; what is checked is the heading against the HIGHEST round number, and the
   # table has fewer rows than that because rounds 13-22 are a declared gap.
+  # ⚠️ AND NO SECOND COUNT ANYWHERE ELSE IN THE SECTION. The heading was checked
+  # and a sentence two lines beneath it said "supported for 16 of the 26 rounds";
+  # both numbers went stale one round later, in the section that declares itself
+  # the canonical record, under a guard added because the count had been wrong in
+  # two places four times. A guard scoped to one sentence cannot keep a document
+  # honest, so the rule is now that the section states its count ONCE.
+  body <- seg[!grepl("^### The figure gate:", seg) & !grepl("^\\| ", seg)]
+  stray <- grep("[0-9]+ (of the )?[0-9]+ rounds|[0-9]+ cuts|[0-9]+ NO-GO", body, value = TRUE)
+  if (length(stray) > 0) {
+    stop(sprintf("the figure-gate section states a round count outside its heading, which will go stale: %s",
+                 paste(trimws(head(stray, 2)), collapse = " / ")))
+  }
   cat(sprintf("  GUARD 6: the heading matches the highest round in the table (%d); %d distinct rounds have rows across %d entries, the rest being the declared 13-22 gap.\n",
               max(rounds), length(unique(rounds)), length(rounds)))
 }
@@ -2631,6 +2858,42 @@ if (abs(PX_PER_DECADE - PX_PER_DECADE_NOMINAL) / PX_PER_DECADE > 0.02) {
 }
 # And the corridor is re-checked at the MEASURED scale, not only the estimate.
 assert_cap_corridor(CAP_GAP, MARKER_HALF_W_PX / PX_PER_DECADE)
+
+# ⚠️ AND FIGURE 1's Y SCALE, FOR THE SAME REASON THE X SCALE OF FIGURE 2 IS
+# MEASURED. `MARKER_HALF_LOG10` converts a pixel reach into decades, and the
+# conversion factor was a nominal number that nothing checked — so the guard
+# comparing break positions to cell means could have been running in the wrong
+# units on a page of a different height. Horizontal gridlines are the only ink at
+# the grid grey on figure 1.
+PX_PER_DECADE_Y <- local({
+  img <- png::readPNG(TMP_MAIN)
+  if (length(dim(img)) == 3) img <- apply(img[, , seq_len(min(3, dim(img)[3])), drop = FALSE], c(1, 2), min)
+  target <- mean(grDevices::col2rgb(tge_ink_gridline)[, 1] / 255)
+  hits <- rowSums(abs(img - target) < 0.06)
+  rws <- which(hits >= max(hits) * 0.5)
+  if (length(rws) == 0) stop("found no horizontal gridline on figure 1 — its y scale was not measured")
+  centres <- as.numeric(tapply(rws, cumsum(c(1, diff(rws) > 3)), mean))
+  if (length(centres) != length(Y_BREAKS)) {
+    stop(sprintf("found %d horizontal gridlines on figure 1, expected %d — refusing to derive a scale from an unrecognised panel",
+                 length(centres), length(Y_BREAKS)))
+  }
+  br <- sort(log10(Y_BREAKS), decreasing = TRUE)   # row 1 is the TOP of the image
+  (max(centres) - min(centres)) / (max(br) - min(br))
+})
+cat(sprintf("  measured %.1f px per decade of t_sat on the divergence figure (nominal %d).\n",
+            PX_PER_DECADE_Y, PX_PER_DECADE_Y_NOMINAL))
+if (abs(PX_PER_DECADE_Y - PX_PER_DECADE_Y_NOMINAL) / PX_PER_DECADE_Y > 0.02) {
+  stop(sprintf("the marker reach was converted at %d px per decade and figure 1 renders at %.1f — the break check ran in the wrong units",
+               PX_PER_DECADE_Y_NOMINAL, PX_PER_DECADE_Y))
+}
+# And the break check is re-run at the MEASURED scale, against the drawn marks.
+local({
+  bp <- ggplot2::ggplot_build(fig_main)
+  br <- bp$layout$panel_params[[1]]$y$breaks; br <- 10^br[!is.na(br)]
+  pi_ <- which(vapply(fig_main$layers, function(l) class(l$geom)[1], character(1)) == "GeomPoint")
+  drawn <- 10^bp$data[[pi_]]$y
+  assert_no_break_under_mark(br, drawn[is.finite(drawn)], MARKER_UP_PX / PX_PER_DECADE_Y)
+})
 
 assert_no_edge_ink(TMP_MAIN)
 assert_no_edge_ink(TMP_REL)
