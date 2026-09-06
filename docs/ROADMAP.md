@@ -370,6 +370,43 @@ live registry and the null stated as "checked HERE", naming where.
       previous caption for the same lie; the wording was changed and the
       rendering was not. Use `shape_003_open`.
 
+- [x] **THE 005 FIGURE GATE IS CLOSED AT 29 ROUNDS — and the reason to stop is
+      evidence, not fatigue.** Rounds 23-29 found **zero** defects in the shipped
+      figures or verdicts: every round independently recomputed the science from
+      the CSV and reproduced it exactly, and every finding was a guard whose
+      SCOPE excluded something it was trusted for. That is a real class of defect
+      and the guards are much stronger for it — seven numbered guards now, plus
+      the cell set, both x axes, the legend, the strips, text contrast, clipping
+      on both axes, and every marker constant measured by rendering it. But the
+      frontier does not close: any finite guard set has an edge, and a reviewer
+      editing the source can always find it. The stopping rule is that the
+      ARTIFACT is correct and independently reproducible, not that no further
+      guard could be written.
+
+      ⚠️⚠️ **THE LESSON WORTH CARRYING: A FIX RELOCATES THE HOLE UNLESS IT CLOSES
+      A CLASS.** Seven times in this arc a fix moved the defect instead of
+      removing it — asserted `caps` when the reader sees the built segment;
+      measured px-per-decade and left px-per-size-unit asserted; closed the set
+      of LAYERS and left the set of AESTHETICS open, then the set of CELLS;
+      clipped y and left x; bound one figure's y axis and left both x axes;
+      resolved parent theme elements and never the children; re-derived a guard's
+      VALUE column while its KEY SET still came from the plotted frame. What
+      works is a CLOSED manifest that fails on anything unaccounted, not a list
+      of what you remembered.
+
+      ⚠️ **AND AN EXPECTATION MUST BE INDEPENDENT OF WHAT IT CHECKS.** Twice a
+      guard's expected value was computed from the very object under test, so
+      both sides moved together and the check passed: `xend` derived from
+      `CAP_W`, and figure 1's expected y being `measured$t_sat` itself. The tell
+      is that the guard cannot fail when you edit the thing it names.
+
+      ⚠️ **The last defect of the arc I found by reading the script's own
+      stderr**, not from a review: `assert_text_fits` measured on a device that
+      could not encode the em-dashes in its own titles, printing `mbcsToSbcs: dot
+      substituted` on every run for 29 rounds — under-measuring the text, in the
+      direction that lets a clipped title pass — while every reviewer watched the
+      warning scroll past.
+
 - [ ] **RE-RENDER `fig-001` … `fig-004` UNDER THE CURRENT HOUSE STYLE.** 005's
       review changed `theme.R` materially — the gridline went from `grey90`
       (measured 1.26:1, under this project's own 3:1 floor) to `#8c95a0` at
