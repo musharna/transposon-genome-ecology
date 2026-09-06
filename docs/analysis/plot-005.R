@@ -462,7 +462,14 @@ is_marginal <- function(rel, se, tol) {
   ((rel - se) < (1 - tol) || (rel + se) > (1 + tol)) && rel >= 1 - tol && rel <= 1 + tol
 }
 
-tol_of <- function(pp) if (pp %in% LOW) TOL_LOW else TOL_MID
+# ⚠️ VECTORISED. As `if (pp %in% LOW) ...` this was scalar-only, which under R >= 4.2
+# is a hard error on a vector rather than a silent wrong answer — loud, but it still
+# meant a helper named `tol_of(phi)` could not be applied to the phi column it is
+# named for, and the first caller that tried died.
+tol_of <- function(pp) ifelse(pp %in% LOW, TOL_LOW, TOL_MID)
+stopifnot(identical(tol_of(LOW[1]), TOL_LOW), identical(tol_of(MID[1]), TOL_MID),
+          identical(tol_of(GRID), ifelse(GRID %in% LOW, TOL_LOW, TOL_MID)),
+          length(tol_of(GRID)) == length(GRID))
 marginal <- do.call(rbind, lapply(seq_len(nrow(scored)), function(i) {
   cc <- scored[i, ]; if (is.na(cc$t_sat)) return(NULL)
   tol <- tol_of(cc$phi); rel <- cc$t_sat / cc$pred; se <- cc$sem / cc$pred
@@ -744,9 +751,23 @@ p_main <- ggplot() +
                          "Such a cell is drawn as an upward arrow at its horizon, not as a point." else
                          "No cell is censored in this run.",
                        "Lines are 004's law with its constants FROZEN — not a fit to these data.",
-                       sprintf("Left of the dashed rule is phi < 0.008: 004 ran %d runs there, all still CONTROLLED at %d, so it",
-                               N_004_SUB, H_004_SUB),
-                       "measured no t_sat and the law is EXTRAPOLATED below it — the whole premise of 005.",
+                       # ⚠️ "0 < phi < 0.008", NOT "phi < 0.008". The predicate below is
+                       # `phi > 0 & phi < 0.008`; 004's grid includes phi = 0, which is the
+                       # genuine equilibrium and holds 30 more runs, so the region AS
+                       # WRITTEN held 120 runs and the sentence said 90. Round 5 logged
+                       # exactly this conflation, corrected the NUMBER, and left the
+                       # REGION wording — the fourth count in this file whose scope did
+                       # not match the region its sentence pointed at. And a third of
+                       # those runs sit at phi = 0.001, left of this panel's own left
+                       # edge, so "there" is said in full rather than left to the eye.
+                       # ⚠️ SPLIT ACROSS TWO LINES, NOT SHORTENED. Stating the region in
+                       # full pushed this past the usable width and guard 3 aborted; the
+                       # answer to a sentence that does not fit is another line, not
+                       # dropping the scope that made it correct.
+                       sprintf("Left of the dashed rule is 0 < phi < 0.008, where 004 ran %d runs at phi in {0.001, 0.002, 0.004}",
+                               N_004_SUB),
+                       sprintf("— 30 of them left of this panel — all still CONTROLLED at %d. So 004 measured no t_sat there and its", H_004_SUB),
+                       "law is EXTRAPOLATED below that rule, which is the whole premise of 005.",
                        "")) +   # scope_line is in the caption; printing it here too duplicated it verbatim
   theme_tge() +
   theme_tge_facet_spacing()
@@ -803,7 +824,16 @@ brackets <- rbind(
 # size 2.0 to 4.5 left the guard green while the mark overlapped a cap by 4 px
 # on each side — the pairing guard 4 says it enforces.
 DIAMOND_SIZE <- 2.0
-MARKER_HALF_W_LOG10 <- (DIAMOND_SIZE * 3.25) / 445
+# ⚠️ THE OTHER HALF OF THIS CONSTANT WAS NOT DERIVED, AND THE FIX STOPPED THERE.
+# `445` is px per decade of phi on this panel: a hand-measurement of the current
+# 13-inch, three-facet x scale, tied to neither the device, the facet count nor
+# the x range — so changing any of them left `assert_cap_corridor` comparing in
+# the wrong units while still passing. It is now MEASURED OFF THE RENDER below
+# and this value is only the pre-render estimate, checked against the
+# measurement. (Measured today: 445.7 / 445.0 / 445.7 across the three panels,
+# so the estimate is right — which is the point: it is checked, not trusted.)
+PX_PER_DECADE_NOMINAL <- 445
+MARKER_HALF_W_LOG10 <- (DIAMOND_SIZE * 3.25) / PX_PER_DECADE_NOMINAL
 
 stopifnot(
   all(abs(brackets$hi[brackets$phi %in% LOW] - (1 + TOL_LOW)) < 1e-12),
@@ -859,6 +889,35 @@ local({
 
 key <- match(paste(rel_005$ratio, rel_005$phi), paste(cells$ratio, cells$phi))
 rel_005$sem_rel <- cells$sem[key] / cells$pred[key]
+
+# ⚠️⚠️ THE FALSIFYING CELLS ARE OFF THE TOP OF THEIR OWN AXIS AND UNREADABLE.
+# The three cells that FALSIFY SECONDARY 1 sit ABOVE the topmost y label (1.25);
+# figure 2 blanks its y grid (round 5: gridlines at the tolerance levels read as
+# asserting a band at every phi), so there is no ink at any level above 1.25
+# anywhere on the panel, and neither title, subtitle nor caption gave their
+# magnitude — the SECONDARY 3 figures are geometric means of two cells and the
+# caption gives magnitudes only for phi = 0.004. A reader of this figure alone
+# could not tell whether the headline finding is +30% or +60%. A break at 1.40
+# was tried and deleted for yielding a margin label and no panel ink; the answer
+# to a reference with no ink is ink, and the ink that does not re-arm round 5 is
+# TEXT that states the numbers. Derived, so it cannot drift from the panel.
+out_cells <- rel_005[abs(rel_005$rel - 1) > tol_of(rel_005$phi) + 1e-12, ]
+out_cells <- out_cells[order(-abs(out_cells$rel - 1)), ]
+out_subtitle <- if (nrow(out_cells) == 0) {
+  "Every cell is inside its registered tolerance."
+} else {
+  hard_wrap(sprintf("%d cell%s fall%s OUTSIDE the registered tolerance, above the top of this axis: %s.",
+            nrow(out_cells), if (nrow(out_cells) == 1) "" else "s",
+            if (nrow(out_cells) == 1) "s" else "",
+            paste(sprintf("theta/sigmaS %s at phi = %s, %+.1f%%",
+                          out_cells$ratio, out_cells$phi, 100 * (out_cells$rel - 1)),
+                  collapse = "; ")), 118)
+}
+# Seen to be able to say both things: with the tolerance widened past every cell
+# the sentence must become the "every cell is inside" one, so it is reporting the
+# data and not printing a fixed string.
+stopifnot(grepl("OUTSIDE", out_subtitle) ==
+            any(abs(rel_005$rel - 1) > tol_of(rel_005$phi) + 1e-12))
 # The cell(s) whose +-1 SEM interval crosses a registered bound although the cell
 # mean — the registered statistic — is inside.
 #
@@ -999,6 +1058,7 @@ p_rel <- ggplot() +
          sprintf("Diamonds are 005's cells, +-1 SEM over up to %d seeds. Dashed rule: phi = 0.008, where 004's fitted range begins.", SEEDS_PER_CELL),
          "SECONDARY 3 compares the GEOMETRIC MEAN of the two leftmost diamonds with the phi = 0.0226 diamond; it must",
          paste0("exceed that and 'on the law' (mean vs baseline, ", sec3_txt, ")."),
+         out_subtitle,
          marg_subtitle)) +
   theme_tge() +
   theme_tge_facets()   # from theme.R; not defined inline
@@ -1281,7 +1341,18 @@ local({
   br <- ggplot2::ggplot_build(fig_main)$layout$panel_params[[1]]$y$breaks
   br <- 10^br[!is.na(br)]
   if (length(br) == 0) stop("guard: the built panel reports no y breaks — it inspected nothing")
-  assert_no_break_under_mark(br, measured$t_sat, MARKER_HALF_LOG10)
+  # ⚠️ AND THE MARKS ARE THE ONES THE LAYER DRAWS, NOT `measured$t_sat`. The
+  # earlier fix hardened the BREAKS side against its call site and left the DATA
+  # side free: with `aes(phi, pred)` the ratio-2.00 mark landed 0.0027 decades
+  # from the 2000 gridline — the collision this guard exists to prevent — and the
+  # guard could not see it, because it was handed the observations the layer had
+  # stopped drawing.
+  pi_ <- which(vapply(fig_main$layers, function(l) class(l$geom)[1], character(1)) == "GeomPoint")
+  if (length(pi_) != 1L) stop("guard: expected exactly one point layer on figure 1 — inspected nothing")
+  drawn <- ggplot2::ggplot_build(fig_main)$data[[pi_]]$y
+  drawn <- 10^drawn[is.finite(drawn)]
+  if (length(drawn) == 0L) stop("guard: the built point layer draws nothing — inspected nothing")
+  assert_no_break_under_mark(br, drawn, MARKER_HALF_LOG10)
 })
 fig_rel  <- p_rel  + labs(caption = paste0(cap_rel, cens_rel)) + SAFE_MARGIN
 
@@ -1417,8 +1488,15 @@ TMP_MAIN <- tempfile(fileext = ".png"); TMP_REL <- tempfile(fileext = ".png")
 # in device pixels, which scale with dpi — a guard reading a resolution the
 # figure is not drawn at cannot report on the figure. Both now read this.
 SHIP_DPI <- 200
-ggsave(TMP_MAIN, fig_main, width = 13, height = 7.2, dpi = SHIP_DPI)
-ggsave(TMP_REL, fig_rel, width = 13, height = 7.2, dpi = SHIP_DPI)
+# ⚠️ AND THE PAGE SIZE, FOR THE SAME REASON THE DPI IS ONE LITERAL. `width = 13,
+# height = 7.2` was re-typed at five sites — both `ggsave` calls, both
+# `assert_every_layer_visible` calls, and the width handed to `assert_text_fits`
+# — so widening the shipped page left guard 5 ablating a 13-inch render against
+# an unchanged pixel threshold and guard 3 measuring text against the wrong
+# usable width. The dpi fix closed one axis of this and left the other two.
+SHIP_W <- 13; SHIP_H <- 7.2
+ggsave(TMP_MAIN, fig_main, width = SHIP_W, height = SHIP_H, dpi = SHIP_DPI)
+ggsave(TMP_REL, fig_rel, width = SHIP_W, height = SHIP_H, dpi = SHIP_DPI)
 
 # GUARD 4 — NO VERDICT MARK IS DRAWN ON A TOLERANCE CAP.
 # ⚠️ Read from the BUILT plot, so it tests the geometry that ships rather than
@@ -1660,8 +1738,88 @@ stopifnot(inherits(try(assert_every_layer_visible(
   fig_main + geom_point(data = measured, aes(phi, t_sat), alpha = 0),
   "canary-sweep", w = 6, h = 4), silent = TRUE), "try-error"))
 
-assert_every_layer_visible(fig_main, "fig-005-divergence", w = 13, h = 7.2)
-assert_every_layer_visible(fig_rel, "fig-005-tolerance", w = 13, h = 7.2)
+assert_every_layer_visible(fig_main, "fig-005-divergence", w = SHIP_W, h = SHIP_H)
+assert_every_layer_visible(fig_rel, "fig-005-tolerance", w = SHIP_W, h = SHIP_H)
+
+# GUARD 7 — THE VALUES A LAYER ACTUALLY DRAWS EQUAL THE QUANTITY THE TEXT NAMES.
+#
+# ⚠️⚠️ THIS IS ONE MISSING CHECK, NOT THREE FIXES. Round 25 named the common root
+# of three separate demonstrations: every geometry guard in this file observes an
+# R object UPSTREAM of the `aes()` (`caps`, `measured$t_sat`, `cells$sem`) or a
+# layer-level presence predicate. Guard 1 reads built data but only asks whether
+# it is NA. So the `aes()` itself — the one place where a drawn value can part
+# company with the value the caption names — was observed by nothing, and each of
+# these exited 0 with all six guards and every canary green:
+#
+#   * `aes(..., y = 1 + (y - 1) * 2)` on the cap layer drew the tolerance ticks at
+#     +-50%/+-20% under a title naming +-25%/+-10%, putting all three cells that
+#     FALSIFY SECONDARY 1 inside their own drawn bracket, beside a caption reading
+#     FALSIFIED. Round 24 "fixed" this by asserting `caps`; the reader does not
+#     see `caps` either. The same sentence, one derivation later.
+#   * `aes(phi, pred)` instead of `aes(phi, t_sat)` on figure 1 put all fifteen
+#     points exactly on the frozen law, under a headline saying the law is wrong
+#     by +37% to +43%.
+#   * `sem_rel <- 3 * ...` drew six intervals crossing their caps under a subtitle
+#     reading "+-1 SEM" and a caption naming exactly one such cell.
+#
+# The fix is to read the BUILT layer back. `ggplot_build()` returns positions in
+# TRANSFORMED space, so on these log-scaled panels the comparison is against
+# log10 of the expected values — that is why `trans` is a parameter and not an
+# assumption. Expected vectors are derived from the REGISTERED constants and the
+# CSV, never from the object the layer was built from.
+assert_layer_values <- function(p, cls, col, expected, nm, trans = log10, tol = 1e-8) {
+  have <- vapply(p$layers, function(l) class(l$geom)[1], character(1))
+  idx <- which(have == cls)
+  if (length(idx) != 1L) {
+    stop(sprintf("%s/%s: expected exactly one %s layer and found %d — this guard inspected nothing and must not report a pass",
+                 nm, col, cls, length(idx)))
+  }
+  b <- ggplot2::ggplot_build(p)$data[[idx]]
+  if (!col %in% names(b)) {
+    stop(sprintf("%s/%s: the built %s layer has no `%s` column — inspected nothing",
+                 nm, col, cls, col))
+  }
+  got <- sort(b[[col]][is.finite(b[[col]])])
+  want <- sort(trans(expected[is.finite(expected)]))
+  if (length(got) != length(want)) {
+    stop(sprintf("%s/%s: the layer draws %d finite values and the named quantity has %d",
+                 nm, col, length(got), length(want)))
+  }
+  if (length(got) == 0L) stop(sprintf("%s/%s: nothing to compare — inspected nothing", nm, col))
+  d <- max(abs(got - want))
+  if (d > tol) {
+    i <- which.max(abs(got - want))
+    stop(sprintf("%s/%s: the layer draws %.6f where the named quantity is %.6f (max divergence %.3g over %d values)",
+                 nm, col, got[i], want[i], d, length(got)))
+  }
+  invisible(TRUE)
+}
+# Seen to fail on a perturbed expectation, on a wrong column, on a class that is
+# not there, and to pass on the truth. The failing controls call the GUARD, not a
+# re-typed copy of its predicate — the mistake this file has shipped four times.
+.g7 <- ggplot(data.frame(x = 1:3, y = c(10, 100, 1000)), aes(x, y)) +
+  geom_point() + scale_y_log10()
+stopifnot(isTRUE(assert_layer_values(.g7, "GeomPoint", "y", c(10, 100, 1000), "canary-ok")))
+stopifnot(inherits(try(assert_layer_values(.g7, "GeomPoint", "y", c(10, 100, 1001), "canary"), silent = TRUE), "try-error"))
+stopifnot(inherits(try(assert_layer_values(.g7, "GeomPoint", "nope", c(10, 100, 1000), "canary"), silent = TRUE), "try-error"))
+stopifnot(inherits(try(assert_layer_values(.g7, "GeomRibbon", "y", c(10), "canary"), silent = TRUE), "try-error"))
+
+# (a) Figure 1's points ARE the observed cell means, not the prediction.
+assert_layer_values(fig_main, "GeomPoint", "y", measured$t_sat, "fig-005-divergence")
+# (b) Figure 2's tolerance ticks ARE the registered tolerances. Derived from
+#     GRID/LOW/MID/TOL_* alone — not from `brackets`, and not from `caps`.
+.want_caps <- unlist(lapply(RATIOS, function(r) unlist(lapply(GRID, function(pp) {
+  tl <- if (pp %in% LOW) TOL_LOW else TOL_MID
+  rep(c(1 - tl, 1 + tl), 2)     # two ticks per bound, one each side of the mark
+}))))
+assert_layer_values(fig_rel, "GeomSegment", "y", .want_caps, "fig-005-tolerance")
+assert_layer_values(fig_rel, "GeomSegment", "yend", .want_caps, "fig-005-tolerance")
+# (c) Figure 2's whiskers ARE +-1 SEM. Recomputed here from the cell table, so a
+#     multiplier introduced at the assignment cannot travel into the guard.
+.k <- match(paste(rel_005$ratio, rel_005$phi), paste(cells$ratio, cells$phi))
+.want_sem <- cells$sem[.k] / cells$pred[.k]
+assert_layer_values(fig_rel, "GeomLinerange", "ymin", rel_005$rel - .want_sem, "fig-005-tolerance")
+assert_layer_values(fig_rel, "GeomLinerange", "ymax", rel_005$rel + .want_sem, "fig-005-tolerance")
 
 # GUARD 6 — THE PROVENANCE CLAIM IN THE HEADER IS CHECKED, NOT ASSERTED.
 #
@@ -1700,7 +1858,8 @@ ADDED_POST_DATA <- c("curvature_per_ratio", "n_scored_ratio", "n_scored_cells",
                      "assert_no_mark_on_cap", "devs_at", "lab_phi",
                      "layer_index", "tol_of", "wrap",
                      "rendered_colours", "assert_rendered_contrast",
-                     "wrap_lines", "injection_is_live", "assert_pre_data_commit")
+                     "wrap_lines", "injection_is_live", "assert_pre_data_commit",
+                     "assert_layer_values")
 UNCHANGED_POST_DATA <- c("predicted", "all_saturated", "within_band", "curvature_up",
                          "evaluable", "raw_band", "cell_of",
                          # ⚠️ `inject` and `assert_nothing_censored` were in
@@ -2023,8 +2182,42 @@ assert_text_fits <- function(p, nm, w_in) {
   labs(title = paste(rep("truncate me", 30), collapse = " ")) + theme_tge()
 stopifnot(inherits(try(assert_text_fits(.long, "canary", 3), silent = TRUE), "try-error"))
 stopifnot(isTRUE(assert_text_fits(.long, "canary-ok", 40)))
-assert_text_fits(fig_main, "fig-005-divergence", 13)
-assert_text_fits(fig_rel, "fig-005-tolerance", 13)
+assert_text_fits(fig_main, "fig-005-divergence", SHIP_W)
+assert_text_fits(fig_rel, "fig-005-tolerance", SHIP_W)
+
+# ⚠️ MEASURED OFF THE SHIPPED RENDER, NOT ASSERTED. Locates the vertical gridline
+# columns (they are the only ink at the grid grey; figure 2's horizontal grid is
+# blanked) and takes the span of one panel's first-to-last break, whose separation
+# in decades is known from GRID. If the device, the page width or the facet count
+# changes, this moves and the corridor check moves with it.
+PX_PER_DECADE <- local({
+  img <- png::readPNG(TMP_REL)
+  if (length(dim(img)) == 3) img <- apply(img[, , seq_len(min(3, dim(img)[3])), drop = FALSE], c(1, 2), min)
+  target <- mean(grDevices::col2rgb(tge_ink_gridline)[, 1] / 255)
+  hits <- colSums(abs(img - target) < 0.06)
+  cols <- which(hits >= max(hits) * 0.5)
+  if (length(cols) == 0) stop("could not find any gridline column on the tolerance figure — this measurement inspected nothing")
+  centres <- as.numeric(tapply(cols, cumsum(c(1, diff(cols) > 3)), mean))
+  want_n <- length(RATIOS) * length(GRID)
+  if (length(centres) != want_n) {
+    stop(sprintf("found %d gridline columns on the tolerance figure, expected %d (%d facets x %d breaks) — refusing to derive a scale from an unrecognised panel",
+                 length(centres), want_n, length(RATIOS), length(GRID)))
+  }
+  spans <- vapply(seq_len(length(RATIOS)) - 1L, function(k) {
+    f <- centres[(k * length(GRID) + 1L):((k + 1L) * length(GRID))]
+    (f[length(GRID)] - f[1]) / log10(max(GRID) / min(GRID))
+  }, numeric(1))
+  if (diff(range(spans)) > 2) stop("the three panels disagree on px per decade by more than 2 px — the scale is not shared")
+  mean(spans)
+})
+cat(sprintf("  measured %.1f px per decade of phi on the tolerance figure (nominal %d).\n",
+            PX_PER_DECADE, PX_PER_DECADE_NOMINAL))
+if (abs(PX_PER_DECADE - PX_PER_DECADE_NOMINAL) / PX_PER_DECADE > 0.02) {
+  stop(sprintf("the marker half-width was computed at %d px per decade and the figure renders at %.1f — the cap-corridor check ran in the wrong units",
+               PX_PER_DECADE_NOMINAL, PX_PER_DECADE))
+}
+# And the corridor is re-checked at the MEASURED scale, not only the estimate.
+assert_cap_corridor(CAP_GAP, (DIAMOND_SIZE * 3.25) / PX_PER_DECADE)
 
 assert_no_edge_ink(TMP_MAIN)
 assert_no_edge_ink(TMP_REL)
