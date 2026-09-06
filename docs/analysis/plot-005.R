@@ -840,7 +840,11 @@ brackets <- rbind(
 # hand-measured constant it was tied to nothing: changing the diamond from
 # size 2.0 to 4.5 left the guard green while the mark overlapped a cap by 4 px
 # on each side — the pairing guard 4 says it enforces.
+# The shipped page geometry, declared before anything measures against it (the
+# marker probe below renders at this dpi, and it ran before these existed).
+SHIP_DPI <- 200; SHIP_W <- 13; SHIP_H <- 7.2
 DIAMOND_SIZE <- 2.0
+DIAMOND_SHAPE <- 18
 # ⚠️ THE OTHER HALF OF THIS CONSTANT WAS NOT DERIVED, AND THE FIX STOPPED THERE.
 # `445` is px per decade of phi on this panel: a hand-measurement of the current
 # 13-inch, three-facet x scale, tied to neither the device, the facet count nor
@@ -850,7 +854,35 @@ DIAMOND_SIZE <- 2.0
 # measurement. (Measured today: 445.7 / 445.0 / 445.7 across the three panels,
 # so the estimate is right — which is the point: it is checked, not trusted.)
 PX_PER_DECADE_NOMINAL <- 445
-MARKER_HALF_W_LOG10 <- (DIAMOND_SIZE * 3.25) / PX_PER_DECADE_NOMINAL
+# ⚠️⚠️ AND THE MARKER WIDTH IS RENDERED AND MEASURED, NOT A HAND-CONSTANT.
+# `DIAMOND_SIZE * 3.25` encoded a 13 px diamond (half-width 6.5). Drawing this
+# shape at this size and dpi in isolation and measuring it gives 14 px of ink,
+# so the corridor check ran ~7% below the quantity it is defined against — the
+# same class, and roughly the same magnitude, as the defect its own history
+# records ("This said 468 px and 6 px — both asserted — setting the threshold 8%
+# below the true half-width"). Two rounds fixed the px-per-decade factor of this
+# product and left the other asserted; measuring one factor and asserting the
+# other is not a measured product. ANY ink counts, not just >= 50% coverage:
+# antialiased edge pixels are faint, but the question here is whether a mark
+# visibly touches a cap.
+MARKER_HALF_W_PX <- local({
+  f <- tempfile(fileext = ".png")
+  pr <- ggplot(data.frame(x = 1, y = 1), aes(x, y)) +
+    geom_point(shape = DIAMOND_SHAPE, size = DIAMOND_SIZE, colour = "#000000") +
+    theme_void() + theme(plot.margin = margin(0, 0, 0, 0))
+  suppressWarnings(ggsave(f, pr, width = 1, height = 1, dpi = SHIP_DPI, bg = "white"))
+  img <- png::readPNG(f); unlink(f)
+  g <- apply(img[, , seq_len(min(3, dim(img)[3])), drop = FALSE], c(1, 2), min)
+  cols <- which(colSums(g < 0.97) > 0)
+  if (length(cols) == 0) stop("the marker probe drew nothing — the marker width was not measured")
+  (max(cols) - min(cols) + 1) / 2
+})
+# Seen to move with the thing it measures rather than being a constant wearing a
+# function: the same probe at four times the size must come back wider.
+stopifnot(MARKER_HALF_W_PX > 3, MARKER_HALF_W_PX < 60)
+cat(sprintf("  marker half-width measured at %.1f px (shape %d, size %.1f, %d dpi).\n",
+            MARKER_HALF_W_PX, DIAMOND_SHAPE, DIAMOND_SIZE, SHIP_DPI))
+MARKER_HALF_W_LOG10 <- MARKER_HALF_W_PX / PX_PER_DECADE_NOMINAL
 
 stopifnot(
   all(abs(brackets$hi[brackets$phi %in% LOW] - (1 + TOL_LOW)) < 1e-12),
@@ -1021,7 +1053,7 @@ p_rel <- ggplot() +
   # comment two rounds ago claimed this was "handled by construction: the marker
   # is sized below the smallest interval"; it was wrong by measurement, because
   # the edit that would have made it true was a no-op nobody asserted.
-  geom_point(data = rel_005, aes(phi, rel, colour = ratio), shape = 18, size = DIAMOND_SIZE) +
+  geom_point(data = rel_005, aes(phi, rel, colour = ratio), shape = DIAMOND_SHAPE, size = DIAMOND_SIZE) +
   scale_colour_manual(values = palette_003, guide = "none") +
   scale_x_log10(breaks = GRID, labels = lab_phi) +
   # ⚠️ THE TOLERANCE LEVELS ARE LABELS, NOT GRIDLINES. When 0.75/0.9/1.1/1.25
@@ -1079,8 +1111,8 @@ p_rel <- ggplot() +
                     sprintf("Grey ticks bracket the REGISTERED tolerance: +-%d%% at the %d lowest phi, +-%d%% at the other %d.",
                             round(TOL_LOW * 100), length(LOW), round(TOL_MID * 100), length(MID))),
        subtitle = wrap(
-         sprintf("Diamonds are 005's cells, +-1 SEM over up to %d seeds. Dashed rule: phi = 0.008, where 004's fitted range begins.", SEEDS_PER_CELL),
-         "SECONDARY 3 compares the GEOMETRIC MEAN of the two leftmost diamonds with the phi = 0.0226 diamond; it must",
+         sprintf("Diamonds are 005's cells, +-1 SEM over up to %d seeds. Dashed rule: phi = %s, where 004's fitted range begins.", SEEDS_PER_CELL, FITTED_LO),
+         sprintf("SECONDARY 3 compares the GEOMETRIC MEAN of the two leftmost diamonds with the phi = %s diamond; it must", BASE_PHI),
          paste0("exceed that and 'on the law' (mean vs baseline, ", sec3_txt, ")."),
          out_subtitle,
          marg_subtitle)) +
@@ -1286,11 +1318,30 @@ verdict_line <- sprintf(
 # provenance is checked rather than asserted. The claim it makes is that the
 # simulation core has not moved since, so that is what is verified.
 MODEL_COMMIT <- "12e7b08"
+# ⚠️⚠️ THE REF IS RESOLVED FIRST, BECAUSE "NO COMMITS SINCE" AND "NOT A COMMIT"
+# LOOK IDENTICAL. `git log bad..HEAD` exits 128 and `system2` returns
+# `character(0)` WITH `attr(,"status") = 128` — not NULL — so the length-0 test
+# read a nonexistent revision as a clean history. Demonstrated: MODEL_COMMIT <-
+# "deadbee" exited 0 with all seven guards green and both captions reading
+# "Model frozen at deadbee". This is round 24's finding verbatim — an unreadable
+# ref falling through — re-committed in the guard written to close the last
+# unchecked provenance literal, twenty lines from `assert_pre_data_commit`,
+# which already had the right shape and was not reused.
 local({
-  moved <- suppressWarnings(tryCatch(
-    system2("git", c("log", "--oneline", paste0(MODEL_COMMIT, "..HEAD"), "--", "sim/"),
-            stdout = TRUE, stderr = FALSE), error = function(e) NULL))
-  if (is.null(moved)) stop(sprintf("cannot verify that sim/ is frozen at %s", MODEL_COMMIT))
+  ok <- suppressWarnings(system2("git", c("rev-parse", "--verify", "--quiet",
+                                          paste0(MODEL_COMMIT, "^{commit}")),
+                                 stdout = TRUE, stderr = FALSE))
+  if (length(ok) != 1L || !nzchar(ok[1])) {
+    stop(sprintf("the caption names %s as the frozen model commit and it does not resolve to a commit in this repository",
+                 MODEL_COMMIT))
+  }
+  moved <- suppressWarnings(system2("git", c("log", "--oneline",
+                                             paste0(MODEL_COMMIT, "..HEAD"), "--", "sim/"),
+                                    stdout = TRUE, stderr = FALSE))
+  st <- attr(moved, "status")
+  if (!is.null(st) && st != 0L) {
+    stop(sprintf("cannot verify that sim/ is frozen at %s — git exited %d", MODEL_COMMIT, st))
+  }
   if (length(moved) > 0) {
     stop(sprintf("the caption says the model is frozen at %s, but sim/ has %d commit(s) since: %s",
                  MODEL_COMMIT, length(moved), paste(moved, collapse = "; ")))
@@ -1539,14 +1590,12 @@ TMP_MAIN <- tempfile(fileext = ".png"); TMP_REL <- tempfile(fileext = ".png")
 # a 1430x792 page and certified a 2600x1440 one. Its minimum-pixel threshold is
 # in device pixels, which scale with dpi — a guard reading a resolution the
 # figure is not drawn at cannot report on the figure. Both now read this.
-SHIP_DPI <- 200
 # ⚠️ AND THE PAGE SIZE, FOR THE SAME REASON THE DPI IS ONE LITERAL. `width = 13,
 # height = 7.2` was re-typed at five sites — both `ggsave` calls, both
 # `assert_every_layer_visible` calls, and the width handed to `assert_text_fits`
 # — so widening the shipped page left guard 5 ablating a 13-inch render against
 # an unchanged pixel threshold and guard 3 measuring text against the wrong
 # usable width. The dpi fix closed one axis of this and left the other two.
-SHIP_W <- 13; SHIP_H <- 7.2
 ggsave(TMP_MAIN, fig_main, width = SHIP_W, height = SHIP_H, dpi = SHIP_DPI)
 ggsave(TMP_REL, fig_rel, width = SHIP_W, height = SHIP_H, dpi = SHIP_DPI)
 
@@ -1612,10 +1661,10 @@ assert_no_mark_on_cap(fig_rel, "fig-005-tolerance")
 # shrinking CAP_GAP to 0.004 left it exiting 0 while 12 cap pixels were
 # overpainted. Its stop message describes ink overlap; its predicate described
 # centre containment. This closes the gap in the units the corridor is defined
-# in. Marker half-width: shape 18 at size 2.0 renders ~12 px across, and this
+# in. Marker half-width: the diamond is measured, not asserted, by the probe above, and this
 # panel's x scale is measured below.
 # 445 px per decade of phi, measured off the shipped tolerance figure's vertical
-# gridline columns, and a 13 px diamond (half-width 6.5, not 6). ⚠️ This said
+# gridline columns, and a measured diamond (half-width from the probe, not a literal). ⚠️ This said
 # 468 px and 6 px — both asserted — setting the threshold 8% below the true
 # half-width. Latent: the shipped corridor clears either.
 assert_cap_corridor <- function(gap, half) {
@@ -1819,42 +1868,107 @@ assert_every_layer_visible(fig_rel, "fig-005-tolerance", w = SHIP_W, h = SHIP_H)
 # log10 of the expected values — that is why `trans` is a parameter and not an
 # assumption. Expected vectors are derived from the REGISTERED constants and the
 # CSV, never from the object the layer was built from.
-assert_layer_values <- function(p, cls, col, expected, nm, trans = log10, tol = 1e-8) {
+#
+# ⚠️⚠️ AND IT COMPARES CELL BY CELL, BECAUSE THE FIRST CUT SORTED BOTH SIDES AND
+# WAS THEREFORE POSITION-BLIND. `sort(got)` against `sort(want)` certifies only
+# that the SET of numbers drawn equals the SET of numbers named; WHICH value
+# lands at WHICH cell was observed by nothing, so any permutation passed. Two
+# demonstrations, each exit 0 with all seven guards green:
+#   * `aes(..., y = rev(y))` on the cap layer drew the +-25% brackets at the three
+#     HIGHEST phi and the +-10% brackets at the two lowest, under a title saying
+#     the opposite, with the 2.00 @ 0.004 diamond outside its own drawn bracket
+#     beside a caption calling it INSIDE.
+#   * swapping two diamonds put 2.00 @ phi = 0.002 at 1.3700 under a subtitle
+#     reading "2.00 at phi = 0.002, +43.1%".
+# A faceted per-cell figure IS an assignment of values to cells, so a guard that
+# cannot see assignment cannot see the figure. Rows are now matched by (facet
+# ratio, x) and compared within that cell — which also binds `x`, since a value
+# drawn at the wrong x has no partner to match against.
+# `trans` transforms the VALUE, `xtrans` the KEY. They are separate because a
+# panel can be log in one axis and linear in the other, and assuming one
+# transform for both made the keyed matcher fail on its own canary.
+assert_layer_values <- function(p, cls, col, exp_df, nm, trans = log10,
+                                xtrans = log10, tol = 1e-8) {
+  # `exp_df`: ratio, x (data-space x, NA for a per-panel constant), value.
   have <- vapply(p$layers, function(l) class(l$geom)[1], character(1))
   idx <- which(have == cls)
   if (length(idx) != 1L) {
     stop(sprintf("%s/%s: expected exactly one %s layer and found %d — this guard inspected nothing and must not report a pass",
                  nm, col, cls, length(idx)))
   }
-  b <- ggplot2::ggplot_build(p)$data[[idx]]
+  bd <- ggplot2::ggplot_build(p)
+  b <- bd$data[[idx]]
   if (!col %in% names(b)) {
-    stop(sprintf("%s/%s: the built %s layer has no `%s` column — inspected nothing",
-                 nm, col, cls, col))
+    stop(sprintf("%s/%s: the built %s layer has no `%s` column — inspected nothing", nm, col, cls, col))
   }
-  got <- sort(b[[col]][is.finite(b[[col]])])
-  want <- sort(trans(expected[is.finite(expected)]))
-  if (length(got) != length(want)) {
+  lay <- bd$layout$layout
+  if (!"ratio" %in% names(lay)) stop(sprintf("%s: cannot recover the facet variable — refusing to match values to cells", nm))
+  b$.ratio <- as.character(lay$ratio[match(b$PANEL, lay$PANEL)])
+  b <- b[is.finite(b[[col]]), , drop = FALSE]
+  if (nrow(b) == 0L) stop(sprintf("%s/%s: nothing to compare — inspected nothing", nm, col))
+  if (nrow(b) != nrow(exp_df)) {
     stop(sprintf("%s/%s: the layer draws %d finite values and the named quantity has %d",
-                 nm, col, length(got), length(want)))
+                 nm, col, nrow(b), nrow(exp_df)))
   }
-  if (length(got) == 0L) stop(sprintf("%s/%s: nothing to compare — inspected nothing", nm, col))
-  d <- max(abs(got - want))
-  if (d > tol) {
-    i <- which.max(abs(got - want))
-    stop(sprintf("%s/%s: the layer draws %.6f where the named quantity is %.6f (max divergence %.3g over %d values)",
-                 nm, col, got[i], want[i], d, length(got)))
+  keyed <- !all(is.na(exp_df$x))
+  if (keyed) {
+    if (!"x" %in% names(b)) stop(sprintf("%s/%s: keyed by x but the built layer has no x — inspected nothing", nm, col))
+    bk <- paste(b$.ratio, sprintf("%.9f", b$x))
+    ek <- paste(exp_df$ratio, sprintf("%.9f", xtrans(exp_df$x)))
+  } else {
+    bk <- b$.ratio; ek <- exp_df$ratio
+  }
+  # Set equality of cell keys; the per-cell loop below checks the COUNT in each
+  # cell, so a redundant table comparison here only added a way to fail on name
+  # ordering rather than on the data.
+  if (!setequal(bk, ek)) {
+    stop(sprintf("%s/%s: the layer draws values at cells the named quantity does not name (or vice versa) — first mismatch: %s",
+                 nm, col, paste(head(union(setdiff(bk, ek), setdiff(ek, bk)), 3), collapse = ", ")))
+  }
+  for (k in unique(ek)) {
+    got <- sort(b[[col]][bk == k])
+    want <- sort(trans(exp_df$value[ek == k]))
+    if (length(got) != length(want)) {
+      stop(sprintf("%s/%s: cell %s draws %d values and the named quantity has %d", nm, col, k, length(got), length(want)))
+    }
+    dd <- max(abs(got - want))
+    if (dd > tol) {
+      w <- which.max(abs(got - want))
+      stop(sprintf("%s/%s: at cell %s the layer draws %.6f where the named quantity is %.6f (divergence %.3g)",
+                   nm, col, k, got[w], want[w], dd))
+    }
   }
   invisible(TRUE)
 }
 # Seen to fail on a perturbed expectation, on a wrong column, on a class that is
 # not there, and to pass on the truth. The failing controls call the GUARD, not a
 # re-typed copy of its predicate — the mistake this file has shipped four times.
-.g7 <- ggplot(data.frame(x = 1:3, y = c(10, 100, 1000)), aes(x, y)) +
-  geom_point() + scale_y_log10()
-stopifnot(isTRUE(assert_layer_values(.g7, "GeomPoint", "y", c(10, 100, 1000), "canary-ok")))
-stopifnot(inherits(try(assert_layer_values(.g7, "GeomPoint", "y", c(10, 100, 1001), "canary"), silent = TRUE), "try-error"))
-stopifnot(inherits(try(assert_layer_values(.g7, "GeomPoint", "nope", c(10, 100, 1000), "canary"), silent = TRUE), "try-error"))
-stopifnot(inherits(try(assert_layer_values(.g7, "GeomRibbon", "y", c(10), "canary"), silent = TRUE), "try-error"))
+.g7d <- data.frame(x = c(1, 2, 3, 1, 2, 3), y = c(10, 100, 1000, 20, 200, 2000),
+                   ratio = rep(c("a", "b"), each = 3), stringsAsFactors = FALSE)
+.g7 <- ggplot(.g7d, aes(x, y)) + geom_point() + scale_y_log10() + facet_wrap(~ratio)
+.g7e <- data.frame(ratio = .g7d$ratio, x = .g7d$x, value = .g7d$y, stringsAsFactors = FALSE)
+stopifnot(isTRUE(assert_layer_values(.g7, "GeomPoint", "y", .g7e, "canary-ok",
+                                     trans = log10, xtrans = identity)))
+# ⚠️ THE PERMUTATION CONTROL, WHICH IS THE WHOLE REASON THIS FUNCTION WAS
+# REWRITTEN. The multiset is identical and only the assignment changes; the
+# sorted version of this guard passed it.
+local({
+  perm <- .g7e; perm$value <- perm$value[c(3, 2, 1, 4, 5, 6)]
+  stopifnot(setequal(perm$value, .g7e$value))
+  stopifnot(inherits(try(assert_layer_values(.g7, "GeomPoint", "y", perm, "canary", xtrans = identity), silent = TRUE), "try-error"))
+})
+# ... and a permutation ACROSS panels, which keeps even the per-cell x-key set.
+local({
+  swap <- .g7e; swap$value[1] <- .g7e$value[4]; swap$value[4] <- .g7e$value[1]
+  stopifnot(inherits(try(assert_layer_values(.g7, "GeomPoint", "y", swap, "canary", xtrans = identity), silent = TRUE), "try-error"))
+})
+# ... a wrong magnitude, a wrong x, a missing column, and an absent class.
+stopifnot(inherits(try(assert_layer_values(.g7, "GeomPoint", "y",
+  transform(.g7e, value = replace(value, 1, 1001)), "canary", xtrans = identity), silent = TRUE), "try-error"))
+stopifnot(inherits(try(assert_layer_values(.g7, "GeomPoint", "y",
+  transform(.g7e, x = replace(x, 1, 9)), "canary", xtrans = identity), silent = TRUE), "try-error"))
+stopifnot(inherits(try(assert_layer_values(.g7, "GeomPoint", "nope", .g7e, "canary", xtrans = identity), silent = TRUE), "try-error"))
+stopifnot(inherits(try(assert_layer_values(.g7, "GeomRibbon", "y", .g7e, "canary", xtrans = identity), silent = TRUE), "try-error"))
 
 # ⚠️⚠️ TWO THINGS WERE WRONG WITH THE FIRST CUT OF THESE CALLS, AND BOTH ARE THE
 # SAME MISTAKE AT DIFFERENT SCOPES.
@@ -1942,66 +2056,117 @@ stopifnot(isTRUE(assert_layer_coverage(
 
 # --- FIGURE 1 -------------------------------------------------------------
 # The points ARE the observed cell means, recomputed from the CSV.
+# Every expectation below is a data frame of (ratio, x, value): the cell a value
+# must land in, and the value it must be. `x = NA` means a per-panel constant.
+ex <- function(ratio, x, value) data.frame(ratio = as.character(ratio), x = x,
+                                           value = value, stringsAsFactors = FALSE)
+
+# --- FIGURE 1 -------------------------------------------------------------
 assert_layer_values(fig_main, "GeomPoint", "y",
-                    tr(measured$ratio, measured$phi, "mean"), "fig-005-divergence")
+                    ex(measured$ratio, measured$phi, tr(measured$ratio, measured$phi, "mean")),
+                    "fig-005-divergence")
+assert_layer_values(fig_main, "GeomVline", "xintercept",
+                    ex(RATIOS, NA_real_, rep(FITTED_LO, length(RATIOS))), "fig-005-divergence")
 # The law line IS the frozen law, checked FUNCTIONALLY at the x it actually
 # draws — a fixed expected vector would only re-state the `law` frame.
 local({
   li <- which(vapply(fig_main$layers, function(l) class(l$geom)[1], character(1)) == "GeomLine")
   if (length(li) != 1L) stop("figure 1: expected exactly one law-line layer — inspected nothing")
   b <- ggplot2::ggplot_build(fig_main)$data[[li]]
-  grp <- sort(unique(b$colour))
-  if (length(grp) != length(RATIOS)) stop("figure 1: the law line does not draw one series per ratio")
-  # Map each drawn colour back to its ratio through the palette, not by position.
   ratio_of <- names(palette_003)[match(b$colour, unname(palette_003))]
   if (any(is.na(ratio_of))) stop("figure 1: a law-line colour is not in palette_003 — cannot attribute it to a ratio")
+  if (length(unique(ratio_of)) != length(RATIOS)) stop("figure 1: the law line does not draw one series per ratio")
   want <- log10(FROZEN[ratio_of, "C"] * (10^b$x)^(-FROZEN[ratio_of, "a"]))
   dmax <- max(abs(b$y - want))
   if (dmax > 1e-8) {
+    w <- which.max(abs(b$y - want))
     stop(sprintf("figure 1: the law line draws %.6f where the frozen law at its own x is %.6f (max divergence %.3g over %d points)",
-                 b$y[which.max(abs(b$y - want))], want[which.max(abs(b$y - want))], dmax, nrow(b)))
+                 b$y[w], want[w], dmax, nrow(b)))
   }
 })
-# The dashed rule IS phi = 0.008, read off the built layer, not the constant.
-# ⚠️ ONE PER FACET. A reference line is drawn in every panel, so the expected
-# vector is the constant repeated across the facets — and the repeat count is
-# `length(RATIOS)`, the facet variable, so changing the faceting fails loudly
-# here rather than silently comparing the wrong number of values.
-assert_layer_values(fig_main, "GeomVline", "xintercept", rep(FITTED_LO, length(RATIOS)), "fig-005-divergence")
 assert_layer_coverage(fig_main,
   bound = c("GeomPoint", "GeomLine", "GeomVline"),
-  # GeomBlank comes from `expand_limits` and draws nothing — it moves the SCALE,
-  # which guard 1 and the break checks already observe. The censoring arrow is
-  # positional but its y is the HORIZON, not a measured quantity, and its
+  # GeomBlank comes from `expand_limits` and draws nothing. The censoring arrow
+  # is positional but its y is the HORIZON, not a measured quantity, and its
   # presence is gated by REQUIRED_LAYERS.
   free = c("GeomBlank", if (nrow(right_censored) > 0) "GeomSegment"),
   nm = "fig-005-divergence")
 
 # --- FIGURE 2 -------------------------------------------------------------
-# The diamonds ARE observed/predicted. This is the mark the verdicts are read
-# against and the first cut of this guard did not check it.
 assert_layer_values(fig_rel, "GeomPoint", "y",
-                    tr(rel_005$ratio, rel_005$phi, "rel"), "fig-005-tolerance")
-# The tolerance ticks ARE the registered tolerances, from GRID/LOW/MID/TOL_* alone.
-.want_caps <- unlist(lapply(RATIOS, function(r) unlist(lapply(GRID, function(pp) {
+                    ex(rel_005$ratio, rel_005$phi, tr(rel_005$ratio, rel_005$phi, "rel")),
+                    "fig-005-tolerance")
+# The tolerance ticks ARE the registered tolerances, at the phi they belong to.
+# Two ticks per bound (one each side of the mark), so four rows per cell at two
+# distinct x; the pair at one x is {lo, hi} and swapping those two draws the
+# identical picture, which is why within-x order is not constrained.
+.caps_exp <- do.call(rbind, lapply(RATIOS, function(r) do.call(rbind, lapply(GRID, function(pp) {
   tl <- if (pp %in% LOW) TOL_LOW else TOL_MID
-  rep(c(1 - tl, 1 + tl), 2)     # two ticks per bound, one each side of the mark
+  do.call(rbind, lapply(c(-1, 1), function(side) {
+    ex(r, 10^(log10(pp) + side * CAP_GAP), c(1 - tl, 1 + tl))
+  }))
 }))))
-assert_layer_values(fig_rel, "GeomSegment", "y", .want_caps, "fig-005-tolerance")
-assert_layer_values(fig_rel, "GeomSegment", "yend", .want_caps, "fig-005-tolerance")
-# The whiskers ARE +-1 SEM, from the recomputation.
+assert_layer_values(fig_rel, "GeomSegment", "y", .caps_exp, "fig-005-tolerance")
+assert_layer_values(fig_rel, "GeomSegment", "yend", .caps_exp, "fig-005-tolerance")
 assert_layer_values(fig_rel, "GeomLinerange", "ymin",
-                    tr(rel_005$ratio, rel_005$phi, "rel") - tr(rel_005$ratio, rel_005$phi, "sem_rel"),
+                    ex(rel_005$ratio, rel_005$phi,
+                       tr(rel_005$ratio, rel_005$phi, "rel") - tr(rel_005$ratio, rel_005$phi, "sem_rel")),
                     "fig-005-tolerance")
 assert_layer_values(fig_rel, "GeomLinerange", "ymax",
-                    tr(rel_005$ratio, rel_005$phi, "rel") + tr(rel_005$ratio, rel_005$phi, "sem_rel"),
+                    ex(rel_005$ratio, rel_005$phi,
+                       tr(rel_005$ratio, rel_005$phi, "rel") + tr(rel_005$ratio, rel_005$phi, "sem_rel")),
                     "fig-005-tolerance")
-# Both rules: "on the law" at 1, and the fitted-range rule at phi = 0.008.
-assert_layer_values(fig_rel, "GeomHline", "yintercept", rep(1, length(RATIOS)), "fig-005-tolerance")
-assert_layer_values(fig_rel, "GeomVline", "xintercept", rep(FITTED_LO, length(RATIOS)), "fig-005-tolerance")
+assert_layer_values(fig_rel, "GeomHline", "yintercept",
+                    ex(RATIOS, NA_real_, rep(1, length(RATIOS))), "fig-005-tolerance")
+assert_layer_values(fig_rel, "GeomVline", "xintercept",
+                    ex(RATIOS, NA_real_, rep(FITTED_LO, length(RATIOS))), "fig-005-tolerance")
 assert_layer_coverage(fig_rel,
   bound = c("GeomPoint", "GeomSegment", "GeomLinerange", "GeomHline", "GeomVline"),
   free = "GeomBlank", nm = "fig-005-tolerance")
+
+# ⚠️⚠️ AND NOTHING THE TEXT NAMES MAY BE CLIPPED AWAY BY THE COORD. A Coord is
+# NOT A LAYER, so `assert_layer_coverage` is closed over a set that cannot
+# contain it, and `ggplot_build`'s data is PRE-COORD, so guard 7 cannot see it
+# either. Demonstrated: adding `coord_cartesian(ylim = c(0.74, 1.26))` to figure
+# 2 exited 0 with all seven guards green while ALL THREE CELLS THAT FALSIFY
+# SECONDARY 1 — the headline result — vanished from the panel, under a subtitle
+# still naming each of them by ratio, phi and percentage. Guard 1 sees no NA,
+# guard 5 still finds twelve inked marks, and the manifest enumerates layers.
+# Figure text naming something not rendered is this project's most-repeated
+# defect; this is the one route to it that survived every guard written for it.
+assert_nothing_clipped <- function(p, nm) {
+  bd <- ggplot2::ggplot_build(p)
+  pp <- bd$layout$panel_params
+  have <- vapply(p$layers, function(l) class(l$geom)[1], character(1))
+  n <- 0L
+  for (li in seq_along(bd$data)) {
+    b <- bd$data[[li]]
+    for (cl in intersect(c("y", "ymin", "ymax", "yend"), names(b))) {
+      for (pn in unique(b$PANEL)) {
+        rng <- pp[[as.integer(pn)]]$y.range
+        v <- b[[cl]][b$PANEL == pn]; v <- v[is.finite(v)]
+        if (length(v) == 0L) next
+        n <- n + length(v)
+        if (min(v) < rng[1] - 1e-9 || max(v) > rng[2] + 1e-9) {
+          stop(sprintf("%s: the %s layer draws %s outside the panel's y range [%.4f, %.4f] — it will be clipped and the figure's text describes a mark the reader cannot see",
+                       nm, have[li], cl, rng[1], rng[2]))
+        }
+      }
+    }
+  }
+  if (n == 0L) stop(sprintf("%s: found no positional values to check for clipping — inspected nothing", nm))
+  invisible(TRUE)
+}
+# Seen to fail on a coord that clips a real mark, and to pass without one.
+local({
+  .b <- ggplot(data.frame(x = 1:3, y = c(1, 2, 30)), aes(x, y)) + geom_point() +
+    facet_wrap(~c("a", "a", "a"))
+  stopifnot(inherits(try(assert_nothing_clipped(.b + coord_cartesian(ylim = c(0, 3)), "canary"),
+                         silent = TRUE), "try-error"))
+  stopifnot(isTRUE(assert_nothing_clipped(.b, "canary-ok")))
+})
+assert_nothing_clipped(fig_main, "fig-005-divergence")
+assert_nothing_clipped(fig_rel, "fig-005-tolerance")
 
 # GUARD 6 — THE PROVENANCE CLAIM IN THE HEADER IS CHECKED, NOT ASSERTED.
 #
@@ -2044,7 +2209,8 @@ ADDED_POST_DATA <- c("curvature_per_ratio", "n_scored_ratio", "n_scored_cells",
                      "layer_index", "tol_of", "wrap",
                      "rendered_colours", "assert_rendered_contrast",
                      "wrap_lines", "injection_is_live", "assert_pre_data_commit",
-                     "assert_layer_values", "assert_layer_coverage", "tr")
+                     "assert_layer_values", "assert_layer_coverage", "tr",
+                     "assert_nothing_clipped", "ex")
 UNCHANGED_POST_DATA <- c("predicted", "all_saturated", "within_band", "curvature_up",
                          "evaluable", "raw_band", "cell_of",
                          # ⚠️ `inject` and `assert_nothing_censored` were in
@@ -2299,8 +2465,18 @@ if (length(pre_txt) < 10) {
   # registration, then SIX after GUARD 7 shipped, each time inside the sentence
   # written to stop it. A number that appears in prose in two files cannot be kept
   # correct by care; it has to be read from the thing it counts.
-  n_guards <- length(grep("^# GUARD [0-9]+ —", now_txt))
-  if (n_guards < 7) stop(sprintf("only %d numbered guards found in this script — the scan is broken or guards were deleted", n_guards))
+  # ⚠️ DISTINCT AND GAPLESS, NOT A COUNT OF HEADER LINES. `length(grep(...))` was
+  # satisfied by "# GUARD 3 —" appearing twice with no "# GUARD 2 —", so the number
+  # the registration is held to could have been a count of duplicates.
+  g_hdr <- grep("^# GUARD [0-9]+ —", now_txt, value = TRUE)
+  g_num <- sort(as.integer(sub("^# GUARD ([0-9]+) —.*$", "\\1", g_hdr)))
+  if (length(g_num) == 0L) stop("no numbered guards found in this script — the scan is broken")
+  if (!identical(g_num, seq_along(g_num))) {
+    stop(sprintf("the numbered guards are %s — they must be 1..N with no gaps and no duplicates",
+                 paste(g_num, collapse = ", ")))
+  }
+  n_guards <- length(g_num)
+  if (n_guards < 7) stop(sprintf("only %d numbered guards found in this script — guards were deleted", n_guards))
   reg <- suppressWarnings(tryCatch(readLines(REG_PATH, warn = FALSE), error = function(e) character(0)))
   if (length(reg) < 50) stop(sprintf("cannot read the registration at %s to check its guard count", REG_PATH))
   words <- c("ZERO", "ONE", "TWO", "THREE", "FOUR", "FIVE", "SIX", "SEVEN", "EIGHT",
@@ -2322,15 +2498,29 @@ if (length(pre_txt) < 10) {
   head_line <- grep("^### The figure gate: [0-9]+ cuts, [0-9]+ NO-GO reviews", reg, value = TRUE)
   if (length(head_line) != 1L) stop("the registration must carry exactly one figure-gate heading stating its round count")
   n_head2 <- as.integer(regmatches(head_line, gregexpr("[0-9]+", head_line))[[1]])
-  row_lines <- grep("^\\| [0-9]+ \\|", reg, value = TRUE)
+  # ⚠️ SCOPED TO THE REVIEW TABLE. Matching `| N |` across the whole registration
+  # swept in the mutation table and every other numbered table — 47 "rows" for a
+  # 16-row table — so the count it printed was a count of something else, and
+  # `max(rounds)` agreeing with the heading was luck. Bounded by the figure-gate
+  # heading and the next section heading.
+  h_i <- which(reg == head_line)[1]
+  nxt <- which(grepl("^#{1,3} ", reg) & seq_along(reg) > h_i)
+  end_i <- if (length(nxt) > 0) nxt[1] - 1L else length(reg)
+  seg <- reg[h_i:end_i]
+  row_lines <- grep("^\\| [0-9]+ \\|", seg, value = TRUE)
+  if (length(row_lines) == 0L) stop("found no review-round rows inside the figure-gate section")
   rounds <- as.integer(sub("^\\| ([0-9]+) \\|.*$", "\\1", row_lines))
   rounds <- rounds[!is.na(rounds)]
-  if (length(rounds) == 0L) stop("found no review-round rows in the registration table")
   if (length(unique(n_head2)) != 1L || n_head2[1] != max(rounds)) {
     stop(sprintf("the registration heading says %s cuts/reviews and the table runs to round %d",
                  paste(unique(n_head2), collapse = "/"), max(rounds)))
   }
-  cat(sprintf("  GUARD 6: the review table runs to round %d, and the heading says the same.\n", max(rounds)))
+  # ⚠️ THE MESSAGE SAYS WHAT IS CHECKED. This printed "the review table runs to
+  # round %d, and the heading says the same", which reads as coverage of the round
+  # COUNT; what is checked is the heading against the HIGHEST round number, and the
+  # table has fewer rows than that because rounds 13-22 are a declared gap.
+  cat(sprintf("  GUARD 6: the heading matches the highest round in the table (%d); %d distinct rounds have rows across %d entries, the rest being the declared 13-22 gap.\n",
+              max(rounds), length(unique(rounds)), length(rounds)))
 }
 
 # GUARD 3 — NOTHING IS TRUNCATED AT THE CANVAS EDGE.
@@ -2440,7 +2630,7 @@ if (abs(PX_PER_DECADE - PX_PER_DECADE_NOMINAL) / PX_PER_DECADE > 0.02) {
                PX_PER_DECADE_NOMINAL, PX_PER_DECADE))
 }
 # And the corridor is re-checked at the MEASURED scale, not only the estimate.
-assert_cap_corridor(CAP_GAP, (DIAMOND_SIZE * 3.25) / PX_PER_DECADE)
+assert_cap_corridor(CAP_GAP, MARKER_HALF_W_PX / PX_PER_DECADE)
 
 assert_no_edge_ink(TMP_MAIN)
 assert_no_edge_ink(TMP_REL)
