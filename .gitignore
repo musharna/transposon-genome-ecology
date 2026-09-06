@@ -5,3 +5,7 @@ dist-guard7/
 # Rscript opens a default PDF device, so any analysis script that draws leaves
 # this behind whether or not it saved a figure.
 Rplots.pdf
+# Per-shard intermediates from a `--shard=<ratio>` run. The merged CSV is the
+# committed artifact and the runner's check 5 proves the shard boundary was
+# inert, so these are regenerable scratch, not results.
+experiments/*.shard-*.csv
