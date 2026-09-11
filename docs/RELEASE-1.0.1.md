@@ -336,11 +336,12 @@ Recorded rather than actioned, each with its reason.
    _current_ population, not the result. Not fixed: outside the punch list, the label is
    ambiguous rather than false, and a wider caption risks the 1440px column budget this
    release tuned to exactly zero dead space. It deserves its own change.
-3. **`CITATION.cff` still reads `version: 1.0.0` / `date-released: 2026-09-10`** while
-   `CHANGELOG.md` opens `## [1.0.1] — 2026-09-11`. The plan said explicitly to keep
-   `date-released`, and only `v1.0.0` is tagged, so **the bump is the coordinator's call at
-   tag time** — but it must not be forgotten, or the citation metadata ships a release
-   behind.
+3. ~~**`CITATION.cff` still reads `version: 1.0.0` / `date-released: 2026-09-10`.**~~
+   **RESOLVED at tag time, exactly as this item asked** — bumped to `version: 1.0.1` /
+   `date-released: "2026-09-11"` in `5fcb497`, the commit `v1.0.1` points at. The plan's
+   instruction to keep `2026-09-10` was scoped to the RC, when no new tag existed yet.
+   _(This entry described itself as outstanding inside the very commit that discharged it;
+   corrected after the release.)_
 4. **`tests/render-panels.test.ts:84` `const FIELD_H = 368;`** mirrors the pre-masthead
    field height (now 328 at 800px). Its comment says the constants are "close to" what the
    page gives each panel, so it is approximate by design, and changing a render test's
