@@ -290,7 +290,7 @@ and **R 4.3.3** with ggplot2 4.0.2, patchwork 1.2.0 and png 0.1-8 for the figure
 ```sh
 npm ci
 npx playwright install chromium   # tests only
-npm test            # 22 files, 199 tests
+npm test            # 23 files, 216 tests
 npm run typecheck
 npm run build       # -> dist/
 npm run preview     # serve the built toy
