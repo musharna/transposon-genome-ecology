@@ -623,3 +623,108 @@ One correction was made beyond the critic's list. `docs/ROADMAP.md:195` carried 
 registered 0.05 criterion with the worst cell mean and worst run, and flags the earlier
 wording. The critic did not look at the ROADMAP; the defect class it found there did not
 stop at the file it happened to be reading.
+
+## Stage 7 — handoff
+
+`release/1.0-rc` is pushed. **Nothing else was done to the remote**: the merge to
+`master`, the visibility flip, Pages enablement, the tag and the release are the
+coordinator's, and none of them was touched from here.
+
+**RC SHA.** The head of `release/1.0-rc` — the commit this section lands in. Resolve it
+with `git rev-parse release/1.0-rc` rather than reading a literal here; a SHA written
+into the commit it names cannot be correct, and a stale one is the same defect the
+Repbase line taught this release.
+
+**Commit chain**, cut from `acf530c` (which is `2ab527c` plus the ship plan itself):
+
+| Commit | What |
+| --- | --- |
+| `71d2e2c` | pin Node >=22, start this evidence log |
+| `fb71a8e` | classify all 23 open roadmap items; discharge the exponent claim |
+| `46aeac0` | re-render figs 001–004; pin `plot-001.R`'s jitter |
+| `787b7d1` | `FINDINGS.md`, README top, the domestication limit in the toy |
+| `964d902` | Pages workflow, licensing, the site base |
+| `0fc0e88` | stage 5 proofs and sweeps |
+| `7c4558f` | close the critic gate; fix every statement it falsified |
+
+### Toolchain
+
+node v22.14.0 · npm 10.9.2 · typescript 5.9.3 · vite 8.2.2 · vitest 5.0.0 · tsx 4.23.13 ·
+@playwright/test 1.62.1 · R 4.3.3 · ggplot2 4.0.2 · patchwork 1.2.0 · png 0.1-8.
+
+### Results at handoff
+
+| Check | Result |
+| --- | --- |
+| `npm test` | **22 files, 198 tests, all passed** (68.75 s) |
+| `npm run typecheck` | clean |
+| `npm run build` | 27 modules, `dist/` with `index.html`, `hash-harness.html`, `.nojekyll` |
+| clean-checkout clone → `npm ci && npm test && npm run build` | **198/198**, all three artifacts present |
+| headless smoke on the built site | 200 / 200, zero console errors, zero failed requests, sim advances and survives every poke |
+| `gitleaks git` | no leaks — 90 commits |
+| `gitleaks dir dist/` | no leaks |
+| ghostcite on `docs/dois.txt` | 51 DOIs, **0 findings** |
+| critic gate | **0 non-waivable defects** |
+
+### Figure render commands, and the hashes they produce
+
+Run from the repository root; the scripts source `docs/analysis/theme.R` by a
+repo-relative path and fail from anywhere else.
+
+| Command | Output | md5 |
+| --- | --- | --- |
+| `Rscript docs/analysis/plot-001.R` | `fig-001-peak-copies.png` | `2154b2972dafcde61a03926aedbe298a` |
+| `Rscript docs/analysis/plot-002.R` | `fig-002-viability.png` | `12abf606a2f5696e3a13b5caf8799a1a` |
+| `Rscript docs/analysis/plot-003.R` | `fig-003-fidelity.png` | `e3f67614a25cb4b5220d490a84b4ffcf` |
+| `Rscript docs/analysis/plot-003.R` | `fig-003-silencing.png` | `cee8b202c9e43d99de42a744b0c32c60` |
+| `Rscript docs/analysis/plot-004.R` | `fig-004-band.png` | `9c7a3afc236bdbd583e95666cbe31af1` |
+| `Rscript docs/analysis/plot-005.R` | `fig-005-divergence.png` | `44d1cf6c20e59568b986e817ff9311bd` |
+| `Rscript docs/analysis/plot-005.R` | `fig-005-tolerance.png` | `82d1ae047c55c55f23cb19f54f5697fa` |
+
+### Rebuild from nothing
+
+```sh
+git clone -b release/1.0-rc https://github.com/musharna/transposon-genome-ecology.git
+cd transposon-genome-ecology
+npm ci
+npx playwright install chromium     # required: two test files drive a real browser
+npm test && npm run typecheck && npm run build
+npm run preview                     # serves dist/ under /transposon-genome-ecology/
+for n in 001 002 003 004 005; do Rscript docs/analysis/plot-$n.R; done
+```
+
+### The scope allowlist held
+
+Verified by diff against the base, not by recollection:
+
+- `git diff --quiet acf530c..HEAD -- sim` → **`sim/` unchanged**.
+- `defaultParams` unchanged; **`wDom` is still the registered 0.01** in both
+  `sim/params.ts` and `web/params.ts`.
+- `theta`, `sigmaS`, `phi` and every other constant unchanged; no law refitted; no new
+  question registered or run.
+- The golden hash pin `9c15fd28` in `tests/step.test.ts` is untouched.
+
+Every defect found in this release was fixed by **correcting a statement**, which is the
+only remedy the plan allows — never by moving the model toward a nicer answer.
+
+### What the coordinator still owns
+
+1. Verify `https://musharna.github.io/transposon-genome-ecology/` serves once Pages is
+   enabled — the README links it as a placeholder and nothing here could confirm it live.
+2. Merge `release/1.0-rc` to `master`. The Pages workflow triggers on `master`, so the
+   site publishes on that merge and not before.
+3. Flip the repository public.
+4. Tag `v1.0.0` and cut the release.
+5. Mint the Zenodo concept DOI and add it to `CITATION.cff`, which deliberately ships
+   without one.
+
+### Two things to carry forward
+
+- **A live count in a shipped line is a staleness generator.** The Repbase evidence line
+  was wrong twice; the second wrong version was created by the act of writing it. What
+  works is an invariant plus the command that tests it.
+- **An intermediate `npm test` reporting 4 failures was contention, not a regression** —
+  a second `vitest` was alive at 301% CPU. `pgrep` before a long pipeline, including for
+  suites this repo runs constantly.
+
+STOP. The remote holds `release/1.0-rc` and nothing else changed.
