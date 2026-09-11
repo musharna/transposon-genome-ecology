@@ -7,7 +7,8 @@
 **Branch.** `release/1.0.1-rc`, cut from `master` at
 `53c0e12` ("docs: v1.0.1 plan — executor brief from the post-ship panel audit").
 
-**RC SHA.** `b2a6ce91bae3b158e547d388e86f5fb1825d6e35` (`b2a6ce9`).
+**RC SHA.** `126ac33640d1e60845984df4c0f80069aebd7637` (`126ac33`), over two commits:
+`b2a6ce9` (the punch list) and `126ac33` (the critic gate).
 
 **Plan.** [`docs/superpowers/specs/2026-09-11-v1.0.1-plan.md`](superpowers/specs/2026-09-11-v1.0.1-plan.md).
 
@@ -17,7 +18,7 @@ are both comments), no `defaultParams` or `TOY_DEFAULTS` value moved, no constan
 no pre-registration was touched, and no experiment was re-run.
 
 ```
-$ git diff --stat 53c0e12..b2a6ce9 -- sim/
+$ git diff --stat 53c0e12..126ac33 -- sim/
  sim/params.ts    | 6 +++++-
  sim/silencing.ts | 9 ++++++---
 ```
@@ -46,13 +47,13 @@ Same as v1.0. All commands run with `export PATH="$HOME/.local/node-22/bin:$PATH
 | A2  | recount "two falsified", fix table bolding            | DONE                        | `README.md` intro + verdict table, per-row falsification level                                               |
 | A3  | `phi = 0.016` direction and count                     | DONE                        | `docs/FINDINGS.md` → "three doublings **below** 0.125"                                                       |
 | A3+ | same error in ROADMAP                                 | DONE (extra)                | `docs/ROADMAP.md`                                                                                            |
-| A3− | same error in a pre-registration                      | **NOT DONE — out of scope** | see "Left undone" below                                                                                      |
+| A3− | same error in a pre-registration                      | **NOT DONE — out of scope** | see "Found but NOT fixed" below                                                                              |
 | A4  | toy header line + legend qualifier                    | DONE                        | `web/index.html` `#masthead`; legend note names guard 8's arm                                                |
 | A5  | stale perf numbers in `sim/silencing.ts`              | DONE                        | 1.06 → 35.73 ms, **33.7×**, with the quantity named                                                          |
 | B6  | Setup / Reproducing: Node 22, Playwright, R, 005 cost | DONE                        | `README.md` Setup; `docs/FINDINGS.md` "Reproducing this"                                                     |
 | B7  | `## Unreleased` under `## [1.0.0]`                    | DONE                        | folded into 1.0.0 (it shipped — see below)                                                                   |
 | C8  | `Mirrors _pm/` → `Layout:`; drop `_scratch/`          | DONE                        | `README.md`                                                                                                  |
-| C9  | re-tally references                                   | DONE                        | 51 DOIs / 41 entries, dated; `docs/REFERENCES.md`, `README.md`                                               |
+| C9  | re-tally references                                   | DONE, **revised by critic** | 51 DOIs, dated, with its command; no entries/works count published — see the critic section                  |
 | C10 | `TOY_DEFAULTS` override count                         | DONE                        | 12 of 17 listed, of 20 `Params` keys; `sim/params.ts`                                                        |
 | C11 | `CITATION.cff` licence URLs                           | DONE, **deviation**         | field removed rather than doubled — see below                                                                |
 | C12 | `hash-harness.html` noindex + fixture note            | DONE                        | `web/hash-harness.html`; not removed, guard 7 loads it                                                       |
@@ -133,11 +134,59 @@ The note was rewritten to carry the qualifier at no net height. Measured after:
 
 ### Suites
 
-<!-- PENDING: job 3720 (in-tree) -->
+**`npm run typecheck` — clean.** `tsc --noEmit`, no output, exit 0, 2.98 s wall.
+
+**`npm run build` — clean**, 123 ms, five artefacts:
+
+```
+dist/hash-harness.html            1.31 kB │ gzip: 0.70 kB
+dist/index.html                  16.54 kB │ gzip: 5.51 kB
+dist/assets/harness-Bn08ftXm.js   0.73 kB │ gzip: 0.45 kB
+dist/assets/params-jPj0KOgw.js    5.10 kB │ gzip: 2.16 kB
+dist/assets/main-3rlMxbCi.js     16.96 kB │ gzip: 6.71 kB
+```
+
+All three JS content hashes (`Bn08ftXm`, `jPj0KOgw`, `3rlMxbCi`) are **unchanged across
+every build in this release**, including the builds before and after the `sim/` edits.
+Only the two HTML files changed size. That is a second, independent confirmation that the
+`sim/` changes are comments: had either edit altered emitted code, Vite's content hash
+would have moved.
+
+**Guard 7's state hash is unchanged.** `tests/guards/one-implementation.test.ts` asserts a
+byte-identical `stateHash` between the browser bundle and node, at both the plain scenario
+and `TOY_DEFAULTS`. Run twice against this tree — after the punch-list commit and again
+after the critic-gate commit — green both times:
+
+```
+$ npx vitest run tests/layout.test.ts tests/guards/one-implementation.test.ts
+Test Files  2 passed (2)
+     Tests  11 passed (11)
+```
+
+⚠️ **THE FULL 198-TEST SUITE HAS NOT BEEN RUN GREEN AGAINST THE FINAL RC.** It is queued
+on the `jobd` broker as job **3720** (in-tree) and has not been dispatched: the laptop
+worker has `max_concurrent: 1` and job **3713** (`jepagame`, priority 78, non-preemptible)
+has held the only slot for the whole of this session. Preempting another project's running
+job to make room for this one was not an acceptable trade and was not done.
+
+What IS known about the suite on this tree:
+
+- the two browser-driven files — the only ones any change here could plausibly break —
+  pass, twice, as above;
+- the remaining 20 files exercise `sim/`, whose emitted code is byte-identical by the
+  hash argument above;
+- the last full run in this session, on the tree **before** any edit, was 197/198, with
+  the single failure proven environmental (see the environment note at the end).
+
+**This is the one acceptance criterion the plan states that is not discharged.** It needs
+a green `npm test` on a quiet box before the tag is cut.
 
 ### Clean clone
 
-<!-- PENDING: job 3722 -->
+⚠️ **NOT RUN.** Queued as job **3722**, dependent on 3720, and blocked behind the same
+occupied worker. The job is written and will clone `release/1.0.1-rc` from the local repo,
+then run `npm ci` → `npx playwright install --with-deps chromium` → `npm test` →
+`npm run typecheck` → `npm run build`. It must pass before the tag is cut.
 
 ### ghostcite
 
