@@ -125,3 +125,107 @@ one `docs/FINDINGS.md` states for question 005, and no exponent is quoted as a p
 of the system anywhere that ships. This row is discharged without a model change.
 
 `npm test` after stage 2: **22 files, 198 tests, all passed** (no code changed).
+
+## Stage 3 — figures
+
+Re-rendered `fig-001` … `fig-004` with their existing scripts under the current
+`docs/analysis/theme.R`. This closes the open ROADMAP item at line 410: before this
+release, 001–004 carried the retired `grey90` gridline (measured 1.26:1, under the
+project's own 3:1 floor) while 005 carried `#8c95a0`, so "ONE house style per project"
+was false.
+
+**Environment.** `Rscript (R) version 4.3.3 (2024-02-29)`, platform
+`x86_64-pc-linux-gnu (64-bit)`. `sessionInfo()` attached packages: ggplot2 4.0.2,
+patchwork 1.2.0, png 0.1-8.
+
+**Commands.** Each is run from the repository root — the scripts `source()` the theme by
+the repo-relative path `docs/analysis/theme.R`, so they fail from inside `docs/analysis`.
+
+```
+Rscript docs/analysis/plot-001.R
+Rscript docs/analysis/plot-002.R
+Rscript docs/analysis/plot-003.R
+Rscript docs/analysis/plot-004.R
+```
+
+All four exited 0. `plot-004.R` emits one warning, `annotation$theme is not a valid
+theme` — the known ggplot2 4.0.2 behaviour where `plot_annotation(theme=)` warns and
+then applies; the theme is applied. No script emitted an error.
+
+**Before / after.**
+
+| File | md5 before | md5 after |
+| --- | --- | --- |
+| `fig-001-peak-copies.png` | `8ded7d77926ce41ac08ce8252e6d3258` | `2154b2972dafcde61a03926aedbe298a` |
+| `fig-002-viability.png` | `25bccf553ff1e070329482303a4fb1ae` | `12abf606a2f5696e3a13b5caf8799a1a` |
+| `fig-003-fidelity.png` | `2a6bbbe9ce3366082b692eb497121da8` | `e3f67614a25cb4b5220d490a84b4ffcf` |
+| `fig-003-silencing.png` | `6ec604f4eb0f590f80158eebd87b5863` | `cee8b202c9e43d99de42a744b0c32c60` |
+| `fig-004-band.png` | `38732afefa3a83d45b21d13dac9c9379` | `9c7a3afc236bdbd583e95666cbe31af1` |
+| `fig-005-divergence.png` | `44d1cf6c20e59568b986e817ff9311bd` | unchanged (not re-rendered) |
+| `fig-005-tolerance.png` | `82d1ae047c55c55f23cb19f54f5697fa` | unchanged (not re-rendered) |
+
+**The house style actually changed, with a control.** Counting pixels of each gridline
+colour in every figure:
+
+| figure | size | `#8C95A0` (current) | `#E5E5E5` (retired) |
+| --- | --- | --- | --- |
+| fig-001-peak-copies | 1300×1000 | 5 685 | 107 |
+| fig-002-viability | 1400×1000 | 11 633 | 186 |
+| fig-003-fidelity | 1880×1200 | 12 437 | 228 |
+| fig-003-silencing | 1880×1200 | 21 894 | 170 |
+| fig-004-band | 2100×1470 | 5 479 | 506 |
+| fig-005-divergence | 2600×1440 | 22 195 | 577 |
+| fig-005-tolerance | 2600×1440 | 15 205 | 661 |
+
+The residual `#E5E5E5` counts are **not** leftover gridlines. `fig-005` was not
+re-rendered and is the reference for the current style, and it carries *more* of that
+colour (577 and 661) than any re-rendered figure — so those pixels come from
+antialiasing and other elements, not from a stale grid. That comparison is the control;
+without it the nonzero counts would be unreadable either way.
+
+**Defect found and fixed: `fig-001` was not reproducible.**
+`plot-001.R` drew `geom_jitter(width = 0.12, …)` with no `set.seed()` anywhere in the
+file, so the figure differed on every run. Measured: two consecutive runs gave
+`4c4453104e735ef98f50bb6443be1e38` then `53ee5de1be3c52f2dc661ef708fecb36`, while
+`plot-002.R` over the same interval reproduced `12abf606…` exactly. A grep for
+`geom_jitter|position_jitter|sample(|runif|rnorm|set.seed` across all five plot scripts
+and `theme.R` returns exactly one line — `plot-001.R:24` — which is why the other four
+are byte-stable: they touch the RNG not at all.
+
+Fixed by adding `set.seed(1)` immediately before the plot is built. Verified over three
+consecutive runs: `2154b2972dafcde61a03926aedbe298a` all three times, with the primary
+statistic unchanged at `t = 4.6675, df = 42.074, p = 3.1e-05` — the seed moves the
+x-offsets of the plotted points and nothing else. This is an analysis-script change; no
+`sim/` behaviour, no `defaultParams`, and no constant was retuned.
+
+**Objective acceptance**, per the plan (objective only; the 29-round subjective loop is
+not reopened):
+
+| Figure | axes labelled with units | glyphs the caption names are drawn | legend | overplotted text | file is the one the doc links |
+| --- | --- | --- | --- | --- | --- |
+| fig-001 | ✅ "peak copies per genome"; x is the two arms | ✅ boxplot + jittered points | n/a — arms are the x axis, fill guide suppressed deliberately | none | ✅ linked from `2026-09-02-per-copy-vs-family-rate.md:264` |
+| fig-002 | ✅ "fraction of seeds extinct" vs "theta / sigmaS" | ✅ both arm series with points | ✅ A-conscription / B-innate | none | ✅ `ROADMAP.md:192`, `2026-09-04-conscription-vs-innate-silencer.md:294` |
+| fig-003-fidelity | ✅ "fraction of 10 seeds CONTROLLED" vs phi with its definition | ✅ triangle / circle / square at all three ratios, Wilson bars | ✅ three ratios, glyph-coded | none | ✅ `ROADMAP.md:226`, `…how-fresh-must-the-trap-be.md:428` |
+| fig-003-silencing | ✅ "mean silenced fraction at the run's stop (log scale)" vs phi | ✅ three series, SE bars | ✅ three ratios | none | ✅ `ROADMAP.md:227`, `…how-fresh-must-the-trap-be.md:418,429` |
+| fig-004 | ✅ "fraction of 10 seeds CONTROLLED" vs "trap infidelity phi (log scale)", both horizon strips labelled | ✅ triangle / circle / square for the three predicted `phi*`, bars, observed-edge cells | ✅ "predicted phi* for theta/sigmaS" | see note | ✅ `ROADMAP.md:267`, `2026-09-04-a-band-or-only-a-delay.md:476` |
+
+*Note on fig-004.* It is by far the densest figure — several annotation blocks sit
+inside the panels, and the new gridline is darker than the one they were composed
+against, so those blocks now cross a more visible line than before. No text overlaps
+other text; the crossings are text-over-gridline. Per the plan ("if a figure's science is
+stable, style is not a blocker") this is recorded, not treated as a blocker, and the
+figure is included in the stage 6 critic's scope so a fresh reader judges it.
+
+**Verdicts are unchanged by the re-render.** Each script recomputes its science from its
+CSV on every run; the printed verdicts match what the ROADMAP already records — 001
+primary `t = 4.6675, p = 3.1e-05`; 002 "both arms viable at 2 of 6 DISTINCT regimes";
+003 CONTROLLED at `phi = 0` only, at every ratio; 004 PRIMARY HELD, SECONDARY 1 HELD,
+SECONDARY 2 FALSIFIED, SECONDARY 3 FALSIFIED-as-registered-but-not-resolved.
+
+**Figure links resolve.** Every `fig-*.png` referenced anywhere under `docs/` or in
+`README.md` exists on disk. Two filenames appear in prose but are not links and have no
+file: `fig-005-residuals.png` (named only in the 005 registration's account of the
+rename to `fig-005-tolerance.png`) and `fig-001-final-copies.png` (named only inside a
+code block in the superseded build plan). Neither is a broken image link.
+
+DONE: four scripts re-rendered deterministically under one house style, recorded above.

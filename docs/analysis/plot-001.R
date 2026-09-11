@@ -19,6 +19,11 @@ stopifnot(all(dev[d$arm == "per-copy"] > 1e-6))
 cat("manipulation check re-asserted on the CSV: PASS\n")
 
 # --- the figure: pre-specified outcome 1, the primary -----------------------
+# geom_jitter draws from R's RNG, so without a seed this figure is different on
+# every run and "re-run the script to reproduce it" is false. The seed moves the
+# x-offsets of the plotted points only; every y value, the boxplot, and all three
+# tests below are computed from the CSV and do not touch the RNG.
+set.seed(1)
 p <- ggplot(d, aes(x = arm, y = peak_copies_per_genome, fill = arm)) +
   geom_boxplot(outlier.shape = NA, alpha = 0.55, width = 0.5) +
   geom_jitter(width = 0.12, size = 1.2, alpha = 0.7) +
