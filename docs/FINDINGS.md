@@ -69,7 +69,8 @@ arms viable** (fewer than half the seeds extinct).
 
 **Verdict: FALSIFIED.** Both arms are viable at **3 of the 9 registered grid points**
 — at `theta/sigmaS` = 3.33 and 5.00. The secondary prediction held (arm B's silenced
-fraction stays ≤ 0.022 wherever arm A is viable). The falsification lives in the range
+fraction stays below the registered 0.05 wherever arm A is viable — the worst cell mean
+is 0.0223 and the worst single run 0.0348). The falsification lives in the range
 **the pilot never swept**: the pilot's grid floor was `theta = 0.15` and the registered
 grid went down to `0.10`. Registering wider than the pilot is the only reason it was
 found.
@@ -77,8 +78,8 @@ found.
 **What it does not show.** Two things, both of which limit it more than the verdict
 suggests. First, **`VIABLE` could not discriminate, and it was the registered
 criterion**: at both both-viable regimes, every arm-B run had hit the saturation stop
-(1580–1593 copies per genome, ~2% silenced) while arm A sat near 200 copies at 95%
-silenced. "Controlled at equilibrium" and "exploding into the stopping rule" score
+(cell means 1580.0 and 1593.3 copies per genome, ~2% silenced) while arm A sat at 195.5
+and 262.6 copies at 94.5–95.5% silenced. "Controlled at equilibrium" and "exploding into the stopping rule" score
 identically under it. That does not rescue the prediction — it was stated on that
 criterion — but it is a real limit on what the number means. Second, **`theta` and
 `sigmaS` are not independent axes**: sequence space carries no other constant, so
@@ -131,7 +132,11 @@ only for a while: the controlled region shrinks as you watch it, and nothing her
 it converging on a floor.
 
 SECONDARY 2 (that a mechanistic prediction `phi* = theta / max|s|` lands in the observed
-edge cell) is **FALSIFIED robustly** — all three predicted values miss by 1.8× to 3.8×.
+edge cell) is **FALSIFIED robustly** — on the post-hoc power-law edge all three predicted
+values miss by 1.8× to 3.8×. Scored instead on the registered grid, the ratio-5.00
+prediction does land in the observed edge cell, by 0.6%; the registration named that
+ratio in advance as the least informative of the three, and the two framings are quoted
+separately here because they are different comparisons.
 The mechanism is also **refuted on its own diagnostic**: it said control requires reach
 `theta/phi` to exceed wander `max|s|`, yet at ratio 2.00, `phi = 0.004`, reach is 25.0
 against wander 60.8 and the cell is controlled 10/10.
@@ -184,9 +189,11 @@ rather than one.
 **What it does not show, and this is the real finding.** Refitting on 005's own data
 gives `a` = **0.8695 / 0.8734 / 0.8766** (SE ≈ 0.02) against 004's frozen **0.7304 /
 0.7360 / 0.7447** — 3.2 to 3.8 combined standard errors apart. But **both fits are
-misspecified by the same diagnostic**: each leaves a systematic `+ − − − +` residual
-pattern at **1.9–2.9× the sampling noise floor**, with R² between 0.993 and 0.9986. A
-high R² is not evidence that a functional form is right.
+misspecified by the same diagnostic**: each leaves a convex residual pattern — `+ − − − +`
+at 004's three ratios and at 005's 2.00 and 5.00, with 005's 3.33 reading `+ − − 0 +`,
+its fourth cell sitting inside its own standard error — running at **1.9–2.9× the
+sampling noise floor**, with R² between 0.993 and 0.9986. A high R² is not evidence that
+a functional form is right.
 
 > **`t_sat` is not a power law in `phi`, and the exponent you measure is a property of
 > the window you fit in.** Nothing in this repository quotes an exponent as a property
@@ -208,7 +215,9 @@ sizing rule is circular and should have come from the model's worst plausible er
 **domestication** — an element ceasing to be a parasite and being kept for a job the
 host needs, as with syncytin and RAG — as an _alternate win_. **At the shipped defaults
 it cannot happen.** `defaultParams().wDom = 0.01`, and the persistence threshold measured
-across eleven seeds sits at `0.03 < wDom* ≤ 0.075`: the shipped value is 3× below the
+across eleven seeds **on guard 8's arm** sits at `0.03 < wDom* ≤ 0.075` — those bounds are
+a property of that arm's `beta` and `pDom`, not of the model, and the guard's own test
+says so. The shipped value is 3× below the
 highest bonus at which every seed still loses its domesticated copies, and 7.5× below
 the lowest at which every seed keeps them. Domesticated copies are made, peak at
 195–595 copies around generation 26–44, and are then lost **to zero at every seed**.

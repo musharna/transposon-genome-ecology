@@ -11,6 +11,13 @@ Specifically, this licence covers:
     docs/analysis/fig-*.png      figures
     experiments/**/*.csv         experimental data
 
+EXCEPT that source code is MIT wherever it lives, including inside docs/:
+
+    docs/analysis/*.R            the analysis and plotting scripts, and the
+                                 shared house theme -- these are source code
+                                 that happens to sit under docs/, and they are
+                                 licensed under the MIT License, not CC BY 4.0
+
 Source code is licensed separately under the MIT License; see LICENSE. The
 boundary is stated in README.md.
 

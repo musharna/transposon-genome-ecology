@@ -192,7 +192,10 @@ live registry and the null stated as "checked HERE", naming where.
       manipulation checks passed. Figure `docs/analysis/fig-002-viability.png`.
       Registered: **no grid point with both arms viable.** Measured: **3 of 9
       points, at `theta/sigmaS` = 3.33 and 5.00.** The secondary prediction held
-      (arm B silencing ≤ 0.022 wherever arm A is viable).
+      (arm B silencing stays under the registered 0.05 wherever arm A is viable;
+      worst cell mean 0.0223, worst single run 0.0348. ⚠️ An earlier wording here
+      said "≤ 0.022", which the worst cell mean 0.02227 strictly violates — the
+      verdict is unaffected, the bound as written was not.)
       **The pilot's grid floor was `theta = 0.15` and the registered grid went to
       0.10 — the falsification lives in the range the pilot never swept.**
       Registering wider than the pilot is the only reason it was found.

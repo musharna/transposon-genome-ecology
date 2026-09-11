@@ -44,12 +44,25 @@ cited and used freely; no Dfam content is included here.
 
 ⚠️ **Repbase is CLOSED and appears in no shipped artifact.** Its academic user agreement
 forbids making the resource available to third parties, so it could not be redistributed
-even in part. `git ls-files -z | xargs -0 grep -ni repbase` returns 16 lines across 5
-tracked files — `README.md`, `docs/REFERENCES.md`, `docs/ROADMAP.md` and the two specs
-under `docs/superpowers/` — and **every one is a statement _about_ Repbase**: that it is
-closed, that its licence forbids redistribution, and that it was dropped as an option in
-favour of Dfam. No Repbase sequence, annotation or derived content appears anywhere in
-the tree.
+even in part.
+
+The check, stated as an invariant rather than a count:
+
+```sh
+git ls-files -z | xargs -0 grep -ni repbase
+```
+
+**Every line this returns is a statement _about_ Repbase** — that it is closed, that its
+academic agreement forbids redistribution, that it was dropped as an option in favour of
+Dfam, or the check itself. No Repbase sequence, annotation or derived content appears
+anywhere in the tree.
+
+⚠️ No hit count is quoted here on purpose. An earlier draft of this paragraph said "16
+lines across 5 files"; writing that sentence **added two more lines to the very set it
+was counting**, and later commits added more. A count baked into a shipped line is a
+staleness generator — it is falsified by the next edit to any of the files it counts,
+including this one. The invariant above is stable under every such edit, and the reader
+can run the command.
 
 ## Prior work the model is built against
 

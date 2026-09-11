@@ -154,31 +154,31 @@ then applies; the theme is applied. No script emitted an error.
 
 **Before / after.**
 
-| File | md5 before | md5 after |
-| --- | --- | --- |
+| File                      | md5 before                         | md5 after                          |
+| ------------------------- | ---------------------------------- | ---------------------------------- |
 | `fig-001-peak-copies.png` | `8ded7d77926ce41ac08ce8252e6d3258` | `2154b2972dafcde61a03926aedbe298a` |
-| `fig-002-viability.png` | `25bccf553ff1e070329482303a4fb1ae` | `12abf606a2f5696e3a13b5caf8799a1a` |
-| `fig-003-fidelity.png` | `2a6bbbe9ce3366082b692eb497121da8` | `e3f67614a25cb4b5220d490a84b4ffcf` |
-| `fig-003-silencing.png` | `6ec604f4eb0f590f80158eebd87b5863` | `cee8b202c9e43d99de42a744b0c32c60` |
-| `fig-004-band.png` | `38732afefa3a83d45b21d13dac9c9379` | `9c7a3afc236bdbd583e95666cbe31af1` |
-| `fig-005-divergence.png` | `44d1cf6c20e59568b986e817ff9311bd` | unchanged (not re-rendered) |
-| `fig-005-tolerance.png` | `82d1ae047c55c55f23cb19f54f5697fa` | unchanged (not re-rendered) |
+| `fig-002-viability.png`   | `25bccf553ff1e070329482303a4fb1ae` | `12abf606a2f5696e3a13b5caf8799a1a` |
+| `fig-003-fidelity.png`    | `2a6bbbe9ce3366082b692eb497121da8` | `e3f67614a25cb4b5220d490a84b4ffcf` |
+| `fig-003-silencing.png`   | `6ec604f4eb0f590f80158eebd87b5863` | `cee8b202c9e43d99de42a744b0c32c60` |
+| `fig-004-band.png`        | `38732afefa3a83d45b21d13dac9c9379` | `9c7a3afc236bdbd583e95666cbe31af1` |
+| `fig-005-divergence.png`  | `44d1cf6c20e59568b986e817ff9311bd` | unchanged (not re-rendered)        |
+| `fig-005-tolerance.png`   | `82d1ae047c55c55f23cb19f54f5697fa` | unchanged (not re-rendered)        |
 
 **The house style actually changed, with a control.** Counting pixels of each gridline
 colour in every figure:
 
-| figure | size | `#8C95A0` (current) | `#E5E5E5` (retired) |
-| --- | --- | --- | --- |
-| fig-001-peak-copies | 1300×1000 | 5 685 | 107 |
-| fig-002-viability | 1400×1000 | 11 633 | 186 |
-| fig-003-fidelity | 1880×1200 | 12 437 | 228 |
-| fig-003-silencing | 1880×1200 | 21 894 | 170 |
-| fig-004-band | 2100×1470 | 5 479 | 506 |
-| fig-005-divergence | 2600×1440 | 22 195 | 577 |
-| fig-005-tolerance | 2600×1440 | 15 205 | 661 |
+| figure              | size      | `#8C95A0` (current) | `#E5E5E5` (retired) |
+| ------------------- | --------- | ------------------- | ------------------- |
+| fig-001-peak-copies | 1300×1000 | 5 685               | 107                 |
+| fig-002-viability   | 1400×1000 | 11 633              | 186                 |
+| fig-003-fidelity    | 1880×1200 | 12 437              | 228                 |
+| fig-003-silencing   | 1880×1200 | 21 894              | 170                 |
+| fig-004-band        | 2100×1470 | 5 479               | 506                 |
+| fig-005-divergence  | 2600×1440 | 22 195              | 577                 |
+| fig-005-tolerance   | 2600×1440 | 15 205              | 661                 |
 
 The residual `#E5E5E5` counts are **not** leftover gridlines. `fig-005` was not
-re-rendered and is the reference for the current style, and it carries *more* of that
+re-rendered and is the reference for the current style, and it carries _more_ of that
 colour (577 and 661) than any re-rendered figure — so those pixels come from
 antialiasing and other elements, not from a stale grid. That comparison is the control;
 without it the nonzero counts would be unreadable either way.
@@ -201,15 +201,15 @@ x-offsets of the plotted points and nothing else. This is an analysis-script cha
 **Objective acceptance**, per the plan (objective only; the 29-round subjective loop is
 not reopened):
 
-| Figure | axes labelled with units | glyphs the caption names are drawn | legend | overplotted text | file is the one the doc links |
-| --- | --- | --- | --- | --- | --- |
-| fig-001 | ✅ "peak copies per genome"; x is the two arms | ✅ boxplot + jittered points | n/a — arms are the x axis, fill guide suppressed deliberately | none | ✅ linked from `2026-09-02-per-copy-vs-family-rate.md:264` |
-| fig-002 | ✅ "fraction of seeds extinct" vs "theta / sigmaS" | ✅ both arm series with points | ✅ A-conscription / B-innate | none | ✅ `ROADMAP.md:192`, `2026-09-04-conscription-vs-innate-silencer.md:294` |
-| fig-003-fidelity | ✅ "fraction of 10 seeds CONTROLLED" vs phi with its definition | ✅ triangle / circle / square at all three ratios, Wilson bars | ✅ three ratios, glyph-coded | none | ✅ `ROADMAP.md:226`, `…how-fresh-must-the-trap-be.md:428` |
-| fig-003-silencing | ✅ "mean silenced fraction at the run's stop (log scale)" vs phi | ✅ three series, SE bars | ✅ three ratios | none | ✅ `ROADMAP.md:227`, `…how-fresh-must-the-trap-be.md:418,429` |
-| fig-004 | ✅ "fraction of 10 seeds CONTROLLED" vs "trap infidelity phi (log scale)", both horizon strips labelled | ✅ triangle / circle / square for the three predicted `phi*`, bars, observed-edge cells | ✅ "predicted phi* for theta/sigmaS" | see note | ✅ `ROADMAP.md:267`, `2026-09-04-a-band-or-only-a-delay.md:476` |
+| Figure            | axes labelled with units                                                                                | glyphs the caption names are drawn                                                      | legend                                                        | overplotted text | file is the one the doc links                                            |
+| ----------------- | ------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- | ------------------------------------------------------------- | ---------------- | ------------------------------------------------------------------------ |
+| fig-001           | ✅ "peak copies per genome"; x is the two arms                                                          | ✅ boxplot + jittered points                                                            | n/a — arms are the x axis, fill guide suppressed deliberately | none             | ✅ linked from `2026-09-02-per-copy-vs-family-rate.md:264`               |
+| fig-002           | ✅ "fraction of seeds extinct" vs "theta / sigmaS"                                                      | ✅ both arm series with points                                                          | ✅ A-conscription / B-innate                                  | none             | ✅ `ROADMAP.md:192`, `2026-09-04-conscription-vs-innate-silencer.md:294` |
+| fig-003-fidelity  | ✅ "fraction of 10 seeds CONTROLLED" vs phi with its definition                                         | ✅ triangle / circle / square at all three ratios, Wilson bars                          | ✅ three ratios, glyph-coded                                  | none             | ✅ `ROADMAP.md:226`, `…how-fresh-must-the-trap-be.md:428`                |
+| fig-003-silencing | ✅ "mean silenced fraction at the run's stop (log scale)" vs phi                                        | ✅ three series, SE bars                                                                | ✅ three ratios                                               | none             | ✅ `ROADMAP.md:227`, `…how-fresh-must-the-trap-be.md:418,429`            |
+| fig-004           | ✅ "fraction of 10 seeds CONTROLLED" vs "trap infidelity phi (log scale)", both horizon strips labelled | ✅ triangle / circle / square for the three predicted `phi*`, bars, observed-edge cells | ✅ "predicted phi\* for theta/sigmaS"                         | see note         | ✅ `ROADMAP.md:267`, `2026-09-04-a-band-or-only-a-delay.md:476`          |
 
-*Note on fig-004.* It is by far the densest figure — several annotation blocks sit
+_Note on fig-004._ It is by far the densest figure — several annotation blocks sit
 inside the panels, and the new gridline is darker than the one they were composed
 against, so those blocks now cross a more visible line than before. No text overlaps
 other text; the crossings are text-over-gridline. Per the plan ("if a figure's science is
@@ -241,20 +241,20 @@ number carries its CSV, its runner and its commit.
 **Every headline number was recomputed from the CSVs**, independently of the R analysis,
 before it was written down. The verification script reads only `experiments/*.csv`:
 
-| Question | Claim in FINDINGS | Recomputed from the CSV |
-| --- | --- | --- |
-| 001 | 80 runs, 40 seeds × 2 arms | 80 rows, 40 distinct seeds |
-| 001 | peak copies/genome 58.65 vs 21.49 | 58.6520 vs 21.4907 |
-| 001 | extinct 21/40 vs 25/40 | 21/40 vs 25/40 |
-| 001 | 17 of 40 per-copy runs over 60 copies; 0 of 40 family-level | 17 and 0 |
-| 002 | 180 runs; both arms viable at 3 of 9 grid points | 180 rows; 9 grid points, 3 both-viable |
-| 002 | the 9 points are 6 distinct regimes | 6 distinct `k_star` values |
-| 003 | 270 runs; CONTROLLED only at `phi = 0`, all three ratios | 270 rows; fully-controlled phi = [0.0] at 2.00, 3.33 and 5.00 |
-| 004 | 270 runs + 60 control; edge 0.016 at gen 600 | 270 + 60; max fully-controlled phi = 0.016 at all three ratios |
-| 004 | edge 0.004 at gen 1800 | max fully-controlled phi = 0.004 at all three ratios |
-| 005 | 150 runs + 90 control; 150/150 saturated, 0 censored, 0 extinct | 150 + 90; saturated 150/150, censored 0, extinct 0 |
-| 005 | 15 cells, no duplicated (ratio, phi, seed) | 15 cells; 150 distinct keys over 150 rows → 0 duplicates |
-| 005 | secondary 1 falsified by +43.1 / +42.2 / +37.0 % at `phi = 0.002` | observed 4720.1 / 5345.5 / 6101.9 vs predicted 3297.5 / 3759.5 / 4454.1 → +43.1 / +42.2 / +37.0 % |
+| Question | Claim in FINDINGS                                                 | Recomputed from the CSV                                                                           |
+| -------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| 001      | 80 runs, 40 seeds × 2 arms                                        | 80 rows, 40 distinct seeds                                                                        |
+| 001      | peak copies/genome 58.65 vs 21.49                                 | 58.6520 vs 21.4907                                                                                |
+| 001      | extinct 21/40 vs 25/40                                            | 21/40 vs 25/40                                                                                    |
+| 001      | 17 of 40 per-copy runs over 60 copies; 0 of 40 family-level       | 17 and 0                                                                                          |
+| 002      | 180 runs; both arms viable at 3 of 9 grid points                  | 180 rows; 9 grid points, 3 both-viable                                                            |
+| 002      | the 9 points are 6 distinct regimes                               | 6 distinct `k_star` values                                                                        |
+| 003      | 270 runs; CONTROLLED only at `phi = 0`, all three ratios          | 270 rows; fully-controlled phi = [0.0] at 2.00, 3.33 and 5.00                                     |
+| 004      | 270 runs + 60 control; edge 0.016 at gen 600                      | 270 + 60; max fully-controlled phi = 0.016 at all three ratios                                    |
+| 004      | edge 0.004 at gen 1800                                            | max fully-controlled phi = 0.004 at all three ratios                                              |
+| 005      | 150 runs + 90 control; 150/150 saturated, 0 censored, 0 extinct   | 150 + 90; saturated 150/150, censored 0, extinct 0                                                |
+| 005      | 15 cells, no duplicated (ratio, phi, seed)                        | 15 cells; 150 distinct keys over 150 rows → 0 duplicates                                          |
+| 005      | secondary 1 falsified by +43.1 / +42.2 / +37.0 % at `phi = 0.002` | observed 4720.1 / 5345.5 / 6101.9 vs predicted 3297.5 / 3759.5 / 4454.1 → +43.1 / +42.2 / +37.0 % |
 
 Every row agrees. The 005 percentages are computed against the `predicted_t_sat` column
 the runner wrote from 004's frozen constants, so both sides of that comparison come from
@@ -291,7 +291,7 @@ it used markdown backticks inside HTML, which render literally.
 `docs/dois.txt` holds **51** unique DOIs harvested from `docs/`, `README.md` and
 `CHANGELOG.md`.
 
-*Ruling (deviation from the plan).* The plan's extraction command is
+_Ruling (deviation from the plan)._ The plan's extraction command is
 `grep -rhoE '10\.[0-9]{4,9}/[^ )>\]"]+'`. That pattern is **malformed** and silently
 matches nothing: in POSIX ERE a backslash inside a bracket expression is a literal
 backslash, so `\]` closes the class early. Run verbatim it returned **0 DOIs**, which
@@ -328,12 +328,12 @@ Charlesworth read, `pathway-mechanics.md`).
 **Each FINDINGS headline that rests on a source was checked against a full-text read**,
 recorded in `docs/pathway-mechanics.md`, not against recall:
 
-| FINDINGS sentence | Source | Confirmed by |
-| --- | --- | --- |
-| tolerance "limits fitness cost without affecting propagation", outside the piRNA pathway | Kelleher et al. 2018 | §5, verbatim: "mechanisms of tolerance do not affect propagation but rather limit the fitness costs to the host" |
-| Kelleher 2012 "argues the other way in its own system" | Kelleher, Edelman & Barbash 2012 | §4, verbatim: "mismatches between piRNAs and TE transcripts cannot explain the pattern of TE derepression in hybrids" |
-| the model is right and the shipped `wDom` is unrealistically small | Kapitonov & Jurka 2005 | §6, verbatim: "a period of intensive transformations due to diversifying/positive selection", then stabilizing selection at 79% identity |
-| Kofler's 0.2% is a property of his silencing rule and does not transfer | Kofler 2020 | §3, verbatim minimum-size quote plus the recorded non-transfer argument |
+| FINDINGS sentence                                                                        | Source                           | Confirmed by                                                                                                                             |
+| ---------------------------------------------------------------------------------------- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| tolerance "limits fitness cost without affecting propagation", outside the piRNA pathway | Kelleher et al. 2018             | §5, verbatim: "mechanisms of tolerance do not affect propagation but rather limit the fitness costs to the host"                         |
+| Kelleher 2012 "argues the other way in its own system"                                   | Kelleher, Edelman & Barbash 2012 | §4, verbatim: "mismatches between piRNAs and TE transcripts cannot explain the pattern of TE derepression in hybrids"                    |
+| the model is right and the shipped `wDom` is unrealistically small                       | Kapitonov & Jurka 2005           | §6, verbatim: "a period of intensive transformations due to diversifying/positive selection", then stabilizing selection at 79% identity |
+| Kofler's 0.2% is a property of his silencing rule and does not transfer                  | Kofler 2020                      | §3, verbatim minimum-size quote plus the recorded non-transfer argument                                                                  |
 
 `npm test` after stage 4: **22 files, 198 tests, all passed.**
 
@@ -345,8 +345,7 @@ with its control seen to fire, README rewritten.
 ### The site builds for a project Pages path
 
 `vite.config.ts` now sets `base: "/transposon-genome-ecology/"`. GitHub Pages serves a
-project site under `/<repo>/`, so without it the page would load and every asset would
-404. Verified in the emitted HTML:
+project site under `/<repo>/`, so without it the page would load and every asset would 404. Verified in the emitted HTML:
 
 ```
 src="/transposon-genome-ecology/assets/main-3rlMxbCi.js"
@@ -377,11 +376,11 @@ between them rather than a guess being adopted.
 
 Fixes, each at the layer the defect lives at:
 
-| Site | Was | Now |
-| --- | --- | --- |
-| both test files | `.replace(/\/$/, "")` | keep the trailing slash; it is the served base URL |
-| `one-implementation.test.ts` | `` `${origin}/hash-harness.html` `` | `new URL("hash-harness.html…", origin).href` — the join cannot reintroduce a double slash |
-| `one-implementation.test.ts` | `/src="(\/assets\/[^"]+\.js)"/` | regex built from `BASE`, imported from `vite.config.ts` |
+| Site                         | Was                                   | Now                                                                                                        |
+| ---------------------------- | ------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| both test files              | `.replace(/\/$/, "")`                 | keep the trailing slash; it is the served base URL                                                         |
+| `one-implementation.test.ts` | `` `${origin}/hash-harness.html` ``   | `new URL("hash-harness.html…", origin).href` — the join cannot reintroduce a double slash                  |
+| `one-implementation.test.ts` | `/src="(\/assets\/[^"]+\.js)"/`       | regex built from `BASE`, imported from `vite.config.ts`                                                    |
 | `one-implementation.test.ts` | `harnessScript[0].replace(/^\//, "")` | `.slice(BASE.length)` — under a non-root base, "strip one slash" and "strip the base" are not the same cut |
 
 `BASE` is **exported from `vite.config.ts` and imported by the guard**, never re-typed.
@@ -399,30 +398,30 @@ git clone --depth=1 -b release/1.0-rc file://$PWD <tmp>/tge-verify
 cd <tmp>/tge-verify && npm ci && npm test && npm run build
 ```
 
-| Step | Result |
-| --- | --- |
-| clone HEAD | `964d902` |
-| `npm ci` | 0 vulnerabilities |
-| `npm test` | **22 files, 198 tests, all passed** |
-| `npm run build` | built in 173 ms |
-| `dist/index.html` | present |
-| `dist/.nojekyll` | present |
-| `dist/hash-harness.html` | present |
+| Step                     | Result                              |
+| ------------------------ | ----------------------------------- |
+| clone HEAD               | `964d902`                           |
+| `npm ci`                 | 0 vulnerabilities                   |
+| `npm test`               | **22 files, 198 tests, all passed** |
+| `npm run build`          | built in 173 ms                     |
+| `dist/index.html`        | present                             |
+| `dist/.nojekyll`         | present                             |
+| `dist/hash-harness.html` | present                             |
 
 ### Headless smoke against the built site
 
 Served with `vite preview` and driven with the Playwright Chromium already in
 devDependencies.
 
-| Check | Result |
-| --- | --- |
-| toy HTTP status | **200** at `/transposon-genome-ecology/` |
-| `hash-harness.html` HTTP status | **200** |
-| responses ≥ 400 | **none** |
-| console errors / page errors / failed requests | **none** |
-| controls present | 4 buttons, 4 sliders |
-| sim advances | `gen` 93 → 459 over 2 s |
-| sim still advances after poking every button | `gen` 255 → 525 |
+| Check                                          | Result                                   |
+| ---------------------------------------------- | ---------------------------------------- |
+| toy HTTP status                                | **200** at `/transposon-genome-ecology/` |
+| `hash-harness.html` HTTP status                | **200**                                  |
+| responses ≥ 400                                | **none**                                 |
+| console errors / page errors / failed requests | **none**                                 |
+| controls present                               | 4 buttons, 4 sliders                     |
+| sim advances                                   | `gen` 93 → 459 over 2 s                  |
+| sim still advances after poking every button   | `gen` 255 → 525                          |
 
 ⚠️ **The first two smoke runs reported FAIL, and both were the harness's fault, not the
 toy's.** Recorded because a smoke test that only ever passes is worthless:
@@ -433,19 +432,19 @@ toy's.** Recorded because a smoke test that only ever passes is worthless:
 2. The second version asserted `gen_after_poking > gen_before_poking`. One of the four
    pokes **seeds a fresh invasion**, which resets the counter — so a lower value after
    poking is correct behaviour, and that predicate **cannot discriminate a reset from a
-   stall**. Replaced with two samples taken *after* the pokes, which can.
+   stall**. Replaced with two samples taken _after_ the pokes, which can.
 
 Having watched it print FAIL twice for real reasons, the PASS is informative.
 
 ### Licensing and provenance
 
-| File | Content |
-| --- | --- |
-| `LICENSE` | MIT, © 2026 Jaret Arnold |
-| `LICENSE-docs` | CC BY 4.0, covering `docs/**`, `docs/analysis/fig-*.png`, `experiments/**/*.csv` |
-| `docs/THIRD-PARTY.md` | no vendored code, no embedded fonts, no redistributed data |
-| `CITATION.cff` | Jaret Arnold, ORCID 0009-0003-4055-5238, version 1.0.0. **No DOI** — the coordinator mints the Zenodo concept DOI |
-| `CHANGELOG.md` | `## [1.0.0] — 2026-09-10` |
+| File                  | Content                                                                                                           |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `LICENSE`             | MIT, © 2026 Jaret Arnold                                                                                          |
+| `LICENSE-docs`        | CC BY 4.0, covering `docs/**`, `docs/analysis/fig-*.png`, `experiments/**/*.csv`                                  |
+| `docs/THIRD-PARTY.md` | no vendored code, no embedded fonts, no redistributed data                                                        |
+| `CITATION.cff`        | Jaret Arnold, ORCID 0009-0003-4055-5238, version 1.0.0. **No DOI** — the coordinator mints the Zenodo concept DOI |
+| `CHANGELOG.md`        | `## [1.0.0] — 2026-09-10`                                                                                         |
 
 The boundary (`sim/ web/ scripts/ tools/ tests/ experiments/**/*.ts` → MIT;
 `docs/** experiments/**/*.csv` and figures → CC BY 4.0) is stated in `README.md`.
@@ -455,34 +454,55 @@ vitest MIT, typescript Apache-2.0, tsx MIT, @playwright/test Apache-2.0,
 @types/node MIT. All six are devDependencies; the shipped bundle contains no
 third-party runtime code.
 
-⚠️ **A claim in `THIRD-PARTY.md` was wrong on first writing and was corrected before
-commit.** It said `grep -rni repbase` over the tracked tree "returns exactly one hit".
-It returns **16 lines across 5 files** (`README.md`, `docs/REFERENCES.md`,
-`docs/ROADMAP.md`, and the two specs under `docs/superpowers/`). Every one is a statement
-*about* Repbase — that it is closed, that its licence forbids redistribution, that it was
-dropped in favour of Dfam — so the plan's actual requirement is met, but the sentence as
-drafted was false and now states the real counts.
+⚠️ **The Repbase evidence line was wrong twice, and the second time taught the real
+lesson.** It first said `grep -rni repbase` "returns exactly one hit"; corrected to "16
+lines across 5 files"; and the stage 6 critic then measured **23 lines across 8 files**.
+The correction had been invalidated by the commits that followed it — including the
+commit that wrote the correction, because **writing a count of Repbase mentions adds
+Repbase mentions**. The sentence was self-defeating.
+
+The fix is not a third count. `THIRD-PARTY.md` now states the **invariant** — every line
+the command returns is a statement _about_ Repbase, never content _from_ it — and prints
+the command so a reader can run it, with no number to go stale. A live count in a shipped
+line is a staleness generator: it is falsified by the next edit to any file it counts.
+Re-typing "23 across 8" would have relocated the hole rather than closed it.
+
+The substantive requirement was never in doubt: the critic read all 23 hits independently
+and confirmed no Repbase sequence, annotation or derived content exists anywhere in the
+tree.
 
 ### Sweeps
 
-| Sweep | Result |
-| --- | --- |
-| `gitleaks git --redact -v .` | **no leaks found** — 87 commits, ~2.22 MB scanned |
-| `gitleaks dir --redact -v dist/` | **no leaks found** — ~37.66 KB scanned |
-| private-path grep, tracked files | **1 hit, justified** (below) |
-| private-path grep, `dist/` | **0 hits** |
+| Sweep                            | Result                                            |
+| -------------------------------- | ------------------------------------------------- |
+| `gitleaks git --redact -v .`     | **no leaks found** — 87 commits, ~2.22 MB scanned |
+| `gitleaks dir --redact -v dist/` | **no leaks found** — ~37.66 KB scanned            |
+| private-path grep, tracked files | **4 hits, enumerated and justified** (below)      |
+| private-path grep, `dist/`       | **0 hits**                                        |
 
 **gitleaks was seen to fire before its clean result was accepted.** Scanned a control
 directory holding a planted GitHub PAT and AWS-style credentials: it returned
 `leaks found: 1`, `RuleID: github-pat`. The scanner discriminates, so "no leaks found" on
 the real tree means something.
 
-The one private-path hit is `docs/superpowers/specs/2026-09-10-ship-plan.md:135`, which
-is **the ship plan quoting this very grep pattern** — self-referential, not a leak. The
-same plan also names `~/.claude/projects/-home-mjarnold/memory/…` as the coordinator's
-memo. Both are **justified rather than removed**: the plan is the record of what this
-release was executed against, and the only thing the local path discloses is a username
+Local-path disclosures in tracked files, enumerated rather than counted from memory —
+`git ls-files -z | xargs -0 grep -nE '/home/mjarnold|-home-mjarnold'`:
+
+| Site                                                 | What it is                                                      |
+| ---------------------------------------------------- | --------------------------------------------------------------- |
+| `docs/superpowers/specs/2026-09-10-ship-plan.md:135` | the ship plan quoting this very grep pattern — self-referential |
+| `docs/superpowers/specs/2026-09-10-ship-plan.md:7`   | the path of the coordinator's memo, which is not in this repo   |
+| `docs/ROADMAP.md:98`                                 | a path in the historical record                                 |
+| `docs/RELEASE-1.0.md:482`                            | this table                                                      |
+
+⚠️ An earlier draft of this paragraph named only the two ship-plan sites and so
+**undercounted by one** — `docs/ROADMAP.md:98` went unlisted. Found by the stage 6 critic.
+The table above is generated from the command rather than recalled.
+
+All are **justified rather than removed**: these documents are the record of what this
+release was executed against, and the only thing the paths disclose is a local username
 that maps to the author's real name, which already ships in `LICENSE` and `CITATION.cff`.
+**`dist/` contains none of them**, so nothing reaches the published site.
 
 `.superpowers/` was added to `.gitignore`. It is untracked today only because a
 **machine-local** global excludesfile hides it, and that protection does not travel with
@@ -490,3 +510,116 @@ a clone — on any other checkout a wildcard `git add` could have committed the 
 ledgers and review packages.
 
 DONE: files exist, proofs and sweeps recorded, both scanners seen to fire first.
+
+## Stage 6 — critic gate
+
+One fresh subagent with **no context from this session**, served `dist/`, `docs/FINDINGS.md`,
+all seven figures, the licensing files and `experiments/*.csv`, and told to find reasons
+the release must not ship.
+
+**Result: zero non-waivable defects. One escalation, ten waivable findings, two checks it
+declared incomplete rather than passing silently.** One round; a second was not needed
+because the escalation was a documentation statement, not a defect in the artifact.
+
+### What the critic verified independently
+
+It wrote its own Python against the raw CSVs and did not read the R scripts first. **Every
+number in `FINDINGS.md` matched**, including ones the write-up did not claim were checked:
+
+- 001: 58.652000 / 21.490667, t = 4.6675, df = 42.07, p = 3.100e-05; 17 and 0 above 60
+  copies; 21/40 and 25/40 extinct; 3 `no-inactivation` exclusions.
+- 002: 3 of 9 grid points both-viable, 6 distinct `k*`, 2 distinct regimes among the three.
+- 003: fully CONTROLLED at `phi = 0` and nowhere else, all three ratios.
+- 004: edge 0.016 at generation 600 and 0.004 at 1800, all three ratios; every cell
+  unanimous 10/10 or 0/10; the mechanism's own diagnostic refuted (reach 25.0 vs wander
+  60.8, controlled 10/10).
+- 005: 150/150 saturated, 0 censored, 0 extinct, 150 unique keys; +43.141 / +42.186 /
+  +36.996 % at `phi = 0.002`; worst interpolation −8.633%; worst seed at 82.4% of horizon;
+  realised headroom 1.311× against 1.796× predicted.
+- **The refits, recomputed from scratch:** a = 0.869472 / 0.873357 / 0.876611, SE 0.0274 /
+  0.0189 / 0.0192, and 004's frozen exponents backed out of the `predicted_t_sat` column
+  as 0.7304 / 0.7360 / 0.7447. Combined-SE separation 3.15 / 3.83 / 3.53 — the claimed
+  "3.2 to 3.8".
+
+It rebuilt `dist/` from clean and drove it with Playwright: clicked all four buttons three
+times each, swept all four sliders to max/min/midpoint with real events, and ran to
+**generation 8331**. Zero console errors, zero page errors, zero failed requests, zero
+responses ≥ 400, on both `index.html` and `hash-harness.html`. It re-ran `plot-001.R`
+twice and got `2154b2972dafcde61a03926aedbe298a` both times, byte-identical to the
+committed figure. It read all seven figures as images and checked plotted values against
+its own recomputation. It confirmed no exponent is quoted as a system property, no
+secrets, and all four source claims against the verbatim quotes in `pathway-mechanics.md`.
+
+### The escalation, and what was done about it
+
+Covered above under Sweeps: the Repbase evidence line quoted a hit count that its own
+writing invalidated. Fixed by replacing the count with an invariant plus the command.
+
+### The waivable findings, and which were fixed anyway
+
+Eight of the ten were statements that were imprecise or wrong. None required a model
+change; all were fixed by correcting the statement, which is the only remedy this
+release's scope allows.
+
+| Finding              | Was                                                                                                                                      | Now                                                                                                  |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| 002 secondary bound  | "silenced fraction stays ≤ 0.022" — violated by the true 0.02227                                                                         | states the registered 0.05 criterion, worst cell mean 0.0223, worst run 0.0348                       |
+| 002 arm A copies     | "sat near 200 copies" — the two regimes are 195.5 and 262.6                                                                              | both means given, with the 94.5–95.5% silenced range                                                 |
+| 005 residual pattern | "a systematic `+ − − − +`" — 005's 3.33 fourth residual is +0.0004, inside its own SEM                                                   | `+ − − − +` at 004's three and 005's 2.00/5.00, `+ − − 0 +` at 005's 3.33, stated                    |
+| 004 secondary 2      | "miss by 1.8× to 3.8×" compressed two different comparisons                                                                              | names the post-hoc edge explicitly and gives the registered-grid near-hit beside it                  |
+| `wDom` band          | `0.03 < wDom* ≤ 0.075` quoted unqualified in FINDINGS and README, while the guard's own test says "0.075 is not a property of the model" | both now say the band is measured **on guard 8's arm** and is a property of that arm's `beta`/`pDom` |
+| README `sim/` size   | "~850 lines"; `wc -l` gives 992                                                                                                          | "~990 lines"                                                                                         |
+| licence boundary     | `LICENSE-docs` claimed all of `docs/**`, sweeping ~275 KB of R **source** into CC BY while README said code is MIT                       | `LICENSE-docs` carves out `docs/analysis/*.R` as MIT; README states the boundary glob by glob        |
+| `CITATION.cff`       | `license: MIT` alone, though the work is dual-licensed                                                                                   | `license: [MIT, CC-BY-4.0]`                                                                          |
+
+Two findings were accepted without change: fig-001's missing lower whisker (pure
+aesthetics) and the workflow triggering only on `master` (deliberate — this branch is
+handed off, not deployed).
+
+**The exponent sweep was widened, because the claim was wider than its evidence.**
+`FINDINGS.md` says "nothing in this repository quotes an exponent as a property of the
+system", but the stage 2 discharge only grepped `docs/`, `README.md` and `CHANGELOG.md`.
+Re-run across every tracked file: every hit is either `0.875` (a `phi` grid value in 003)
+or a frozen-reference constant in a guard or runner (`plot-004.R:191-193`,
+`plot-005.R:78-80`, `experiments/005-delay-divergence.ts:67-69`). The critic separately
+flagged `web/params.ts:45`'s "0.87"; read in context it is an **evolved transposition rate
+`r` under `rMax = 1`**, not a `t_sat` exponent. The claim holds tree-wide, and now the
+evidence covers what the claim covers.
+
+### What the critic could not finish, recorded rather than passed
+
+- **"1.9–2.9× the sampling noise floor"** could not be reproduced exactly, because
+  "sampling noise floor" is not defined in shipped prose and the critic was told not to
+  trust the R scripts. Its closest reconstruction gave 2.99 / 2.12 / 2.13 for 005's three
+  fits — same order and direction, and 004's fit extends the low end. The per-cell SEMs it
+  _could_ check matched exactly (0.86%–2.48%). Corroborated, not independently confirmed.
+- **Guard-level claims** (the seven guards, golden hash `9c15fd28`, the `wDom` band, the
+  domestication peaks) were traced to their recorded measurements in
+  `tests/guards/domestication-arm.ts` and `docs/ROADMAP.md` but not re-run. The passing
+  198-test suite is the evidence for those, not an independent recomputation.
+
+DONE: zero non-waivable defects remain.
+
+### Re-verification after the stage 6 corrections
+
+`npm run typecheck` clean. `npm test` **22 files, 198 tests, all passed** (68.75 s).
+
+⚠️ **An intermediate run of that suite reported 4 failures and is recorded rather than
+quietly discarded.** It took 281 s against a normal ~69 s, and `pgrep` found a second
+`vitest` process alive at 301% CPU — the stage 6 critic's own `npm test` still draining.
+Two concurrent suites contend for CPU and for the preview server's port, and both browser
+test files bind one. The failures were the harness colliding with itself, not a
+regression: after waiting for the other run to exit, a single clean run passes 198/198.
+The lesson is the `pgrep`-before-a-long-pipeline rule, applied to a suite this repo runs
+constantly.
+
+Also re-checked after the edits: `CITATION.cff` still parses as valid CFF 1.2.0 with
+`license: [MIT, CC-BY-4.0]`; all relative links in `FINDINGS.md` still resolve (0 broken);
+no stale claim survives anywhere except inside the correction records that quote it
+deliberately.
+
+One correction was made beyond the critic's list. `docs/ROADMAP.md:195` carried the same
+"≤ 0.022" bound that was fixed in FINDINGS, and the ROADMAP ships too — it now states the
+registered 0.05 criterion with the worst cell mean and worst run, and flags the earlier
+wording. The critic did not look at the ROADMAP; the defect class it found there did not
+stop at the file it happened to be reading.

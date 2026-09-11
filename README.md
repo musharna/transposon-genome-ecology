@@ -11,8 +11,11 @@ selection.
 prediction and its falsification condition and committed to git _before_ the code that
 answered it existed. Two of them falsified the thing they were testing.
 
-Code is **MIT**; documentation, figures and data are **CC BY 4.0**. See
-[LICENSE](LICENSE), [LICENSE-docs](LICENSE-docs) and [CITATION.cff](CITATION.cff).
+Code is **MIT** (`sim/ web/ scripts/ tools/ tests/`, `experiments/**/*.ts`, and
+`docs/analysis/*.R` — source code is MIT wherever it lives, including under `docs/`);
+prose, figures and data are **CC BY 4.0** (`docs/**` otherwise, the figures, and
+`experiments/**/*.csv`). See [LICENSE](LICENSE), [LICENSE-docs](LICENSE-docs) and
+[CITATION.cff](CITATION.cff).
 
 ⚠️ **You play a LINEAGE'S EVOLVABLE STRATEGY, not an element making choices.**
 This is an accuracy constraint and it is load-bearing: **transposition rate is
@@ -27,7 +30,8 @@ and the element's own descendants — and two mechanics carry that:
 - **Domestication is an alternate win** (syncytin, RAG). Ceasing to be a parasite
   is a way to persist, not a way to lose.
   ⚠️ **Not at the shipped defaults.** `wDom = 0.01` sits below the measured
-  persistence threshold (`0.03 < wDom* ≤ 0.075`), so domesticated copies are made,
+  persistence threshold measured on guard 8's arm (`0.03 < wDom* ≤ 0.075`, bounds that
+  are a property of that arm rather than of the model), so domesticated copies are made,
   peak, and are then lost to zero at every seed. It is a calibration limit, not a
   missing mechanism, and the constant was deliberately **not** retuned for the
   release — every registered question above was answered at this value.
@@ -35,7 +39,7 @@ and the element's own descendants — and two mechanics carry that:
 
 ## What is here
 
-**The model** (`sim/`) is ~850 lines of TypeScript: six phases composed by
+**The model** (`sim/`) is ~990 lines of TypeScript: six phases composed by
 `step(world)` — transpose, trap, domesticate, excise, select, reproduce — over a
 population of genomes, each a sorted array of copies plus a piRNA repertoire.
 Silencing is not a phase but a derived predicate (`sim/silencing.ts`) that
