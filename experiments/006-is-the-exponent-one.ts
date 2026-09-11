@@ -77,16 +77,23 @@ type Ratio = (typeof RATIOS)[number];
 /** Phase 1 interleaves 005's grid rather than repeating it. */
 const PHASE1_PHIS = [0.0028, 0.0057, 0.008, 0.016, 0.032] as const;
 
-/** Phase 2, column A: unconditional. Column B: gated, see `columnBRuns`. */
+/** Phase 2, column A: unconditional. Column B: gated, see `columnBGate`. */
 const PHASE2_A = 0.001;
 const PHASE2_B = 0.0005;
 
 /**
- * COLUMN B'S GATE, fixed in the registration before any data existed: it runs
- * iff Phase 1's SELECTED form predicts `t_sat(0.0005) <= 30000` at ratio 5.00,
- * so that a horizon at 2.5x the prediction fits the compute budget.
+ * COLUMN B'S GATE, as AMENDED in the registration before any data existed.
+ *
+ * The original clause gated on the SELECTED form's prediction of
+ * `t_sat(0.0005)` being <= 30000 at ratio 5.00, "so that a horizon at 2.5x the
+ * prediction fits the compute budget". That names the wrong quantity: the
+ * horizon the runner actually sets is `horizonFor`, which is 2.5x the LARGEST
+ * of the three candidates, and the selected form is not in general the largest.
+ * The gate now compares the horizon that will actually be spent against
+ * 2.5 * 30000 = 75000 — the same budget the original rationale implied, with
+ * the quantity corrected.
  */
-const COLUMN_B_MAX_PREDICTED = 30_000;
+const COLUMN_B_MAX_HORIZON = 75_000;
 const COLUMN_B_RATIO = "5.00";
 
 const SEEDS = Array.from({ length: 10 }, (_, i) => 6001 + i);
@@ -696,15 +703,50 @@ function runPhase1(shard?: string): void {
   console.log(`Phase 1 written to ${out}`);
 }
 
-function columnBRuns(inRange: Point[]): { runs: boolean; predicted: number } {
-  const sel = selectForm(inRange);
-  const fit = {
-    "power-law": fitPowerLaw,
-    mechanism: fitMechanism,
-    quadratic: fitQuadratic,
-  }[sel.winner](inRange);
-  const predicted = predict(fit, PHASE2_B);
-  return { runs: predicted <= COLUMN_B_MAX_PREDICTED, predicted };
+/**
+ * Column B's gate, decided ONCE for the whole column from ratio 5.00's in-range
+ * cells, as registered. Everything it looked at is returned, because the
+ * amendment obliges the Result to report the gate's inputs whichever way it
+ * falls: a cancelled column B is an affordability outcome, never a null result.
+ */
+function columnBGate(inRange: Point[]): {
+  runs: boolean;
+  horizon: number;
+  from: FormName;
+  selected: FormName;
+  selectedPredicts: number;
+  predictions: Record<FormName, number>;
+} {
+  const selected = selectForm(inRange).winner;
+  const predictions: Record<FormName, number> = {
+    "power-law": predict(fitPowerLaw(inRange), PHASE2_B),
+    mechanism: predict(fitMechanism(inRange), PHASE2_B),
+    quadratic: predict(fitQuadratic(inRange), PHASE2_B),
+  };
+  const [from] = horizonSource(PHASE2_B, inRange);
+  const horizon = horizonFor(PHASE2_B, inRange);
+  return {
+    runs: horizon <= COLUMN_B_MAX_HORIZON,
+    horizon,
+    from,
+    selected,
+    selectedPredicts: predictions[selected],
+    predictions,
+  };
+}
+
+/**
+ * Every cell Phase 2 runs, built from the column gate and nothing else.
+ *
+ * The first version of this runner cancelled column B only at ratio 5.00 and
+ * let the other two ratios run it anyway, which is not what the registration
+ * says ("If the criterion fails, Column B is **not** run"). This is the unit
+ * the runner iterates, so mutation table row 9 has something to make red: with
+ * the gate closed, no cell anywhere in the grid may sit at `PHASE2_B`.
+ */
+function phase2Grid(gateRuns: boolean): { ratio: Ratio; phi: number }[] {
+  const phis = gateRuns ? [PHASE2_A, PHASE2_B] : [PHASE2_A];
+  return RATIOS.flatMap((ratio) => phis.map((phi) => ({ ratio, phi })));
 }
 
 /** Which candidate supplies the largest prediction, and what it is. */
@@ -724,44 +766,58 @@ function runPhase2(): void {
   writeFileSync(PHASE2_CSV, `${HEADER}\n`);
   const rows: Row[] = [];
 
-  for (const r of RATIOS) {
-    const inRange = assertInRange(
-      [...inRange005(r.label), ...cellMeans(p1, r.label)].sort(
+  const forRatio = (label: string): Point[] =>
+    assertInRange(
+      [...inRange005(label), ...cellMeans(p1, label)].sort(
         (a, b) => a.phi - b.phi,
       ),
-      `Phase 2 horizon fit, ratio ${r.label}`,
+      `Phase 2 horizon fit, ratio ${label}`,
     );
-    const sel = selectForm(inRange);
+
+  // ONE decision, for the whole column, taken at the registered ratio before
+  // any cell runs -- not per ratio inside the loop.
+  const gate = columnBGate(forRatio(COLUMN_B_RATIO));
+  console.log(
+    `COLUMN B GATE, at ratio ${COLUMN_B_RATIO}: horizon ${Math.ceil(gate.horizon)} ` +
+      `(2.5x ${gate.from}) against the registered ceiling ${COLUMN_B_MAX_HORIZON} ` +
+      `-> column B ${gate.runs ? "RUNS" : "DOES NOT RUN"}.\n` +
+      `  selected form ${gate.selected}, predicting t_sat(${PHASE2_B}) = ` +
+      `${gate.selectedPredicts.toFixed(0)}; all candidates: ` +
+      `${Object.entries(gate.predictions)
+        .map(([k, v]) => `${k} ${v.toFixed(0)}`)
+        .join(", ")}`,
+  );
+  if (!gate.runs) {
+    console.log(
+      `  ⚠️ Column B is NOT run at ANY ratio, as registered. This is an ` +
+        `AFFORDABILITY outcome, not a null result: the primary is scored on ` +
+        `${PHASE2_A} alone, where the mechanism and the quadratic are nearly ` +
+        `indistinguishable, and the Result must say so.`,
+    );
+  }
+
+  for (const r of RATIOS) {
+    const sel = selectForm(forRatio(r.label));
     console.log(
       `ratio ${r.label}: selected form = ${sel.winner} ` +
         `(LOO MARE ${Object.entries(sel.scores)
           .map(([k, v]) => `${k} ${(100 * v).toFixed(2)}%`)
           .join(", ")})`,
     );
+  }
 
-    const gate = columnBRuns(inRange);
-    const phis: number[] = [PHASE2_A];
-    if (r.label === COLUMN_B_RATIO && !gate.runs) {
+  // The grid is built from the gate and nothing else -- see `phase2Grid`.
+  for (const { ratio: r, phi } of phase2Grid(gate.runs)) {
+    const inRange = forRatio(r.label);
+    const [from, pred] = horizonSource(phi, inRange);
+    const horizon = Math.ceil(horizonFor(phi, inRange));
+    for (const seed of SEEDS) {
+      const row = runOne(phi, r, seed, horizon, from, pred);
+      rows.push(row);
+      appendFileSync(PHASE2_CSV, `${format(row)}\n`);
       console.log(
-        `  ⚠️ COLUMN B GATE FAILED at ratio ${COLUMN_B_RATIO}: selected form predicts ` +
-          `t_sat(${PHASE2_B}) = ${gate.predicted.toFixed(0)} > ${COLUMN_B_MAX_PREDICTED}. ` +
-          `Column B is NOT run, as registered, and the primary is scored on ${PHASE2_A} alone.`,
+        `  phi=${phi} ratio=${r.label} seed=${seed}: t_sat=${row.saturationGeneration} (horizon ${horizon} from ${from})`,
       );
-    } else {
-      phis.push(PHASE2_B);
-    }
-
-    for (const phi of phis) {
-      const [from, pred] = horizonSource(phi, inRange);
-      const horizon = Math.ceil(horizonFor(phi, inRange));
-      for (const seed of SEEDS) {
-        const row = runOne(phi, r, seed, horizon, from, pred);
-        rows.push(row);
-        appendFileSync(PHASE2_CSV, `${format(row)}\n`);
-        console.log(
-          `  phi=${phi} ratio=${r.label} seed=${seed}: t_sat=${row.saturationGeneration} (horizon ${horizon} from ${from})`,
-        );
-      }
     }
   }
   manipulationCheck4(rows);
@@ -786,13 +842,11 @@ function analyse(): void {
       ...cellMeans(p1, r.label),
       ...cellMeans(usable, r.label),
     ].sort((a, b) => a.phi - b.phi);
-    const locals = all
-      .slice(0, -1)
-      .map((_, i) => ({
-        lo: all[i]!.phi,
-        hi: all[i + 1]!.phi,
-        a: localExponent(all[i]!, all[i + 1]!),
-      }));
+    const locals = all.slice(0, -1).map((_, i) => ({
+      lo: all[i]!.phi,
+      hi: all[i + 1]!.phi,
+      a: localExponent(all[i]!, all[i + 1]!),
+    }));
     console.log(
       `  ratio ${r.label}: ` +
         locals.map((l) => `[${l.lo}→${l.hi}] ${l.a.toFixed(3)}`).join("  "),
@@ -880,7 +934,13 @@ export {
   assertInRange,
   keysFor,
   runOne,
+  columnBGate,
+  phase2Grid,
+  COLUMN_B_MAX_HORIZON,
+  COLUMN_B_RATIO,
   PHASE1_PHIS,
+  PHASE2_A,
+  PHASE2_B,
   RATIOS,
   SEEDS,
   type Row,
@@ -902,7 +962,9 @@ function smoke(): void {
   const r = RATIOS[0];
   const phis = [0.032, 0.0453];
   const seeds = SEEDS.slice(0, 2);
-  console.log(`SMOKE — ratio ${r.label}, phi ${phis.join("/")}, ${seeds.length} seeds\n`);
+  console.log(
+    `SMOKE — ratio ${r.label}, phi ${phis.join("/")}, ${seeds.length} seeds\n`,
+  );
 
   writeFileSync(OUT, `${HEADER}\n`);
   for (const phi of phis) {
@@ -918,14 +980,21 @@ function smoke(): void {
   // Round-trip through the real reader, then the real analysis.
   const back = readRows(OUT);
   if (back.length !== phis.length * seeds.length) {
-    throw new Error(`SMOKE FAILED: wrote ${phis.length * seeds.length} rows, read back ${back.length}`);
+    throw new Error(
+      `SMOKE FAILED: wrote ${phis.length * seeds.length} rows, read back ${back.length}`,
+    );
   }
   const means = cellMeans(back, r.label);
   if (means.length !== phis.length) {
-    throw new Error(`SMOKE FAILED: expected ${phis.length} cell means, got ${means.length}`);
+    throw new Error(
+      `SMOKE FAILED: expected ${phis.length} cell means, got ${means.length}`,
+    );
   }
-  console.log(`\n  round-trip OK: ${back.length} rows, ${means.length} cell means`);
-  for (const m of means) console.log(`    phi=${m.phi} mean t_sat=${m.t.toFixed(1)}`);
+  console.log(
+    `\n  round-trip OK: ${back.length} rows, ${means.length} cell means`,
+  );
+  for (const m of means)
+    console.log(`    phi=${m.phi} mean t_sat=${m.t.toFixed(1)}`);
 
   const withHistory = assertInRange(
     [...inRange005(r.label), ...means].sort((a, b) => a.phi - b.phi),
@@ -934,13 +1003,27 @@ function smoke(): void {
   const sel = selectForm(withHistory);
   console.log(
     `\n  selectForm over ${withHistory.length} in-range cells -> ${sel.winner} ` +
-      `(${Object.entries(sel.scores).map(([k, v]) => `${k} ${(100 * v).toFixed(2)}%`).join(", ")})`,
+      `(${Object.entries(sel.scores)
+        .map(([k, v]) => `${k} ${(100 * v).toFixed(2)}%`)
+        .join(", ")})`,
   );
   const [from, pred] = horizonSource(PHASE2_A, withHistory);
   console.log(
     `  horizon for phi=${PHASE2_A}: ${Math.ceil(horizonFor(PHASE2_A, withHistory))} generations, largest candidate ${from} at ${pred.toFixed(0)}`,
   );
-  console.log(`\nSMOKE PASSED — the pipeline runs end to end. ${OUT} is scratch; delete it.`);
+
+  // Column B's gate, driven end to end. It is unit-tested against synthetic
+  // data, but this is the only place it runs against numbers that came out of
+  // the model, through the CSV, and back — which is the whole point of a smoke.
+  const gate = columnBGate(withHistory);
+  console.log(
+    `  column B gate: horizon ${Math.ceil(gate.horizon)} (2.5x ${gate.from}) ` +
+      `vs ceiling ${COLUMN_B_MAX_HORIZON} -> ${gate.runs ? "RUNS" : "DOES NOT RUN"}; ` +
+      `${phase2Grid(gate.runs).length} Phase 2 cells across ${RATIOS.length} ratios`,
+  );
+  console.log(
+    `\nSMOKE PASSED — the pipeline runs end to end. ${OUT} is scratch; delete it.`,
+  );
 }
 
 function main(): void {

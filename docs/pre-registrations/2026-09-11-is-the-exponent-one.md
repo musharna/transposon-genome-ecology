@@ -179,6 +179,33 @@ horizon for Phase 2.
   2.5× the prediction fits the compute budget. If the criterion fails, Column B
   is **not** run, that is recorded as a registered deviation, and the primary is
   scored on Column A alone with the reduced power stated in the Result.
+  - ⚠️ **AMENDED 2026-09-11, before any data existed**, while smoke-testing the
+    runner: **the clause above names the wrong quantity.** What column B costs
+    is not the selected form's point prediction; it is the horizon the runner
+    actually sets, and the horizon rule in "Pre-specified analysis" takes 2.5×
+    the **largest** of the three candidates, not the selected one. Those differ.
+    On exact power-law data the mechanism's extrapolation to `phi = 0.0005`
+    exceeds the selected power law's by about 1.5×, so the original clause could
+    wave through a column costing far more than it read — and, in the other
+    direction, cancel an affordable one because a contest among candidates
+    happened to be won by the most convex of them. Neither direction is about
+    affordability, which is the only thing this gate exists to decide.
+    **The gate is therefore keyed on the horizon that will actually be spent:
+    column B runs iff `horizonFor(0.0005)` at ratio 5.00 is ≤ 75000
+    generations.** That is 2.5 × 30000 — the original clause's own stated
+    rationale — so the compute this project agreed to spend is unchanged; only
+    the quantity compared against it is corrected.
+  - ⚠️ **What the amendment does NOT fix, recorded rather than hidden.** Any
+    compute gate is anti-correlated with curvature, and curvature is exactly
+    what makes column B worth running: the more the data curves, the larger
+    every extrapolation to `phi = 0.0005`, and the likelier the column is
+    cancelled — precisely when it is the only thing that could separate the
+    mechanism from a still-drifting exponent. That tension is real and cannot be
+    designed away, because deep `phi` genuinely does cost more. It is stated
+    here so that a cancelled column B is read as an **affordability** outcome
+    and never as a null result, and so that the Result is obliged to report the
+    gate's inputs — the selected form, all three candidates' predictions, and
+    the horizon — whichever way it falls.
 
 **Why Column B is registered rather than deferred.** At `phi = 0.001` the
 mechanism and the quadratic are nearly indistinguishable — predicted local
@@ -322,6 +349,14 @@ fail for its stated reason.
 | 5 | Phase 2 cells included in the candidate fits                  | analysis assertion      |
 | 6 | one seed duplicated across two cells                          | manipulation check 5    |
 | 7 | the falsification clause's upper bound removed                | this table's own review |
+| 8 | column B's gate keyed on the selected form's prediction        | `tests/006-column-b-gate.test.ts` |
+| 9 | column B cancelled at ratio 5.00 only, the other two left running | `tests/006-column-b-gate.test.ts` |
+
+Rows 8 and 9 were **added 2026-09-11 with the amendment above, before any data
+existed**, because the amendment changes the runner and an unchecked change to a
+runner is exactly what this table exists to prevent. Row 9 is not a design
+defect but an implementation one: the first runner cancelled column B only at
+ratio 5.00, which is not what "Column B is **not** run" says.
 
 ## Scope, stated in advance
 
