@@ -6,8 +6,8 @@ authors:
   - given-names: Jaret
     family-names: Arnold
     orcid: "https://orcid.org/0009-0003-4055-5238"
-version: 1.0.0
-date-released: "2026-09-10"
+version: 1.0.1
+date-released: "2026-09-11"
 # Two licences: MIT for source code (wherever it lives, including
 # docs/analysis/*.R), CC BY 4.0 for prose, figures and data. README.md states
 # the boundary file-glob by file-glob; the texts are LICENSE and LICENSE-docs.
