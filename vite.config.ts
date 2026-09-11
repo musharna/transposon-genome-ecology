@@ -15,8 +15,21 @@ const here = (rel: string): string =>
  * imports, which is the whole point: the guard compares node against the
  * artifact the build actually emits, not against a separate compilation.
  */
+/**
+ * GitHub Pages serves a project site under `/<repo>/`, not at the domain root,
+ * so every emitted asset URL needs that prefix or the page loads and every
+ * script 404s.
+ *
+ * Exported because `tests/guards/one-implementation.test.ts` asserts on the
+ * emitted `src="..."` paths, and a second hand-typed copy of this string there
+ * would be a constant calibrated against the artifact under test: change the
+ * base and the guard would keep passing against its own stale literal.
+ */
+export const BASE = "/transposon-genome-ecology/";
+
 export default defineConfig({
   root: "web",
+  base: BASE,
   build: {
     outDir: "../dist",
     emptyOutDir: true,

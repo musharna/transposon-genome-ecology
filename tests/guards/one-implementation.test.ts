@@ -93,6 +93,7 @@
 import { chromium, type Browser } from "@playwright/test";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { build, preview, type PreviewServer } from "vite";
+import { BASE } from "../../vite.config.js";
 import {
   createWorld,
   defaultParams,
@@ -167,7 +168,11 @@ beforeAll(async () => {
     // of this guard, which would then be reporting on the wrong thing.
     preview: { port: 4321, strictPort: false },
   });
-  origin = server.resolvedUrls!.local[0]!.replace(/\/$/, "");
+  // Keep the trailing slash -- this is the served BASE url, and under a
+  // non-root `base` preview serves it only with the slash. See the same note in
+  // `tests/layout.test.ts`. Pages are derived from it with `new URL`, not by
+  // string concatenation, so the join cannot reintroduce a double slash.
+  origin = server.resolvedUrls!.local[0]!;
   // If this throws it usually says "Executable doesn't exist" and means
   // `npx playwright install chromium` has not been run -- see README setup.
   browser = await chromium.launch();
@@ -231,9 +236,10 @@ async function browserRun(preset: Preset, seed: number): Promise<BrowserRun> {
     if (m.type() === "error") failures.push(`console: ${m.text()}`);
   });
   try {
-    const url =
-      `${origin}/hash-harness.html` +
-      `?seed=${seed}&generations=${GENERATIONS}&preset=${preset}`;
+    const url = new URL(
+      `hash-harness.html?seed=${seed}&generations=${GENERATIONS}&preset=${preset}`,
+      origin,
+    ).href;
     const response = await page.goto(url);
     // Asserted, not retried. A 404 here means the second Vite entry emitted
     // nothing; swallowing it is how a guard turns into a skipped test.
@@ -276,10 +282,15 @@ describe("guard 7: one implementation", () => {
       const file = emitted.find((f) => f.fileName === name);
       return typeof file?.source === "string" ? file.source : "";
     };
+    // The prefix comes from `vite.config.ts`, never re-typed here: a built page
+    // emits `src="<base>assets/...js"`, so a hand-copied literal would go on
+    // matching its own stale value after the base changed.
+    const assetSrc = new RegExp(
+      `src="(${BASE.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}assets/[^"]+\\.js)"`,
+      "g",
+    );
     const entryScript = (page: string): string[] =>
-      [...html(page).matchAll(/src="(\/assets\/[^"]+\.js)"/g)].map(
-        (m) => m[1]!,
-      );
+      [...html(page).matchAll(assetSrc)].map((m) => m[1]!);
 
     // Positive control, asserted first: adding a second Rollup entry can
     // displace the first, and a harness page in an otherwise empty build would
@@ -299,9 +310,12 @@ describe("guard 7: one implementation", () => {
       html("hash-harness.html"),
       "and not at the raw source",
     ).not.toContain("hash-harness.ts");
-    // And the chunk that script names was actually written.
+    // And the chunk that script names was actually written. Rollup's fileNames
+    // are relative to outDir (`assets/harness-*.js`) while the emitted `src` is
+    // a URL path carrying the base, so strip the base rather than one leading
+    // slash -- under a non-root base those are not the same cut.
     expect(names, `${harnessScript[0]} was written`).toContain(
-      harnessScript[0]!.replace(/^\//, ""),
+      harnessScript[0]!.slice(BASE.length),
     );
   });
 

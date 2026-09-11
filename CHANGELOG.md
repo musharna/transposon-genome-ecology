@@ -2,6 +2,71 @@
 
 Milestone-boundary entries. Appended in the commit that closes a milestone.
 
+## [1.0.0] — 2026-09-10
+
+First public release: the toy goes on GitHub Pages and the findings become
+readable by a stranger. **The registered model ships as registered** — questions
+001–005 are answered and their limitations ship as limitations, not as fixes. No
+`sim/` behaviour, no `defaultParams`, and no constant changed in this release.
+
+### Added
+
+- **`docs/FINDINGS.md`** — the five registered questions written for a stranger:
+  prediction as registered → result → verdict → what it does not show, with each
+  number carrying its CSV, its runner and its commit. Every headline number was
+  recomputed from `experiments/*.csv` independently of the R analysis before it
+  was written down.
+- **`docs/RELEASE-1.0.md`** — the release evidence log, including a disposition
+  table classifying all 23 open roadmap items as claim-invalidating,
+  interpretation-limiting, or future work.
+- **`docs/THIRD-PARTY.md`** — no code, fonts or data are vendored; Repbase
+  appears only as a statement that it is closed.
+- **`LICENSE`** (MIT, code) and **`LICENSE-docs`** (CC BY 4.0, documentation,
+  figures and data), with the boundary stated in `README.md`.
+- **`CITATION.cff`**.
+- **`.github/workflows/pages.yml`** — build, test and publish to Pages. It
+  installs Chromium before `npm test`, because two test files drive a real
+  browser and the suite cannot pass without it.
+- `engines: { node: ">=22" }` in `package.json`.
+
+### Changed
+
+- **`vite.config.ts` sets `base: "/transposon-genome-ecology/"`**, which a
+  project site on GitHub Pages requires; without it the page loads and every
+  asset 404s. The base is exported as `BASE` and imported by guard 7 rather than
+  re-typed, so the guard cannot pass against a stale literal after the base moves.
+- **Figures `fig-001` … `fig-004` re-rendered under the current house style.**
+  They predated the gridline change made during 005's review and were still
+  drawing the retired `grey90` at 1.26:1, below this project's own 3:1 floor, so
+  "one house style per project" was false until now.
+- **`README.md`**: a play link, a link to FINDINGS, and the licence boundary at
+  the top. Its claim that "**one** registered question has been asked and
+  answered" was false — five have been — and is replaced by a verdict table.
+- **The toy's legend** now states the domestication limitation where a visitor
+  meets it.
+
+### Fixed
+
+- **`fig-001` was not reproducible.** `plot-001.R` called `geom_jitter` with no
+  seed anywhere in the file, so the figure differed on every run and "re-run the
+  script to reproduce it" was untrue. Pinned with `set.seed(1)`; three
+  consecutive runs now produce one hash, with the primary statistic unchanged.
+  It was the only RNG call in any plot script, which is why the other four were
+  already byte-stable.
+- **`.superpowers/` added to `.gitignore`.** It was hidden only by a
+  machine-local global excludesfile, which does not travel with a clone.
+
+### Known limitations, shipped deliberately
+
+- **Domestication cannot happen at the shipped defaults.** `wDom = 0.01` sits
+  below the measured persistence threshold of `0.03 < wDom* ≤ 0.075`, so
+  domesticated copies appear, peak, and are lost to zero at every seed. It is a
+  calibration limit, not a missing mechanism. Retuning it would invalidate every
+  registered result above, so it was left alone.
+- **`t_sat` is not a power law in `phi`**, and the exponent measured is a
+  property of the fitting window. No shipped sentence quotes an exponent as a
+  property of the system. The next registration must test a functional _form_.
+
 ## Unreleased
 
 ### The repertoire lookup is bounded — `sim/silencing.ts`, `sim/phases/trap.ts`

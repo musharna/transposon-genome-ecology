@@ -99,7 +99,12 @@ let origin = "";
 beforeAll(async () => {
   await build({ logLevel: "warn" });
   server = await preview({ preview: { port: 4319, strictPort: false } });
-  origin = server.resolvedUrls!.local[0]!.replace(/\/$/, "");
+  // Keep the trailing slash. Vite resolves this to the served BASE url, which
+  // under `base: "/transposon-genome-ecology/"` is `http://host:port/<repo>/`,
+  // and preview serves that path only WITH the slash -- the bare `/<repo>` 404s
+  // and is not redirected. Stripping it was harmless only while the base was
+  // `/`, where `http://host:port/` and `http://host:port` are the same request.
+  origin = server.resolvedUrls!.local[0]!;
   // If this throws, it usually says "Executable doesn't exist" and means
   // `npx playwright install chromium` has not been run -- see README setup.
   browser = await chromium.launch();
@@ -130,11 +135,7 @@ async function measure(height: number): Promise<Panel> {
     // The readout is filled by JS after first layout and is 156px of text; the
     // panel's height is not final until it is there. Waiting for it is also
     // what makes this a check on the RUNNING toy rather than on the markup.
-    await page.waitForFunction(
-      READOUT_FILLED,
-      undefined,
-      { timeout: 30_000 },
-    );
+    await page.waitForFunction(READOUT_FILLED, undefined, { timeout: 30_000 });
     return await page.evaluate(() => {
       const panel = document.getElementById("controls")!;
       const trap = document.getElementById("trap-panel")!;
@@ -255,10 +256,9 @@ describe("the control panel at the shipped viewport", () => {
     // `clientHeight`, so this can only ever say "the column does not overflow";
     // it cannot report spare height, and the dead-space assertion below is what
     // proves the spare height was spent.
-    expect(
-      tall.scrollHeight,
-      "at 1440px the column does not overflow",
-    ).toBe(tall.clientHeight);
+    expect(tall.scrollHeight, "at 1440px the column does not overflow").toBe(
+      tall.clientHeight,
+    );
     expect(
       tall.deadSpace,
       "and it is spent: nothing unpainted below the last section",
@@ -302,7 +302,9 @@ describe("the page while the genome is flooded", () => {
     const page = await browser!.newPage({ viewport: { width: W, height: H } });
     try {
       await page.goto(origin);
-      await page.waitForFunction(READOUT_FILLED, undefined, { timeout: 30_000 });
+      await page.waitForFunction(READOUT_FILLED, undefined, {
+        timeout: 30_000,
+      });
 
       // Positive control, asserted first: a sexual page advances and is nowhere
       // near full, so the flooded numbers below are the poke and the "still

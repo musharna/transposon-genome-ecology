@@ -1,0 +1,33 @@
+cff-version: 1.2.0
+title: "Transposons as genome ecology"
+message: "If you use this software or its findings, please cite it as below."
+type: software
+authors:
+  - given-names: Jaret
+    family-names: Arnold
+    orcid: "https://orcid.org/0009-0003-4055-5238"
+version: 1.0.0
+date-released: "2026-09-10"
+license: MIT
+license-url: "https://github.com/musharna/transposon-genome-ecology/blob/master/LICENSE"
+repository-code: "https://github.com/musharna/transposon-genome-ecology"
+url: "https://musharna.github.io/transposon-genome-ecology/"
+abstract: >-
+  A watchable, pokeable model of transposable elements as an ecosystem inside a
+  genome, in which the unit of individuality is the copy and transposition rate
+  is a per-copy heritable trait rather than a player decision. The host's piRNA
+  trap is built from captured element fragments, so inserting into it conscripts
+  an element into its own suppression. Five questions were pre-registered — each
+  with its prediction and falsification condition committed before the code that
+  answered it existed — covering per-copy versus family-level rate heritability,
+  conscription versus an innate silencer, the fidelity a trap requires, whether
+  imperfect trapping yields a band or only a delay, and whether that delay
+  diverges or reaches a floor. Documentation, figures and data are licensed
+  CC BY 4.0; source code is MIT.
+keywords:
+  - transposable elements
+  - piRNA
+  - genome ecology
+  - agent-based model
+  - pre-registration
+  - simulation

@@ -1,0 +1,68 @@
+name: Pages
+
+# The toy is a static Vite build, so the deploy is "build it, upload it, publish
+# it". `workflow_dispatch` is here so the site can be republished without an
+# empty commit — useful the first time, when Pages has just been enabled.
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# A second push while a deploy is in flight should supersede it, not race it.
+# In-progress runs are allowed to finish: cancelling a half-done deploy is how a
+# Pages site ends up serving a partial upload.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Read from .nvmrc rather than repeated here: package.json also pins
+          # engines >=22, and a third copy of the version is a third thing to
+          # forget. The toolchain does not start on Node 18 — `vitest run` and
+          # `vite build` both crash on a missing `styleText` from `node:util`.
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      # REQUIRED before `npm test`. Two test files drive a real Chromium:
+      # `tests/layout.test.ts` (the pokes are on screen) and guard 7
+      # (`tests/guards/one-implementation.test.ts`, the browser and Node produce
+      # a byte-identical state hash). Without the browser binary the suite fails
+      # at `chromium.launch()` with "Executable doesn't exist" — which is the
+      # truth, and is why this step is not optional.
+      - run: npx playwright install --with-deps chromium
+
+      - run: npm test
+
+      - run: npm run typecheck
+
+      - run: npm run build
+
+      # `dist/.nojekyll` comes from `web/public/` via the build. Without it Pages
+      # runs Jekyll, which strips paths beginning with an underscore.
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

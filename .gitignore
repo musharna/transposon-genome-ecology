@@ -1,4 +1,9 @@
 _scratch/
+# Workflow scratch (ledgers, briefs, review packages). It was previously hidden
+# only by this machine's global excludesfile, which does not travel with a
+# clone — so on any other checkout it would show up as untracked and could be
+# committed by a wildcard `git add`.
+.superpowers/
 node_modules/
 dist/
 dist-guard7/
