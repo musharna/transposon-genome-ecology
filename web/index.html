@@ -10,7 +10,16 @@
          third canvas was clipped at the fold with no bottom border while the
          first two closed cleanly. min-height:0 stops a grid item's auto minimum
          from re-inflating the rows. Measured after the fix at an 800px
-         viewport: 8 + 368 + 8 + 180 + 8 + 220 + 8 = 800 exactly. */
+         viewport, when #stage held three rows and two gaps:
+         8 + 368 + 8 + 180 + 8 + 220 + 8 = 800 exactly.
+
+         RE-MEASURED for v1.0.1, which added the #masthead row: #stage is now
+         FOUR rows and THREE gaps, and the auto row takes its height out of the
+         field's 1fr rather than out of the viewport. At the same 800px:
+         8 + 32 + 8 + 328 + 8 + 180 + 8 + 220 + 8 = 800, still exactly. The
+         masthead is 32px because it wraps to two lines at 11px/1.45 in the
+         960px stage column; if it ever fits on one line the field takes the
+         difference back and the identity still closes. */
       *,
       *::before,
       *::after {

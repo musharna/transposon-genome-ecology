@@ -31,9 +31,9 @@ and the element's own descendants — and two mechanics carry that:
   one conscripts you into your own suppression. The trap is made of you.
 - **Domestication is an alternate win** (syncytin, RAG). Ceasing to be a parasite
   is a way to persist, not a way to lose.
-  ⚠️ **Not at the shipped defaults.** `wDom = 0.01` sits below the measured
-  persistence threshold measured on guard 8's arm (`0.03 < wDom* ≤ 0.075`, bounds that
-  are a property of that arm rather than of the model), so domesticated copies are made,
+  ⚠️ **Not at the shipped defaults.** `wDom = 0.01` sits below the persistence
+  threshold measured on guard 8's arm (`0.03 < wDom* ≤ 0.075`, bounds that are a
+  property of that arm rather than of the model), so domesticated copies are made,
   peak, and are then lost to zero at every seed. It is a calibration limit, not a
   missing mechanism, and the constant was deliberately **not** retuned for the
   release — every registered question above was answered at this value.
@@ -41,7 +41,7 @@ and the element's own descendants — and two mechanics carry that:
 
 ## What is here
 
-**The model** (`sim/`) is ~990 lines of TypeScript: six phases composed by
+**The model** (`sim/`) is ~1,000 lines of TypeScript (999 at v1.0.1): six phases composed by
 `step(world)` — transpose, trap, domesticate, excise, select, reproduce — over a
 population of genomes, each a sorted array of copies plus a piRNA repertoire.
 Silencing is not a phase but a derived predicate (`sim/silencing.ts`) that
@@ -71,20 +71,20 @@ been re-measured since (in-browser frame rate), are on `reset()` in
 **The validation surface** (`tests/guards/`) is nine guards, each asserting one
 claim the model makes, each against its own matched null:
 
-| #   | claim                                                                                                                                                                                  | file                         |
-| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
-| 1   | Charlesworth 1983's qualitative equilibrium: a LINEAR fitness function does not control copy number, a quadratic one does                                                              | `equilibrium.test.ts`        |
-| 2   | Kofler 2019's three phases — invasion, plateau, inactivation — are detectable, and the detector reports failure rather than guessing                                                   | `three-phases.test.ts`       |
-| 3   | Repression switches on as the piRNA cluster grows, with onset inside Kofler 2020's 0.2–3% band                                                                                         | `cluster-threshold.test.ts`  |
-| 4   | Knocking out silencing produces genome bloat — direction only, not magnitude                                                                                                           | `bloat.test.ts`              |
-| 5   | Per-copy transposition rate actually EVOLVES, and not from mutational bias — the geometric mean rises too                                                                              | `rate-evolves.test.ts`       |
-| 6   | A diverged sublineage escapes an established trap                                                                                                                                      | `escape.test.ts`             |
-| 7   | The browser and Node run one model, byte for byte                                                                                                                                      | `one-implementation.test.ts` |
-| 8   | Domestication is an alternate win ABOVE a benefit threshold, and the shipped `wDom = 0.01` is below it — asserted as loss at the default and persistence-through-family-death above it | `domestication.test.ts`      |
-| 9   | The resistance↔tolerance dial is a difference in KIND: a purely tolerant host never forms a repertoire, so it cannot be conscripted at all                                             | `tolerance.test.ts`          |
+| #   | claim                                                                                                                                                                                                                              | file                         |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
+| 1   | Charlesworth 1983's qualitative equilibrium: a LINEAR fitness function does not control copy number, a quadratic one does                                                                                                          | `equilibrium.test.ts`        |
+| 2   | Kofler 2019's three phases — invasion, plateau, inactivation — are detectable, and the detector reports failure rather than guessing                                                                                               | `three-phases.test.ts`       |
+| 3   | Repression switches on as the piRNA cluster grows, with onset inside Kofler 2020's 0.2–3% band — at every reduction constant from 20% to 85%, and the window is asserted to have two ends (below the band at 15%, above it at 90%) | `cluster-threshold.test.ts`  |
+| 4   | Knocking out silencing produces genome bloat — direction only, not magnitude                                                                                                                                                       | `bloat.test.ts`              |
+| 5   | Per-copy transposition rate actually EVOLVES, and not from mutational bias — the geometric mean rises too                                                                                                                          | `rate-evolves.test.ts`       |
+| 6   | A diverged sublineage escapes an established trap                                                                                                                                                                                  | `escape.test.ts`             |
+| 7   | The browser and Node run one model, byte for byte                                                                                                                                                                                  | `one-implementation.test.ts` |
+| 8   | Domestication is an alternate win ABOVE a benefit threshold, and the shipped `wDom = 0.01` is below it — asserted as loss at the default and persistence-through-family-death above it                                             | `domestication.test.ts`      |
+| 9   | The resistance↔tolerance dial is a difference in KIND: a purely tolerant host never forms a repertoire, so it cannot be conscripted at all                                                                                         | `tolerance.test.ts`          |
 
 Guard 8 does **not** locate a threshold in the model — the band `0.03 < wDom* ≤ 0.075`
-belongs to that arm's `N`, horizon, `beta` and `pDom`, and it asserts no domesticated
+belongs to that arm's `N`, `v`, `beta`, `pDom` and horizon, and it asserts no domesticated
 count as a prediction. Guard 9 does **not** claim the dial is graded in the population;
 that was measured and is false at its arm, and its fitness tests are arithmetic on
 constructed genomes rather than a population result.
@@ -183,10 +183,12 @@ Layout:
 
 ## Grounding
 
-`docs/REFERENCES.md` carries 51 DOIs across 41 cited entries (re-tallied
-2026-09-11), every one resolved live against OpenAlex on 2026-09-02 or 2026-09-03
-— first-author surname, year, venue and DOI from the registry, not from recall.
-`docs/dois.txt` is that DOI set, and nothing else. `docs/charlesworth-1983-equilibrium.md` is a full read of the null
+`docs/REFERENCES.md` carries 51 distinct DOIs (re-tallied 2026-09-11), every one
+resolved live against OpenAlex on 2026-09-02 or 2026-09-03 — first-author surname,
+year, venue and DOI from the registry, not from recall. `docs/dois.txt` is that DOI
+set and nothing else. That file states no count of "works": one work is entered in
+two sections and §8 cites several DOIs under one bullet, so the DOI count is the
+only tally with a reproducible command behind it. `docs/charlesworth-1983-equilibrium.md` is a full read of the null
 model, including the reason its analytic constant does NOT transfer to this
 model (ours is haploid and deduplicates sites shared by both parents; theirs is
 diploid).

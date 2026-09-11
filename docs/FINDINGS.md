@@ -216,9 +216,13 @@ sizing rule is circular and should have come from the model's worst plausible er
 **domestication** — an element ceasing to be a parasite and being kept for a job the
 host needs, as with syncytin and RAG — as an _alternate win_. **At the shipped defaults
 it cannot happen.** `defaultParams().wDom = 0.01`, and the persistence threshold measured
-across eleven seeds **on guard 8's arm** sits at `0.03 < wDom* ≤ 0.075` — those bounds are
-a property of that arm's `beta` and `pDom`, not of the model, and the guard's own test
-says so. The shipped value is 3× below the
+across eleven seeds **on guard 8's arm** sits at `0.03 < wDom* ≤ 0.075`. Those bounds are
+a property of **that arm and not of the model**, and the guard's own test says so: the
+band is a drift-versus-selection balance, so it moves with `N` (200 here), with `v`, with
+`beta` and `pDom` (0.1 and 0.2 here, which set the supply), and **with the horizon** —
+at `wDom = 0.05`, five of eleven seeds still hold domesticated copies at generation 600
+and **none do at generation 1000**. Nothing here licenses quoting 0.075 as the model's
+domestication threshold. The shipped value is 3× below the
 highest bonus at which every seed still loses its domesticated copies, and 7.5× below
 the lowest at which every seed keeps them. Domesticated copies are made, peak at
 195–595 copies around generation 26–44, and are then lost **to zero at every seed**.

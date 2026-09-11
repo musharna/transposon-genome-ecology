@@ -325,10 +325,16 @@ list, so every finding carries `claimed_author: null` and `claimed_year: null`: 
 verified that all 51 DOIs **resolve** and that none appears in the Retraction Watch
 snapshot. It did **not** verify that each DOI is the work the surrounding prose names —
 the wrong-author-for-right-DOI failure mode. That check is `docs/REFERENCES.md`'s, which
-records all 38 works / 42 DOIs resolved live against OpenAlex on 2026-09-02 with
-first-author surname, year, venue and DOI taken from the registry. The 51 here exceed 42
-because `docs/` also cites works outside `REFERENCES.md` (pre-registrations, the
-Charlesworth read, `pathway-mechanics.md`).
+records the works resolved live against OpenAlex on 2026-09-02 and 2026-09-03 with
+first-author surname, year, venue and DOI taken from the registry.
+
+⚠️ **Corrected 2026-09-11 (v1.0.1).** This paragraph read "all 38 works / 42 DOIs" and
+explained the gap to 51 by saying `docs/` cites works outside `REFERENCES.md`
+(pre-registrations, the Charlesworth read, `pathway-mechanics.md`). **Both halves were
+wrong.** `REFERENCES.md` itself carries 51 distinct DOIs — its own header was the stale
+thing, never updated after §7 and §8 grew — and `docs/dois.txt` is exactly that file's
+DOI set, verified identical in both directions. There is no excess to explain. See the
+re-tally note at the top of `REFERENCES.md`.
 
 **Each FINDINGS headline that rests on a source was checked against a full-text read**,
 recorded in `docs/pathway-mechanics.md`, not against recall:

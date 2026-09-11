@@ -27,8 +27,8 @@ Settled there, and **superseding the two sections immediately below**:
 
 ~~**Nothing is designed yet.**~~ Superseded 2026-09-02. ~~Scaffolded 2026-09-01;
 still no code, no runner, no measurement~~ — superseded again 2026-09-03: the
-model, the toy, all seven guards, one registered question and its result are
-built and committed on `impl/sim-core-v1`. See the checklist at the bottom.
+model, the toy, all seven guards (nine by v1.0), one registered question and its
+result are built and committed on `impl/sim-core-v1`. See the checklist at the bottom.
 
 ## The constraint that shapes everything else
 
@@ -89,7 +89,8 @@ Osmanski et al. 2023 (248 mammal genomes, deposited into Dfam, so CC0).
 ## Prior grounding that already exists — read before re-running it
 
 ➡️ **SUPERSEDED IN PART by [`REFERENCES.md`](REFERENCES.md) (built 2026-09-02).**
-That file carries 38 registry-verified works (42 DOIs), the null model this roadmap lacks
+That file carries 51 registry-verified DOIs (re-tallied 2026-09-11; it said "38 works,
+42 DOIs" until then, and that count predated §7 and §8), the null model this roadmap lacks
 (Charlesworth & Charlesworth 1983), a calibration number for the piRNA trap
 (cluster size >0.2% of genome), and a **re-derived artifact-gap finding that
 contradicts the second bullet below**. Read it before the brainstorm.

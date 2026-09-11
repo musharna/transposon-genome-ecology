@@ -83,6 +83,53 @@ was touched; nothing was re-run to produce a different number.
   facts now sit beside the command, with "do not run this to check the figures" and a
   pointer to `Rscript docs/analysis/plot-005.R` instead.
 
+### Fixed — found by the release's own critic pass
+
+A fresh critic was run against the rendered toy and the prose, told to falsify rather
+than approve. It returned nine class-1 findings (a count disagreeing with the tree), zero
+class-2 (broken links) and two class-3 (an unqualified threshold claim). All are fixed
+here; two of them were introduced by this release.
+
+- **Introduced here, and caught here: `web/index.html`'s stage arithmetic went stale the
+  moment the masthead was added.** The box-sizing comment proved the layout with
+  `8 + 368 + 8 + 180 + 8 + 220 + 8 = 800`, which is three rows and two gaps. Adding the
+  masthead made `#stage` four rows and three gaps. Re-measured and rewritten, with the
+  old identity kept as the "before": `8 + 32 + 8 + 328 + 8 + 180 + 8 + 220 + 8 = 800`,
+  still exact.
+- **Introduced here: "51 DOIs across 41 cited entries" was not reproducible.** The 51 is
+  right and has a command behind it; the 41 came from a segmentation script that
+  captured only 48 of the 51 DOIs, and "cited entries" contradicted the very next
+  sentence, which said a cited tool was _not_ among the 41. **No works/entries count is
+  published any more** — `REFERENCES.md` now says why (one work is entered in two
+  sections, and §8 cites up to six DOIs under one bullet, so "entry" has no segmentation
+  rule a reader would reproduce) and states only the DOI count, with its command.
+- **The guard-count fix missed the top of the file it was fixing.**
+  `tests/guards/one-implementation.test.ts` had "Six guards validate the model by running
+  `sim/` in node" four lines above the "other six guards" that _was_ corrected. Both now
+  read eight. The same docblock's "the other eighteen test files" is now twenty-one
+  (there are 22), and its "TEN of `TOY_DEFAULTS`' seventeen fields differ" — followed by
+  a parenthetical listing twelve — now leads with twelve and explains that ten is the
+  count once `N` and `S` are set aside.
+- **`docs/RELEASE-1.0.md` did not just carry the stale "38 works / 42 DOIs" — its
+  explanation was falsified.** It accounted for `docs/dois.txt`'s 51 by saying `docs/`
+  cites works outside `REFERENCES.md`. `REFERENCES.md` itself holds all 51, and
+  `dois.txt` is exactly its DOI set; there was never an excess to explain. Both halves
+  corrected in place, with the withdrawn reasoning recorded.
+- **`docs/ROADMAP.md` carried both retired counts** — "38 registry-verified works (42
+  DOIs)" and "all seven guards" — in the file `FINDINGS.md` names as the running record.
+- **`docs/FINDINGS.md` named two of the five things the domestication band depends on.**
+  It said the bounds are "a property of that arm's `beta` and `pDom`". The guard says the
+  band moves with `N`, with `v`, with `beta` and `pDom`, **and with the horizon** — and
+  demonstrates the last one numerically: at `wDom = 0.05`, five of eleven seeds hold
+  copies at generation 600 and none do at 1000. FINDINGS is the page a reader is sent to
+  for this limitation and was the weakest statement of it; it now carries all five and
+  the generation-1000 result. `README.md` was missing `v` and now lists all five.
+- **Guard 3's README row stated Kofler's band unconditionally.** The guard asserts onset
+  inside the 0.2–3% band _at every reduction constant from 20% to 85%_, and separately
+  asserts the window has two ends — below the band at 15%, above it at 90%. The row now
+  says both.
+- **`README.md` "~990 lines"** is 999.
+
 ### Fixed — metadata and hygiene
 
 - **`web/hash-harness.html` was a visitor-reachable URL on the published site.** It

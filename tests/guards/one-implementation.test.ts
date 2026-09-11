@@ -2,8 +2,8 @@
  * GUARD 7 (spec §6): one implementation.
  *
  * The strongest claim in the project is that THE ARTIFACT PLAYED IS THE
- * ARTIFACT VALIDATED. Six guards validate the model by running `sim/` in node.
- * The toy runs a Vite bundle in a browser. Nothing in the other eighteen test
+ * ARTIFACT VALIDATED. Eight guards validate the model by running `sim/` in node.
+ * The toy runs a Vite bundle in a browser. Nothing in the other twenty-one test
  * files touches that bundle's copy of the model, so "one implementation" is,
  * until this file exists, a sentence in a design document.
  *
@@ -29,10 +29,10 @@
  * BOTH CLAIMS ARE MADE AT TWO PARAMETER REGIMES, AND THE SECOND IS THE TOY'S
  * ------------------------------------------------------------------------------
  * Until 2026-09-03 this guard ran only `defaultParams({ N, S, seed })`. The toy
- * runs `defaultParams(TOY_DEFAULTS)` (`web/main.ts:37`), and TEN of
+ * runs `defaultParams(TOY_DEFAULTS)` (`web/main.ts:37`), and TWELVE of
  * `TOY_DEFAULTS`' seventeen fields differ from `defaultParams` (`N`, `S`, `c`,
- * `r0`, `rMax`, `sigmaR`, `sigmaS`, `theta`, `v`, `b`, `beta`, `pDom` — twelve
- * counting `N` and `S`, which the plain scenario already overrode). Two of those
+ * `r0`, `rMax`, `sigmaR`, `sigmaS`, `theta`, `v`, `b`, `beta`, `pDom`) — ten if
+ * you set aside `N` and `S`, which the plain scenario already overrode. Two of those
  * differences change which code paths are live rather than merely which numbers
  * flow through them:
  *

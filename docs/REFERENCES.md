@@ -4,14 +4,28 @@
 DOIs** — Brouha et al. 2003 added to §4 to ground a claim that was standing
 uncited in `tests/guards/three-phases-arm.ts`.
 
-⚠️ **Re-tallied 2026-09-11: the document carries 51 distinct DOIs across 41
-DOI-bearing entries.** The 2026-09-03 header was never updated when §7's registry
-sweep and §8's dataset resolutions added citations of their own, so "38 works / 42
-DOIs" undercounted from then on. Those two figures are kept as the dated record of
-what the base held on those days; **51 DOIs / 41 entries is the current count.** One
-further cited tool (TEvarSim, §7) carries a PMC identifier and no DOI, so it is not
-among the 41. `docs/dois.txt` is exactly this DOI set — verified identical in both
-directions on 2026-09-11.
+⚠️ **Re-tallied 2026-09-11: the document carries 51 distinct DOIs.** The 2026-09-03
+header was never updated when §7's registry sweep and §8's dataset resolutions added
+citations of their own, so "38 works / 42 DOIs" undercounted from then on. Those two
+figures are kept as the dated record of what the base held on those days; **51 is the
+current DOI count.** Reproduce it:
+
+```sh
+grep -oE '10\.[0-9]{4,9}/[^ )"'"'"',;]+' docs/REFERENCES.md | sed 's/[.,]$//' | sort -u | wc -l
+```
+
+`docs/dois.txt` is exactly that set — verified identical in both directions on
+2026-09-11, and `ghostcite docs/dois.txt` reads the same 51 with zero findings.
+
+**No count of "works" is published here, deliberately.** 52 lines carry a DOI and 51 DOIs
+are distinct, because **Meiklejohn & Blumenstiel 2018** is entered twice — in §4 (line 193)
+and again in §9 (line 507) — so entries exceed works. Beyond that, "entry" is not
+well-defined across this file: §1–§6 and §9 are one-work bullets and table rows, while §8's
+dataset pointers cite up to six DOIs under a single bullet. Any single number here depends
+on a segmentation rule nobody else would reproduce, so the DOI count — which has a command
+behind it — is the only tally stated. An earlier draft of this section published "41
+entries"; that figure came from a script that captured only 48 of the 51 DOIs and is
+withdrawn.
 
 Every entry below was resolved
 against **OpenAlex live**: first-author surname, year, venue and DOI all came
