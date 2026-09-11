@@ -2,6 +2,39 @@
 
 Milestone-boundary entries. Appended in the commit that closes a milestone.
 
+## Unreleased
+
+### Fixed
+
+- **`tests/layout.test.ts`'s flood waits were budgeted in the wrong unit.** They gated on
+  `occupancy > 0.9` — an event that arrives after some number of **generations**, with the
+  page advancing one generation per animation frame — using a **240 s wall-clock** budget.
+  Generations-per-second is set by how much CPU the host has spare, so the budget silently
+  shrank, measured in generations, exactly when the box was busy. Measured on one machine,
+  one tree, one commit: **~9 s at load average 10, and the full 240 s blown at load average
+  20.5** with four foreign processes pinning all 16 cores.
+
+  Concurrency inside vitest was ruled out by measurement rather than assumed: the same test
+  takes **9.1 s isolated against 9.9 s inside the full 22-file suite**, a 9% difference, so
+  the sibling files are not the cause.
+
+  Replaced by `waitForWorld`, which fails only when the world has genuinely **stopped** —
+  `stallMs` of wall clock with no change in `generation`. A freeze is a real event and is
+  legitimately measured in seconds; a merely slow host now waits longer and passes, which is
+  the correct outcome. The failure message names the stall instead of blaming an occupancy
+  that was still climbing. This applies to the waits the rule the file already stated for its
+  assertions: "a frame-time threshold is a property of the machine running it; what is
+  asserted is the part that is not".
+
+### Added
+
+- **A guard on that guard** (199 tests, up from 198). `waitForWorld` can fail exactly one
+  way, so an untested failure path would not report a slow failure — it would report nothing
+  and hang until vitest killed the file. The new test freezes the page by starving its
+  animation-frame loop and asserts the stall is both detected and named, with a positive
+  control asserted first in the same body (the world IS advancing before the freeze), so it
+  cannot pass on a page that never ran.
+
 ## [1.0.1] — 2026-09-11
 
 A documentation-correctness release, from a 10-judge review panel on v1.0.0. **Every

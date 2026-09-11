@@ -55,8 +55,6 @@ const READOUT_FILLED = `(document.getElementById("readout") || {}).textContent`;
 const COPIES = `(function(){var w=window.__sim.world,c=0;
   for(var i=0;i<w.genomes.length;i++)c+=w.genomes[i].copies.length;
   return {generation:w.generation,copies:c,occupancy:c/(w.params.N*w.params.S)};})()`;
-const OCCUPANCY_OVER_90 = `${COPIES}.occupancy > 0.9`;
-const OCCUPANCY_UNDER_10 = `${COPIES}.occupancy < 0.1`;
 
 interface SimState {
   generation: number;
@@ -66,6 +64,58 @@ interface SimState {
 
 async function state(page: Page): Promise<SimState> {
   return (await page.evaluate(COPIES)) as SimState;
+}
+
+/**
+ * Wait until `done(s)` holds, failing ONLY if the world stops advancing.
+ *
+ * WHY THIS IS NOT `page.waitForFunction(..., { timeout })`. It was, at 240 s,
+ * and that budget is the wrong unit. What this test waits for -- the genome
+ * filling past 90% -- arrives after some number of GENERATIONS, and the page
+ * advances one generation per animation frame. Generations-per-second is
+ * therefore a property of how much CPU the host has spare, so a wall-clock
+ * budget silently shrinks, measured in generations, exactly when the box is
+ * busy. Measured on this machine, same tree, same commit: the test takes
+ * ~9.1 s at load average 10 and blew the whole 240 s at load average 20.5 with
+ * four foreign processes pinning all 16 cores. Concurrency inside vitest is
+ * NOT the cause and was ruled out by measurement: isolated 9.1 s against 9.9 s
+ * inside the full 22-file suite, a 9% difference.
+ *
+ * This file already draws that distinction for its ASSERTIONS -- "a frame-time
+ * threshold is a property of the machine running it; what is asserted is the
+ * part that is not". The waits were left coupled to the machine. This applies
+ * the same rule to them.
+ *
+ * So the only thing that fails here is a world that has STOPPED: `stallMs` of
+ * wall clock with no change in `generation`. That is a real freeze and it is
+ * legitimately measured in seconds. A merely slow host waits longer and still
+ * passes, which is the correct outcome -- and the failure message now names
+ * what actually went wrong instead of blaming an occupancy that was still
+ * climbing.
+ */
+async function waitForWorld(
+  page: Page,
+  done: (s: SimState) => boolean,
+  what: string,
+  stallMs = 45_000,
+): Promise<SimState> {
+  let last = await state(page);
+  let lastAdvance = Date.now();
+  for (;;) {
+    const s = await state(page);
+    if (done(s)) return s;
+    if (s.generation !== last.generation) {
+      last = s;
+      lastAdvance = Date.now();
+    } else if (Date.now() - lastAdvance > stallMs) {
+      throw new Error(
+        `the world stopped advancing while waiting for ${what}: ` +
+          `generation stuck at ${s.generation} for ${stallMs} ms, ` +
+          `occupancy ${s.occupancy.toFixed(3)}`,
+      );
+    }
+    await page.waitForTimeout(250);
+  }
 }
 
 /**
@@ -297,6 +347,61 @@ describe("the control panel at the shipped viewport", () => {
  * The one timing bound is deliberately two orders of magnitude looser than the
  * measurement, so it fails for "frozen", not for "busy CI".
  */
+/**
+ * THE GUARD ON THE GUARD. `waitForWorld` can only fail one way -- the world
+ * stopped advancing -- so if that path is broken it does not report a slow
+ * failure, it reports NOTHING and waits until vitest kills the file. A wait
+ * whose only failure mode is untested is a wait that silently cannot fail.
+ *
+ * This freezes the page by starving its animation-frame loop (`web/main.ts`
+ * drives every generation from `requestAnimationFrame`) and asserts the stall
+ * is both DETECTED and NAMED. It is fast -- a 4 s stall budget -- because it
+ * is testing the detector, not the toy.
+ */
+describe("the stall detector that the flood waits depend on", () => {
+  it("reports a frozen world instead of waiting forever", async () => {
+    const page = await browser!.newPage({ viewport: { width: W, height: H } });
+    try {
+      await page.goto(origin);
+      await page.waitForFunction(READOUT_FILLED, undefined, {
+        timeout: 30_000,
+      });
+
+      // POSITIVE CONTROL, asserted first and inside this same body: the world
+      // IS advancing before the freeze, so the stall reported below cannot be
+      // "it never started" -- which would pass on a page that never ran.
+      const a = await state(page);
+      await page.waitForTimeout(500);
+      const b = await state(page);
+      expect(
+        b.generation,
+        "the world is advancing before the freeze",
+      ).toBeGreaterThan(a.generation);
+
+      await page.evaluate(
+        `window.requestAnimationFrame = function(){ return 0; };`,
+      );
+
+      let err: Error | undefined;
+      try {
+        await waitForWorld(
+          page,
+          (s) => s.occupancy > 0.9,
+          "a flood that will never come",
+          4_000,
+        );
+      } catch (e) {
+        err = e as Error;
+      }
+      expect(err, "it threw rather than hanging until the file timed out").toBeDefined();
+      expect(err!.message).toContain("the world stopped advancing");
+      expect(err!.message).toContain("generation stuck at");
+    } finally {
+      await page.close();
+    }
+  }, 120_000);
+});
+
 describe("the page while the genome is flooded", () => {
   it("keeps running and still answers the button that undoes it", async () => {
     const page = await browser!.newPage({ viewport: { width: W, height: H } });
@@ -320,11 +425,11 @@ describe("the page while the genome is flooded", () => {
       );
 
       await page.click('[data-poke="sexual"]');
-      await page.waitForFunction(OCCUPANCY_OVER_90, undefined, {
-        timeout: 240_000,
-      });
-
-      const flooded = await state(page);
+      const flooded = await waitForWorld(
+        page,
+        (s) => s.occupancy > 0.9,
+        "the genome to flood past 90% occupancy",
+      );
       expect(flooded.occupancy, "the genome is full").toBeGreaterThan(0.9);
       const frame = await frameTime(page, 4000);
       expect(
@@ -339,10 +444,11 @@ describe("the page while the genome is flooded", () => {
       ).toBeGreaterThan(flooded.generation);
 
       await page.click('[data-poke="sexual"]');
-      await page.waitForFunction(OCCUPANCY_UNDER_10, undefined, {
-        timeout: 240_000,
-      });
-      const cleared = await state(page);
+      const cleared = await waitForWorld(
+        page,
+        (s) => s.occupancy < 0.1,
+        "the flood to clear back under 10% occupancy",
+      );
       expect(cleared.occupancy, "and the way out works").toBeLessThan(0.1);
     } finally {
       await page.close();
