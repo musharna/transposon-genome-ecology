@@ -14,3 +14,4 @@ Rplots.pdf
 # committed artifact and the runner's check 5 proves the shard boundary was
 # inert, so these are regenerable scratch, not results.
 experiments/*.shard-*.csv
+experiments/006-smoke.csv

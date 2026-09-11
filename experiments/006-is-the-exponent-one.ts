@@ -886,6 +886,63 @@ export {
   type Row,
 };
 
+/**
+ * A minimal end-to-end pass: run real cells, write the real CSV, read it back
+ * through the real reader, and drive the real analysis. Minutes, not hours.
+ *
+ * This exists because everything else in this file can be green while the
+ * pipeline is broken. The manipulation checks were verified against the model
+ * and the fits are unit-tested, but `runOne` -> `format` -> `readRows` ->
+ * `cellMeans` -> `selectForm` had never executed end to end, and committing
+ * sixteen hours to a write-and-read path nobody has run is how this project
+ * has been bitten before.
+ */
+function smoke(): void {
+  const OUT = "experiments/006-smoke.csv";
+  const r = RATIOS[0];
+  const phis = [0.032, 0.0453];
+  const seeds = SEEDS.slice(0, 2);
+  console.log(`SMOKE — ratio ${r.label}, phi ${phis.join("/")}, ${seeds.length} seeds\n`);
+
+  writeFileSync(OUT, `${HEADER}\n`);
+  for (const phi of phis) {
+    for (const seed of seeds) {
+      const row = runOne(phi, r, seed, 1000, "smoke", 0);
+      appendFileSync(OUT, `${format(row)}\n`);
+      console.log(
+        `  phi=${phi} seed=${seed}: t_sat=${row.saturationGeneration} saturated=${row.saturated} maxAbsEntry=${row.maxAbsEntry.toFixed(3)}`,
+      );
+    }
+  }
+
+  // Round-trip through the real reader, then the real analysis.
+  const back = readRows(OUT);
+  if (back.length !== phis.length * seeds.length) {
+    throw new Error(`SMOKE FAILED: wrote ${phis.length * seeds.length} rows, read back ${back.length}`);
+  }
+  const means = cellMeans(back, r.label);
+  if (means.length !== phis.length) {
+    throw new Error(`SMOKE FAILED: expected ${phis.length} cell means, got ${means.length}`);
+  }
+  console.log(`\n  round-trip OK: ${back.length} rows, ${means.length} cell means`);
+  for (const m of means) console.log(`    phi=${m.phi} mean t_sat=${m.t.toFixed(1)}`);
+
+  const withHistory = assertInRange(
+    [...inRange005(r.label), ...means].sort((a, b) => a.phi - b.phi),
+    "smoke",
+  );
+  const sel = selectForm(withHistory);
+  console.log(
+    `\n  selectForm over ${withHistory.length} in-range cells -> ${sel.winner} ` +
+      `(${Object.entries(sel.scores).map(([k, v]) => `${k} ${(100 * v).toFixed(2)}%`).join(", ")})`,
+  );
+  const [from, pred] = horizonSource(PHASE2_A, withHistory);
+  console.log(
+    `  horizon for phi=${PHASE2_A}: ${Math.ceil(horizonFor(PHASE2_A, withHistory))} generations, largest candidate ${from} at ${pred.toFixed(0)}`,
+  );
+  console.log(`\nSMOKE PASSED — the pipeline runs end to end. ${OUT} is scratch; delete it.`);
+}
+
 function main(): void {
   const argv = process.argv.slice(2);
   const flag = (name: string): string | undefined => {
@@ -893,12 +950,13 @@ function main(): void {
     return i >= 0 ? argv[i + 1] : undefined;
   };
   const phase = flag("--phase");
-  if (argv.includes("--analyse")) analyse();
+  if (argv.includes("--smoke")) smoke();
+  else if (argv.includes("--analyse")) analyse();
   else if (phase === "1") runPhase1(flag("--shard"));
   else if (phase === "2") runPhase2();
   else {
     console.error(
-      "usage: 006-is-the-exponent-one.ts --phase 1 [--shard 2.00] | --phase 2 | --analyse",
+      "usage: 006-is-the-exponent-one.ts --smoke | --phase 1 [--shard 2.00] | --phase 2 | --analyse",
     );
     process.exit(2);
   }
