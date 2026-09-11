@@ -339,3 +339,154 @@ recorded in `docs/pathway-mechanics.md`, not against recall:
 
 DONE: FINDINGS numbers agree with the CSVs they cite (checked above), ghostcite clean
 with its control seen to fire, README rewritten.
+
+## Stage 5 — site, licensing, hygiene
+
+### The site builds for a project Pages path
+
+`vite.config.ts` now sets `base: "/transposon-genome-ecology/"`. GitHub Pages serves a
+project site under `/<repo>/`, so without it the page would load and every asset would
+404. Verified in the emitted HTML:
+
+```
+src="/transposon-genome-ecology/assets/main-3rlMxbCi.js"
+href="/transposon-genome-ecology/assets/params-jPj0KOgw.js"
+```
+
+`web/public/.nojekyll` was added and lands in the build as `dist/.nojekyll` (Vite copies
+`publicDir`, which resolves to `<root>/public` = `web/public` because `root` is `web`).
+
+**The base broke five tests, and they were right to break.** `npm test` went from 198/198
+to 5 failures across `tests/layout.test.ts` and `tests/guards/one-implementation.test.ts`.
+Root cause, established by direct measurement rather than inference — a probe against a
+live preview server printed:
+
+```
+resolvedUrls.local: ["http://localhost:4399/transposon-genome-ecology/"]
+404 http://localhost:4399/transposon-genome-ecology     (no redirect)
+200 http://localhost:4399/transposon-genome-ecology/
+200 http://localhost:4399/transposon-genome-ecology/hash-harness.html
+```
+
+Both test files did `server.resolvedUrls.local[0].replace(/\/$/, "")`. **That strip was
+harmless only while the base was `/`**, where `http://host:port/` and `http://host:port`
+are the same request; under a non-root base it produces a path preview 404s and does not
+redirect. Three candidate causes were considered — `resolvedUrls` missing the base, an
+in-page asset assertion, and the trailing-slash strip — and the probe above discriminated
+between them rather than a guess being adopted.
+
+Fixes, each at the layer the defect lives at:
+
+| Site | Was | Now |
+| --- | --- | --- |
+| both test files | `.replace(/\/$/, "")` | keep the trailing slash; it is the served base URL |
+| `one-implementation.test.ts` | `` `${origin}/hash-harness.html` `` | `new URL("hash-harness.html…", origin).href` — the join cannot reintroduce a double slash |
+| `one-implementation.test.ts` | `/src="(\/assets\/[^"]+\.js)"/` | regex built from `BASE`, imported from `vite.config.ts` |
+| `one-implementation.test.ts` | `harnessScript[0].replace(/^\//, "")` | `.slice(BASE.length)` — under a non-root base, "strip one slash" and "strip the base" are not the same cut |
+
+`BASE` is **exported from `vite.config.ts` and imported by the guard**, never re-typed.
+A second hand-copied literal in the test would be a constant calibrated against the
+artifact under test: change the base and the guard would go on passing against its own
+stale value.
+
+After the fixes: `npm run typecheck` clean, `npm test` **22 files, 198 tests, all
+passed.**
+
+### Clean-checkout proof
+
+```
+git clone --depth=1 -b release/1.0-rc file://$PWD <tmp>/tge-verify
+cd <tmp>/tge-verify && npm ci && npm test && npm run build
+```
+
+| Step | Result |
+| --- | --- |
+| clone HEAD | `964d902` |
+| `npm ci` | 0 vulnerabilities |
+| `npm test` | **22 files, 198 tests, all passed** |
+| `npm run build` | built in 173 ms |
+| `dist/index.html` | present |
+| `dist/.nojekyll` | present |
+| `dist/hash-harness.html` | present |
+
+### Headless smoke against the built site
+
+Served with `vite preview` and driven with the Playwright Chromium already in
+devDependencies.
+
+| Check | Result |
+| --- | --- |
+| toy HTTP status | **200** at `/transposon-genome-ecology/` |
+| `hash-harness.html` HTTP status | **200** |
+| responses ≥ 400 | **none** |
+| console errors / page errors / failed requests | **none** |
+| controls present | 4 buttons, 4 sliders |
+| sim advances | `gen` 93 → 459 over 2 s |
+| sim still advances after poking every button | `gen` 255 → 525 |
+
+⚠️ **The first two smoke runs reported FAIL, and both were the harness's fault, not the
+toy's.** Recorded because a smoke test that only ever passes is worthless:
+
+1. The first version scraped `document.body.innerText` for `/generation[^0-9]*([0-9]+)/`.
+   The string "generation" does not appear in `web/index.html` at all, so it matched an
+   unrelated number that never moved. The real counter is the `gen` row of `#readout`.
+2. The second version asserted `gen_after_poking > gen_before_poking`. One of the four
+   pokes **seeds a fresh invasion**, which resets the counter — so a lower value after
+   poking is correct behaviour, and that predicate **cannot discriminate a reset from a
+   stall**. Replaced with two samples taken *after* the pokes, which can.
+
+Having watched it print FAIL twice for real reasons, the PASS is informative.
+
+### Licensing and provenance
+
+| File | Content |
+| --- | --- |
+| `LICENSE` | MIT, © 2026 Jaret Arnold |
+| `LICENSE-docs` | CC BY 4.0, covering `docs/**`, `docs/analysis/fig-*.png`, `experiments/**/*.csv` |
+| `docs/THIRD-PARTY.md` | no vendored code, no embedded fonts, no redistributed data |
+| `CITATION.cff` | Jaret Arnold, ORCID 0009-0003-4055-5238, version 1.0.0. **No DOI** — the coordinator mints the Zenodo concept DOI |
+| `CHANGELOG.md` | `## [1.0.0] — 2026-09-10` |
+
+The boundary (`sim/ web/ scripts/ tools/ tests/ experiments/**/*.ts` → MIT;
+`docs/** experiments/**/*.csv` and figures → CC BY 4.0) is stated in `README.md`.
+
+**Dependency licences were read from `node_modules`, not recalled**: vite MIT,
+vitest MIT, typescript Apache-2.0, tsx MIT, @playwright/test Apache-2.0,
+@types/node MIT. All six are devDependencies; the shipped bundle contains no
+third-party runtime code.
+
+⚠️ **A claim in `THIRD-PARTY.md` was wrong on first writing and was corrected before
+commit.** It said `grep -rni repbase` over the tracked tree "returns exactly one hit".
+It returns **16 lines across 5 files** (`README.md`, `docs/REFERENCES.md`,
+`docs/ROADMAP.md`, and the two specs under `docs/superpowers/`). Every one is a statement
+*about* Repbase — that it is closed, that its licence forbids redistribution, that it was
+dropped in favour of Dfam — so the plan's actual requirement is met, but the sentence as
+drafted was false and now states the real counts.
+
+### Sweeps
+
+| Sweep | Result |
+| --- | --- |
+| `gitleaks git --redact -v .` | **no leaks found** — 87 commits, ~2.22 MB scanned |
+| `gitleaks dir --redact -v dist/` | **no leaks found** — ~37.66 KB scanned |
+| private-path grep, tracked files | **1 hit, justified** (below) |
+| private-path grep, `dist/` | **0 hits** |
+
+**gitleaks was seen to fire before its clean result was accepted.** Scanned a control
+directory holding a planted GitHub PAT and AWS-style credentials: it returned
+`leaks found: 1`, `RuleID: github-pat`. The scanner discriminates, so "no leaks found" on
+the real tree means something.
+
+The one private-path hit is `docs/superpowers/specs/2026-09-10-ship-plan.md:135`, which
+is **the ship plan quoting this very grep pattern** — self-referential, not a leak. The
+same plan also names `~/.claude/projects/-home-mjarnold/memory/…` as the coordinator's
+memo. Both are **justified rather than removed**: the plan is the record of what this
+release was executed against, and the only thing the local path discloses is a username
+that maps to the author's real name, which already ships in `LICENSE` and `CITATION.cff`.
+
+`.superpowers/` was added to `.gitignore`. It is untracked today only because a
+**machine-local** global excludesfile hides it, and that protection does not travel with
+a clone — on any other checkout a wildcard `git add` could have committed the workflow's
+ledgers and review packages.
+
+DONE: files exist, proofs and sweeps recorded, both scanners seen to fire first.
