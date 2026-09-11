@@ -114,11 +114,23 @@ toolchain imports `styleText` from `node:util` and Node 18 has no such export.
 `.nvmrc` pins 22 and `package.json` declares `engines.node >= 22`.
 
     npm ci
-    npx playwright install --with-deps chromium    # REQUIRED -- see below
+    npx playwright install chromium     # REQUIRED -- see below
     npm test
 
-`--with-deps` installs the system libraries Chromium needs and is **Linux-only**
-— on macOS and Windows drop it and run `npx playwright install chromium`.
+**If Chromium then fails to launch for a missing system library**, and only
+then, add `--with-deps`:
+
+    npx playwright install --with-deps chromium
+
+⚠️ `--with-deps` is **Linux-only and needs root** — it runs the distro's package
+manager to install Chromium's shared libraries, so it prompts for a password and
+**fails outright where sudo is non-interactive** (`sudo: a password is required`,
+then `Failed to install browsers`). That is why it is not the first line: CI can
+use it because a GitHub runner has passwordless sudo (`.github/workflows/pages.yml`
+does exactly that), and a developer machine that already has the libraries does not
+need it at all. Plain `npx playwright install chromium` needs no privileges and is
+enough in that case.
+
 Playwright is a **test** dependency only: `npm run build` and `npm run preview`
 do not touch it, so a browserless machine can still build and serve the toy. It
 is `npm test` that cannot pass without it.

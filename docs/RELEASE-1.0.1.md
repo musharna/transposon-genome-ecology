@@ -9,10 +9,10 @@
 
 **RC.** Branch `release/1.0.1-rc`, three commits on top of `53c0e12`:
 
-| commit    | what                                                                      |
-| --------- | ------------------------------------------------------------------------- |
-| `b2a6ce9` | the punch list — all 14 items                                             |
-| `126ac33` | the critic gate — 9 class-1 and 2 class-3 findings, two of them self-inflicted |
+| commit    | what                                                                                         |
+| --------- | -------------------------------------------------------------------------------------------- |
+| `b2a6ce9` | the punch list — all 14 items                                                                |
+| `126ac33` | the critic gate — 9 class-1 and 2 class-3 findings, two of them self-inflicted               |
 | tip       | this evidence log (its own SHA cannot be quoted inside it; `git rev-parse release/1.0.1-rc`) |
 
 Every measurement below was taken at `126ac33`, whose tree differs from the tip only
@@ -171,30 +171,80 @@ Test Files  2 passed (2)
      Tests  11 passed (11)
 ```
 
-⚠️ **THE FULL 198-TEST SUITE HAS NOT BEEN RUN GREEN AGAINST THE FINAL RC.** It is queued
-on the `jobd` broker as job **3720** (in-tree) and has not been dispatched: the laptop
-worker has `max_concurrent: 1` and job **3713** (`jepagame`, priority 78, non-preemptible)
-has held the only slot for the whole of this session. Preempting another project's running
-job to make room for this one was not an acceptable trade and was not done.
+**`npm test` — 22 files, 198 tests, all passed**, 40.69 s, exit 0, against the RC tree:
 
-What IS known about the suite on this tree:
+```
+$ npm test
+ Test Files  22 passed (22)
+      Tests  198 passed (198)
+   Start at  04:51:14
+   Duration  40.69s (tests 97%, transform 2%, import 1%)
+```
 
-- the two browser-driven files — the only ones any change here could plausibly break —
-  pass, twice, as above;
-- the remaining 20 files exercise `sim/`, whose emitted code is byte-identical by the
-  hash argument above;
-- the last full run in this session, on the tree **before** any edit, was 197/198, with
-  the single failure proven environmental (see the environment note at the end).
+_Note on how this was run._ It was first submitted to the `jobd` broker (job 3720) rather
+than run inline, because the host was saturated by other projects' work. It never
+dispatched: the laptop worker is `max_concurrent: 1`, and `jepagame` jobs at priority 78
+held the only slot for ~70 minutes — job 3713 ran to completion and job 3727 claimed the
+slot immediately after, with this job queued at priority 40 behind both. It was cancelled
+and run inline once the host had gone quiet (load average **1.44**, 13 idle CPUs, 32.7 GB
+free RAM), at which point an inline run starved nothing. Preempting another project's
+running job was never done.
 
-**This is the one acceptance criterion the plan states that is not discharged.** It needs
-a green `npm test` on a quiet box before the tag is cut.
+**That run also settles the environment question below.** The same suite, same tree, took
+**249 s and failed one test** under load average 20.5, and **40.69 s with everything
+green** at load average 1.4 — a 6.1× wall-clock difference on identical code. The failure
+was contention, and nothing about it was a property of this release.
 
 ### Clean clone
 
-⚠️ **NOT RUN.** Queued as job **3722**, dependent on 3720, and blocked behind the same
-occupied worker. The job is written and will clone `release/1.0.1-rc` from the local repo,
-then run `npm ci` → `npx playwright install --with-deps chromium` → `npm test` →
-`npm run typecheck` → `npm run build`. It must pass before the tag is cut.
+Ran from a fresh `git clone` of `release/1.0.1-rc` into an empty temp directory at
+`361d74b`, with no `node_modules` and no `dist`:
+
+```
+HEAD=361d74b582b7e577dc91422d706a6ce6948480f3
+=== npm ci ===        13 packages looking for funding; found 0 vulnerabilities
+=== npm test ===      Test Files 22 passed (22) | Tests 198 passed (198)   41.42s
+=== typecheck ===     tsc --noEmit, no output
+=== build ===         built in 101ms
+                      dist/hash-harness.html            1.31 kB
+                      dist/index.html                  16.54 kB
+                      dist/assets/harness-Bn08ftXm.js   0.73 kB
+                      dist/assets/params-jPj0KOgw.js    5.10 kB
+                      dist/assets/main-3rlMxbCi.js     16.96 kB
+```
+
+Green, and the three JS content hashes are **identical to the in-tree build** — the build
+is reproducible from a clean checkout, not just incrementally correct here.
+
+⚠️ **One step in it failed, and it found a real defect in this release's own
+documentation.**
+
+```
+=== playwright ===
+sudo: a password is required
+Failed to install browsers
+Error: Installation process exited with code: 1
+```
+
+The clean clone ran `npx playwright install --with-deps chromium` — the command **B6 had
+just written into `README.md` as the first-line setup step** — and it failed. `--with-deps`
+shells out to the distro package manager to install Chromium's shared libraries, so it
+needs root; under non-interactive sudo it exits 1. The suite passed anyway only because
+Playwright's browser cache is user-global (`~/.cache/ms-playwright`) and was already
+populated, which means **this run did not verify the documented install path** — it
+verified `npm ci` → `npm test` on a machine that happened to already have a browser.
+
+Fixed rather than noted: `README.md` and `FINDINGS.md` now lead with plain
+`npx playwright install chromium`, which needs no privileges (verified: exit 0 in the
+clean clone as a non-root user), and present `--with-deps` as the fallback for a missing
+system library, marked Linux-only **and root-only**, with the reason CI can use it
+(`.github/workflows/pages.yml:46` runs it on a GitHub runner, which has passwordless
+sudo). The plan's B6 asked for `--with-deps` with a Linux-only caveat; the caveat was
+incomplete, and a clean-clone run is what showed it.
+
+**Still not verified by anything here:** installation of Chromium on a machine with an
+empty `~/.cache/ms-playwright` **and** missing system libraries. That path needs a
+container.
 
 ### ghostcite
 
@@ -316,5 +366,27 @@ file in isolation on the identical tree: **4 passed in 9.96 s**. The failing tes
 wall-clock-bounded and vitest runs files in parallel, so under saturation the flooded-page
 test loses its budget to its own siblings.
 
-The acceptance runs recorded above were therefore submitted through the `jobd` broker
-rather than run inline, which serialises them against the other work on the host.
+The acceptance runs were therefore submitted through the `jobd` broker rather than run
+inline. When the broker's single laptop slot proved to be held continuously by a
+higher-priority project, they were run inline instead — but only after the host had gone
+quiet, so the measurement would mean something.
+
+**Resolved, and the numbers are worth keeping.** The same suite on the same tree:
+
+| load average | wall time | result            |
+| ------------ | --------- | ----------------- |
+| 20.47        | 249 s     | 197/198, one FAIL |
+| 1.44         | 40.69 s   | **198/198**       |
+
+A 6.1× spread on identical code, with the slow end crossing a hard 240 s timeout. Two
+things follow, neither of them about this release:
+
+1. **v1.0.0's recorded "198 tests, all passed (69.16 s)" is not reproducible on a busy
+   machine**, and nothing in the suite says so.
+2. **`tests/layout.test.ts`'s flooded-page test is wall-clock-bounded at 240 s while
+   vitest runs its 22 files in parallel**, so its budget is shared with every sibling and
+   with whatever else the host is doing. It is the only test in the suite that can go red
+   for reasons that have nothing to do with the model. Making it robust — a generation
+   budget rather than a time budget, or serialising that one file — is a real follow-up,
+   and it is out of this release's scope because it would change a test's behaviour rather
+   than a statement.

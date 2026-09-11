@@ -289,7 +289,7 @@ and **R 4.3.3** with ggplot2 4.0.2, patchwork 1.2.0 and png 0.1-8 for the figure
 
 ```sh
 npm ci
-npx playwright install --with-deps chromium   # tests only; --with-deps is Linux-only
+npx playwright install chromium   # tests only
 npm test            # 22 files, 198 tests
 npm run typecheck
 npm run build       # -> dist/
@@ -301,6 +301,10 @@ Chromium is needed by `npm test` and by nothing else: `tests/layout.test.ts` and
 and without the binary the suite fails at `chromium.launch()`. `npm run build` and
 `npm run preview` do not use it, so the toy builds and serves on a machine that has no
 browser installed.
+
+If Chromium launches but dies on a missing shared library, add `--with-deps` — but note
+it is **Linux-only and needs root**, so it fails where sudo is non-interactive. The
+README's Setup section has the detail.
 
 Every figure regenerates from its committed CSV. Run these **from the repository root**
 — each script sources the shared house theme by the repo-relative path

@@ -72,10 +72,18 @@ was touched; nothing was re-run to produce a different number.
 
 - **Setup did not mention its hardest requirement.** `README.md` now leads with Node ≥ 22
   and the reason (Node 18 has no `styleText` in `node:util`, and both `vitest run` and
-  `vite build` crash at startup), uses `npx playwright install --with-deps chromium`,
-  says `--with-deps` is Linux-only, and says Playwright is needed by `npm test` and not
-  by `npm run build` or `npm run preview`. `FINDINGS.md`'s "Reproducing this" gains the
-  same Playwright line.
+  `vite build` crash at startup), and says Playwright is needed by `npm test` and not by
+  `npm run build` or `npm run preview`. `FINDINGS.md`'s "Reproducing this" gains the same
+  Playwright line.
+- **`--with-deps` is the fallback, not the first line — and the clean-clone check is what
+  proved it.** This release first wrote `npx playwright install --with-deps chromium` into
+  Setup as the required step. Running it from an actual fresh clone failed:
+  `sudo: a password is required` / `Failed to install browsers`. `--with-deps` invokes the
+  distro package manager for Chromium's shared libraries, so it needs root and dies where
+  sudo is non-interactive. Setup now leads with plain `npx playwright install chromium`,
+  which needs no privileges, and presents `--with-deps` as what to reach for if Chromium
+  then fails on a missing library — marked Linux-only **and** root-only, noting that
+  `.github/workflows/pages.yml` can use it because a GitHub runner has passwordless sudo.
 - **Re-running experiment 005 was presented as a casual check.** It is not: the
   registered cost table budgets **~16 h** single-process or **~6 h** sharded across three
   ratios, and the runner `writeFileSync`s the committed
