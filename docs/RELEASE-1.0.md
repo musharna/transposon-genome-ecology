@@ -16,7 +16,7 @@ carries one extra documentation file.
 _Ruling (deviation from the plan)._ The plan prescribes building a conda `node22`
 environment because system Node is v18.19.1 and crashes both `vitest run` and
 `vite build`. A Node 22.14.0 toolchain already exists on this machine at
-`~/.local/node-22/bin` and satisfies the actual constraint ("Node 22"), so it was used
+a local user-level install and satisfies the actual constraint ("Node 22"), so it was used
 instead of creating a redundant environment. Exact versions are recorded below, which is
 what the plan asks for. Cost if wrong: none — the recorded versions identify the
 toolchain either way.
@@ -25,7 +25,7 @@ toolchain either way.
 
 | Tool             | Version                                |
 | ---------------- | -------------------------------------- |
-| node             | v22.14.0 (`~/.local/node-22/bin/node`) |
+| node             | v22.14.0 (local user-level install)     |
 | npm              | 10.9.2                                 |
 | `.nvmrc`         | 22                                     |
 | typescript       | 5.9.3                                  |
@@ -486,7 +486,7 @@ directory holding a planted GitHub PAT and AWS-style credentials: it returned
 the real tree means something.
 
 Local-path disclosures in tracked files, enumerated rather than counted from memory —
-`git ls-files -z | xargs -0 grep -nE '/home/mjarnold|-home-mjarnold'`:
+`git ls-files -z | xargs -0 grep -nE '<home-dir>|<memory-dir>'` (the author's home and notes paths, redacted here):
 
 | Site                                                 | What it is                                                      |
 | ---------------------------------------------------- | --------------------------------------------------------------- |

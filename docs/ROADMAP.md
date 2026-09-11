@@ -95,7 +95,7 @@ That file carries 38 registry-verified works (42 DOIs), the null model this road
 contradicts the second bullet below**. Read it before the brainstorm.
 
 A sweep on **2026-07-31** (`bio_sim_candidates_grounded_2026-07-31.md` §1, in the
-`-home-mjarnold` memory dir) already covered this candidate. Two results the rest
+the author's notes) already covered this candidate. Two results the rest
 of this roadmap does not carry, both worth having before the brainstorm:
 
 - ⚠️⚠️ **"Genome as ecosystem" is the FIELD'S OWN framing, not a fresh lens.**
