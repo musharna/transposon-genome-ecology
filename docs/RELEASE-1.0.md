@@ -1,5 +1,10 @@
 # Release evidence — transposon-genome-ecology v1.0
 
+> **Release evidence log, not a findings document.** Nothing here is a claim about the
+> model or a result you should quote. The findings are in
+> [`FINDINGS.md`](FINDINGS.md); this file only records what was run during the v1.0
+> release and what it printed.
+
 This file is the executor's evidence log for the v1.0 release candidate. Every stage of
 `docs/superpowers/specs/2026-09-10-ship-plan.md` appends here. Nothing in this file is a
 claim about the model; it is a record of what was run and what it printed.
@@ -23,21 +28,21 @@ toolchain either way.
 
 **Versions.**
 
-| Tool             | Version                                |
-| ---------------- | -------------------------------------- |
-| node             | v22.14.0 (local user-level install)     |
-| npm              | 10.9.2                                 |
-| `.nvmrc`         | 22                                     |
-| typescript       | 5.9.3                                  |
-| vite             | 8.2.2                                  |
-| vitest           | 5.0.0                                  |
-| tsx              | 4.23.13                                |
-| @playwright/test | 1.62.1                                 |
-| @types/node      | 22.20.1                                |
-| R                | 4.3.3 (2024-02-29)                     |
-| ggplot2          | 4.0.2                                  |
-| patchwork        | 1.2.0                                  |
-| png              | 0.1.8                                  |
+| Tool             | Version                             |
+| ---------------- | ----------------------------------- |
+| node             | v22.14.0 (local user-level install) |
+| npm              | 10.9.2                              |
+| `.nvmrc`         | 22                                  |
+| typescript       | 5.9.3                               |
+| vite             | 8.2.2                               |
+| vitest           | 5.0.0                               |
+| tsx              | 4.23.13                             |
+| @playwright/test | 1.62.1                              |
+| @types/node      | 22.20.1                             |
+| R                | 4.3.3 (2024-02-29)                  |
+| ggplot2          | 4.0.2                               |
+| patchwork        | 1.2.0                               |
+| png              | 0.1.8                               |
 
 **Commands and results.** All run from the repo root with
 `export PATH="$HOME/.local/node-22/bin:$PATH"`.
@@ -593,7 +598,7 @@ evidence covers what the claim covers.
   trust the R scripts. Its closest reconstruction gave 2.99 / 2.12 / 2.13 for 005's three
   fits — same order and direction, and 004's fit extends the low end. The per-cell SEMs it
   _could_ check matched exactly (0.86%–2.48%). Corroborated, not independently confirmed.
-- **Guard-level claims** (the seven guards, golden hash `9c15fd28`, the `wDom` band, the
+- **Guard-level claims** (the nine guards, golden hash `9c15fd28`, the `wDom` band, the
   domestication peaks) were traced to their recorded measurements in
   `tests/guards/domestication-arm.ts` and `docs/ROADMAP.md` but not re-run. The passing
   198-test suite is the evidence for those, not an independent recomputation.
@@ -637,15 +642,15 @@ Repbase line taught this release.
 
 **Commit chain**, cut from `acf530c` (which is `2ab527c` plus the ship plan itself):
 
-| Commit | What |
-| --- | --- |
-| `71d2e2c` | pin Node >=22, start this evidence log |
+| Commit    | What                                                             |
+| --------- | ---------------------------------------------------------------- |
+| `71d2e2c` | pin Node >=22, start this evidence log                           |
 | `fb71a8e` | classify all 23 open roadmap items; discharge the exponent claim |
-| `46aeac0` | re-render figs 001–004; pin `plot-001.R`'s jitter |
-| `787b7d1` | `FINDINGS.md`, README top, the domestication limit in the toy |
-| `964d902` | Pages workflow, licensing, the site base |
-| `0fc0e88` | stage 5 proofs and sweeps |
-| `7c4558f` | close the critic gate; fix every statement it falsified |
+| `46aeac0` | re-render figs 001–004; pin `plot-001.R`'s jitter                |
+| `787b7d1` | `FINDINGS.md`, README top, the domestication limit in the toy    |
+| `964d902` | Pages workflow, licensing, the site base                         |
+| `0fc0e88` | stage 5 proofs and sweeps                                        |
+| `7c4558f` | close the critic gate; fix every statement it falsified          |
 
 ### Toolchain
 
@@ -654,32 +659,32 @@ node v22.14.0 · npm 10.9.2 · typescript 5.9.3 · vite 8.2.2 · vitest 5.0.0 ·
 
 ### Results at handoff
 
-| Check | Result |
-| --- | --- |
-| `npm test` | **22 files, 198 tests, all passed** (68.75 s) |
-| `npm run typecheck` | clean |
-| `npm run build` | 27 modules, `dist/` with `index.html`, `hash-harness.html`, `.nojekyll` |
-| clean-checkout clone → `npm ci && npm test && npm run build` | **198/198**, all three artifacts present |
-| headless smoke on the built site | 200 / 200, zero console errors, zero failed requests, sim advances and survives every poke |
-| `gitleaks git` | no leaks — 90 commits |
-| `gitleaks dir dist/` | no leaks |
-| ghostcite on `docs/dois.txt` | 51 DOIs, **0 findings** |
-| critic gate | **0 non-waivable defects** |
+| Check                                                        | Result                                                                                     |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
+| `npm test`                                                   | **22 files, 198 tests, all passed** (68.75 s)                                              |
+| `npm run typecheck`                                          | clean                                                                                      |
+| `npm run build`                                              | 27 modules, `dist/` with `index.html`, `hash-harness.html`, `.nojekyll`                    |
+| clean-checkout clone → `npm ci && npm test && npm run build` | **198/198**, all three artifacts present                                                   |
+| headless smoke on the built site                             | 200 / 200, zero console errors, zero failed requests, sim advances and survives every poke |
+| `gitleaks git`                                               | no leaks — 90 commits                                                                      |
+| `gitleaks dir dist/`                                         | no leaks                                                                                   |
+| ghostcite on `docs/dois.txt`                                 | 51 DOIs, **0 findings**                                                                    |
+| critic gate                                                  | **0 non-waivable defects**                                                                 |
 
 ### Figure render commands, and the hashes they produce
 
 Run from the repository root; the scripts source `docs/analysis/theme.R` by a
 repo-relative path and fail from anywhere else.
 
-| Command | Output | md5 |
-| --- | --- | --- |
+| Command                            | Output                    | md5                                |
+| ---------------------------------- | ------------------------- | ---------------------------------- |
 | `Rscript docs/analysis/plot-001.R` | `fig-001-peak-copies.png` | `2154b2972dafcde61a03926aedbe298a` |
-| `Rscript docs/analysis/plot-002.R` | `fig-002-viability.png` | `12abf606a2f5696e3a13b5caf8799a1a` |
-| `Rscript docs/analysis/plot-003.R` | `fig-003-fidelity.png` | `e3f67614a25cb4b5220d490a84b4ffcf` |
-| `Rscript docs/analysis/plot-003.R` | `fig-003-silencing.png` | `cee8b202c9e43d99de42a744b0c32c60` |
-| `Rscript docs/analysis/plot-004.R` | `fig-004-band.png` | `9c7a3afc236bdbd583e95666cbe31af1` |
-| `Rscript docs/analysis/plot-005.R` | `fig-005-divergence.png` | `44d1cf6c20e59568b986e817ff9311bd` |
-| `Rscript docs/analysis/plot-005.R` | `fig-005-tolerance.png` | `82d1ae047c55c55f23cb19f54f5697fa` |
+| `Rscript docs/analysis/plot-002.R` | `fig-002-viability.png`   | `12abf606a2f5696e3a13b5caf8799a1a` |
+| `Rscript docs/analysis/plot-003.R` | `fig-003-fidelity.png`    | `e3f67614a25cb4b5220d490a84b4ffcf` |
+| `Rscript docs/analysis/plot-003.R` | `fig-003-silencing.png`   | `cee8b202c9e43d99de42a744b0c32c60` |
+| `Rscript docs/analysis/plot-004.R` | `fig-004-band.png`        | `9c7a3afc236bdbd583e95666cbe31af1` |
+| `Rscript docs/analysis/plot-005.R` | `fig-005-divergence.png`  | `44d1cf6c20e59568b986e817ff9311bd` |
+| `Rscript docs/analysis/plot-005.R` | `fig-005-tolerance.png`   | `82d1ae047c55c55f23cb19f54f5697fa` |
 
 ### Rebuild from nothing
 

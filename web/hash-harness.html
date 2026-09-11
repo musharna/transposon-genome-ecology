@@ -2,9 +2,19 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+    <!-- This file builds into `dist/` and is therefore a reachable URL on the
+         published Pages site. It is a fixture, not a page anyone should land
+         on from a search result, so it is kept out of the index. It is NOT
+         removed: guard 7 loads it. -->
+    <meta name="robots" content="noindex" />
     <title>hash harness</title>
   </head>
   <body>
+    <p>
+      <strong>Test fixture, not part of the toy.</strong> This page exists only
+      so an automated check can run the model in a browser and compare its state
+      hash with node's. The toy itself is at <a href="./">the site root</a>.
+    </p>
     <!--
       Not part of the toy. This page exists so guard 7
       (`tests/guards/one-implementation.test.ts`) can run the model inside a

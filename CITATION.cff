@@ -10,11 +10,17 @@ version: 1.0.0
 date-released: "2026-09-10"
 # Two licences: MIT for source code (wherever it lives, including
 # docs/analysis/*.R), CC BY 4.0 for prose, figures and data. README.md states
-# the boundary file-glob by file-glob.
+# the boundary file-glob by file-glob; the texts are LICENSE and LICENSE-docs.
+#
+# `license-url` is deliberately ABSENT rather than pointing at LICENSE. CFF
+# 1.2.0 types it as a SINGLE url and scopes it to "non-standard licenses not
+# included in the SPDX License List", so it cannot name two licences and does
+# not apply to either of these — both are SPDX identifiers, which is what the
+# `license` list below is for. It previously held the MIT text alone, which read
+# as a single-licence work.
 license:
   - MIT
   - CC-BY-4.0
-license-url: "https://github.com/musharna/transposon-genome-ecology/blob/master/LICENSE"
 repository-code: "https://github.com/musharna/transposon-genome-ecology"
 url: "https://musharna.github.io/transposon-genome-ecology/"
 abstract: >-

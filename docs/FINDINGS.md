@@ -111,9 +111,10 @@ directions its prediction can fail in — the project's signature defect, occurr
 falsifier itself.
 
 **What it does not show.** The headline turned out to be a **resolution artefact**: 004
-found control up to `phi = 0.016`, four doublings above 003's first nonzero grid step of
-0.125, which is precisely why 003 saw control only at exactly zero. 003's answer is
-correct about 003's grid and wrong about the model.
+found control up to `phi = 0.016`, which is three doublings **below** 003's first nonzero
+grid step of 0.125 (0.016 → 0.032 → 0.064 → 0.125). The whole controlled region sat
+underneath 003's first step, which is precisely why 003 saw control only at exactly zero.
+003's answer is correct about 003's grid and wrong about the model.
 
 ### 004 — A band, or only a delay?
 
@@ -279,16 +280,23 @@ the running record with full measurements is [`ROADMAP.md`](ROADMAP.md).
 ## Reproducing this
 
 **Requirements: Node ≥ 22** (the toolchain crashes at startup on Node 18 — `styleText` is
-missing from `node:util`) and **R 4.3.3** with ggplot2 4.0.2, patchwork 1.2.0 and png
-0.1-8 for the figures.
+missing from `node:util`), **Playwright's Chromium** for the two browser-driven test files,
+and **R 4.3.3** with ggplot2 4.0.2, patchwork 1.2.0 and png 0.1-8 for the figures.
 
 ```sh
 npm ci
+npx playwright install --with-deps chromium   # tests only; --with-deps is Linux-only
 npm test            # 22 files, 198 tests
 npm run typecheck
 npm run build       # -> dist/
 npm run preview     # serve the built toy
 ```
+
+Chromium is needed by `npm test` and by nothing else: `tests/layout.test.ts` and guard 7
+(`tests/guards/one-implementation.test.ts`) drive a real browser against the built page,
+and without the binary the suite fails at `chromium.launch()`. `npm run build` and
+`npm run preview` do not use it, so the toy builds and serves on a machine that has no
+browser installed.
 
 Every figure regenerates from its committed CSV. Run these **from the repository root**
 — each script sources the shared house theme by the repo-relative path
@@ -311,8 +319,17 @@ Re-running an **experiment** from scratch (rather than re-drawing from the commi
 CSV) uses the runner named in each section above, for example:
 
 ```sh
-npx tsx experiments/005-delay-divergence.ts
+npx tsx experiments/005-delay-divergence.ts    # ~16 h single-process, ~6 h sharded
 ```
+
+⚠️ **Do not run this to check the figures.** Two reasons. It is expensive — the
+registered cost table budgets **~16 hours** of wall time for all 243 runs in one
+process, or **~6 hours** if you shard by ratio across three (the runner accepts a shard
+label, and the sharded output is asserted byte-identical to the unsharded one). And it
+**overwrites the committed CSV**: the runner opens `experiments/005-delay-divergence.csv`
+with `writeFileSync` and truncates it before the first row. If you want to verify the
+published result, re-draw from the committed data with `Rscript docs/analysis/plot-005.R`
+— that takes seconds and re-asserts the manipulation checks on the way.
 
 The model is seeded and deterministic — `stateHash` digests the ordered world state, and
 `tests/step.test.ts` pins the RNG draw stream to golden hash `9c15fd28`, so a change that

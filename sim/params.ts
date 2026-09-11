@@ -56,7 +56,11 @@ export interface Params {
  * and every guard derivation at once, so this is not a cheap change.
  *
  * NOTE: the toy does NOT run at these values — see `TOY_DEFAULTS` in
- * `web/params.ts`, which overrides ten of them.
+ * `web/params.ts`. It lists 17 of the 20 keys here and actually CHANGES 12 of
+ * them (`N`, `S`, `c`, `r0`, `rMax`, `sigmaR`, `sigmaS`, `theta`, `v`, `b`,
+ * `beta`, `pDom`); the other five — `a`, `d`, `dTol`, `t`, `wDom` — restate the
+ * value below rather than change it, so `wDom` in particular is the same 0.01
+ * in the toy as it is here.
  */
 export function defaultParams(overrides: Partial<Params> = {}): Params {
   return {

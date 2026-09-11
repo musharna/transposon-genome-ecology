@@ -2,7 +2,18 @@
 
 **Built 2026-09-02** (37 works / 41 DOIs); **extended 2026-09-03 to 38 works / 42
 DOIs** — Brouha et al. 2003 added to §4 to ground a claim that was standing
-uncited in `tests/guards/three-phases-arm.ts`. Every entry below was resolved
+uncited in `tests/guards/three-phases-arm.ts`.
+
+⚠️ **Re-tallied 2026-09-11: the document carries 51 distinct DOIs across 41
+DOI-bearing entries.** The 2026-09-03 header was never updated when §7's registry
+sweep and §8's dataset resolutions added citations of their own, so "38 works / 42
+DOIs" undercounted from then on. Those two figures are kept as the dated record of
+what the base held on those days; **51 DOIs / 41 entries is the current count.** One
+further cited tool (TEvarSim, §7) carries a PMC identifier and no DOI, so it is not
+among the 41. `docs/dois.txt` is exactly this DOI set — verified identical in both
+directions on 2026-09-11.
+
+Every entry below was resolved
 against **OpenAlex live**: first-author surname, year, venue and DOI all came
 back from the registry, not from recall. Citation counts are as of the date the
 entry was added and will drift.
@@ -197,17 +208,17 @@ secondary source. ~~**the primary study it comments on has not been read**~~ —
 cite this Primer for a quantitative claim; cite the primary:
 
 **Kelleher ES, Jaweria J, Akoma U, Ortega L, Tang W (2018)**, "QTL mapping of
-natural variation reveals that the developmental regulator *bruno* reduces
-tolerance to P-element transposition in the *Drosophila* female germline",
+natural variation reveals that the developmental regulator _bruno_ reduces
+tolerance to P-element transposition in the _Drosophila_ female germline",
 _PLoS Biol_ 16(10):e2006040,
 [10.1371/journal.pbio.2006040](https://doi.org/10.1371/journal.pbio.2006040).
 Same journal, same issue, same date as the Primer, and in its reference list.
 The definition, verbatim: "mechanisms of tolerance do not affect propagation but
 rather limit the fitness costs to the host." >32,000 dysgenic F1 offspring
 phenotyped across the DSPR; two allelic classes, tolerant and sensitive;
-candidate gene *bruno*, a germline developmental regulator, differing
+candidate gene _bruno_, a germline developmental regulator, differing
 **regulatorily not coding** ("none of the 36 in-phase SNPs are nonsynonymous"),
-tolerant alleles carrying a 20% reduction in *bruno* expression (95% CI 14–26%).
+tolerant alleles carrying a 20% reduction in _bruno_ expression (95% CI 14–26%).
 Effects: 39% less F1 ovarian atrophy, 54% reduction in sterility, no effect on
 brood size among fertile F1s. First demonstration of natural variation in TE
 tolerance in any organism.

@@ -44,9 +44,12 @@ export function repertoireInsertionIndex(sorted: number[], s: number): number {
  * This used to scan every entry. `trap` only ever inserts and NOTHING EVER
  * REMOVES AN ENTRY, so the scan cost O(copies x repertoire) per pass over a
  * repertoire that grows for as long as the world runs, and the toy got slower
- * the longer anyone watched it: 0.67 ms/step at generation 200 against
- * 15.97 ms/step at 6000, a 24x slowdown while copy number rose 1.6x
- * (`web/main.ts` has the repertoire-size table that number comes from).
+ * the longer anyone watched it: 1.06 ms at generation 200 against 35.73 ms at
+ * 6000 for one `step` + one `observe`, a 33.7x DEGRADATION while copy number
+ * rose only 1.6x (1170 -> 1893). NAME THE QUANTITY: 33.7x is before-at-6000
+ * over before-at-200, which is not the 34.7x SPEEDUP in the same row of
+ * `web/main.ts`'s table (35.73 ms before over 1.03 ms after, at generation 6000
+ * alone). That table, on `reset()` in `web/main.ts`, is where both come from.
  *
  * `Genome.repertoire` is now kept SORTED ASCENDING (`sim/state.ts`), so the
  * nearest entry to `s` can be found by binary search. The argument that

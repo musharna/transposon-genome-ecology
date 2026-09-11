@@ -271,9 +271,9 @@ live registry and the null stated as "checked HERE", naming where.
       All four manipulation checks passed, including the strongest: `phi = 0` and
       `phi = 0.125` reproduce 003's committed CSV **exactly** on 003's own seeds.
       ⚠️ **003's HEADLINE WAS A RESOLUTION ARTEFACT.** Control reaches
-      `phi = 0.016` at 600 generations, 10/10 seeds at every ratio — four
-      doublings above 003's first grid step, which is why 003 saw control only at
-      exactly 0. PRIMARY HELD.
+      `phi = 0.016` at 600 generations, 10/10 seeds at every ratio — three
+      doublings BELOW 003's first grid step of 0.125, which is why 003 saw control
+      only at exactly 0. PRIMARY HELD.
       ⚠️ **BUT THE EDGE MOVES WITH THE HORIZON: 0.016 at 600 generations, 0.004
       at 1800.** SECONDARY 1 HELD at every ratio. It is a delay, not a band.
       ⚠️⚠️ **SECONDARY 3 IS FALSIFIED AS REGISTERED AND THE VERDICT DOES NOT

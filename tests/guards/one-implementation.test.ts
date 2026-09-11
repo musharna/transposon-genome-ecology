@@ -61,7 +61,7 @@
  * Chromium are both V8. What is established is ONE CODEBASE, THROUGH ONE
  * BUNDLER, ON ONE ENGINE FAMILY — that Vite's transform, tree-shaking and
  * minification did not change the model's behaviour, and that the bundle a
- * visitor loads is the source the other six guards validate. That is the claim
+ * visitor loads is the source the other eight guards validate. That is the claim
  * the project needs and it is worth having; it is strictly weaker than "any
  * conforming JavaScript engine reproduces these hashes".
  *

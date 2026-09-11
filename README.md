@@ -9,7 +9,9 @@ selection.
 **▶ [Play it](https://musharna.github.io/transposon-genome-ecology/)** ·
 **📄 [What it found](docs/FINDINGS.md)** — five questions, each registered with its
 prediction and its falsification condition and committed to git _before_ the code that
-answered it existed. Two of them falsified the thing they were testing.
+answered it existed. **One registered primary was falsified (002); registered
+secondaries were falsified in 003, 004 and 005, and 004's third secondary was later
+retracted as unresolvable.**
 
 Code is **MIT** (`sim/ web/ scripts/ tools/ tests/`, `experiments/**/*.ts`, and
 `docs/analysis/*.R` — source code is MIT wherever it lives, including under `docs/`);
@@ -66,18 +68,26 @@ rather than merely tracking it more slowly. The full table, and what has _not_
 been re-measured since (in-browser frame rate), are on `reset()` in
 `web/main.ts`.
 
-**The validation surface** (`tests/guards/`) is seven guards, each asserting one
+**The validation surface** (`tests/guards/`) is nine guards, each asserting one
 claim the model makes, each against its own matched null:
 
-| #   | claim                                                                                                                                | file                         |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------- |
-| 1   | Charlesworth 1983's qualitative equilibrium: a LINEAR fitness function does not control copy number, a quadratic one does            | `equilibrium.test.ts`        |
-| 2   | Kofler 2019's three phases — invasion, plateau, inactivation — are detectable, and the detector reports failure rather than guessing | `three-phases.test.ts`       |
-| 3   | Repression switches on as the piRNA cluster grows, with onset inside Kofler 2020's 0.2–3% band                                       | `cluster-threshold.test.ts`  |
-| 4   | Knocking out silencing produces genome bloat — direction only, not magnitude                                                         | `bloat.test.ts`              |
-| 5   | Per-copy transposition rate actually EVOLVES, and not from mutational bias — the geometric mean rises too                            | `rate-evolves.test.ts`       |
-| 6   | A diverged sublineage escapes an established trap                                                                                    | `escape.test.ts`             |
-| 7   | The browser and Node run one model, byte for byte                                                                                    | `one-implementation.test.ts` |
+| #   | claim                                                                                                                                                                                  | file                         |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
+| 1   | Charlesworth 1983's qualitative equilibrium: a LINEAR fitness function does not control copy number, a quadratic one does                                                              | `equilibrium.test.ts`        |
+| 2   | Kofler 2019's three phases — invasion, plateau, inactivation — are detectable, and the detector reports failure rather than guessing                                                   | `three-phases.test.ts`       |
+| 3   | Repression switches on as the piRNA cluster grows, with onset inside Kofler 2020's 0.2–3% band                                                                                         | `cluster-threshold.test.ts`  |
+| 4   | Knocking out silencing produces genome bloat — direction only, not magnitude                                                                                                           | `bloat.test.ts`              |
+| 5   | Per-copy transposition rate actually EVOLVES, and not from mutational bias — the geometric mean rises too                                                                              | `rate-evolves.test.ts`       |
+| 6   | A diverged sublineage escapes an established trap                                                                                                                                      | `escape.test.ts`             |
+| 7   | The browser and Node run one model, byte for byte                                                                                                                                      | `one-implementation.test.ts` |
+| 8   | Domestication is an alternate win ABOVE a benefit threshold, and the shipped `wDom = 0.01` is below it — asserted as loss at the default and persistence-through-family-death above it | `domestication.test.ts`      |
+| 9   | The resistance↔tolerance dial is a difference in KIND: a purely tolerant host never forms a repertoire, so it cannot be conscripted at all                                             | `tolerance.test.ts`          |
+
+Guard 8 does **not** locate a threshold in the model — the band `0.03 < wDom* ≤ 0.075`
+belongs to that arm's `N`, horizon, `beta` and `pDom`, and it asserts no domesticated
+count as a prediction. Guard 9 does **not** claim the dial is graded in the population;
+that was measured and is false at its arm, and its fitness tests are arithmetic on
+constructed genomes rather than a population result.
 
 Every guard carries a **WHAT THIS GUARD DOES NOT CLAIM** section. Read it before
 quoting a result: several of these are fixed-horizon comparisons at one pinned
@@ -88,19 +98,30 @@ arm, and guard 4's direction reverses past generation 180.
 runner in `experiments/` answers exactly one of them. Results, verdicts and the limits
 on each: **[docs/FINDINGS.md](docs/FINDINGS.md)**.
 
-| #   | question                                     | verdict                                                  |
-| --- | -------------------------------------------- | -------------------------------------------------------- |
-| 001 | per-copy vs family-level rate                | the arms differ — the falsification clause does not fire |
-| 002 | conscription vs an innate silencer           | **falsified** — both arms viable at 3 of 9 grid points   |
-| 003 | how fresh must the trap be?                  | control only at `phi = 0` — and a resolution artefact    |
-| 004 | a band, or only a delay?                     | a delay: the edge moves 0.016 → 0.004 with the horizon   |
-| 005 | does the delay diverge, or is there a floor? | no floor above `phi = 0.002`; 150/150 saturate           |
+| #   | question                                     | verdict                                                                                                                           |
+| --- | -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| 001 | per-copy vs family-level rate                | the arms differ — the falsification clause does not fire                                                                          |
+| 002 | conscription vs an innate silencer           | **primary FALSIFIED** — both arms viable at 3 of 9 grid points; the secondary held                                                |
+| 003 | how fresh must the trap be?                  | primary held trivially; **secondary 1 FALSIFIED** — control only at `phi = 0`, and that is a resolution artefact                  |
+| 004 | a band, or only a delay?                     | primary held — a delay: the edge moves 0.016 → 0.004 with the horizon; **secondary 2 FALSIFIED**, secondary 3's verdict retracted |
+| 005 | does the delay diverge, or is there a floor? | primary held — no floor above `phi = 0.002`, 150/150 saturate; **secondary 1 FALSIFIED**                                          |
 
 ## Setup
 
+**Node ≥ 22 is required**, and it is a hard floor rather than a preference: on
+Node 18 both `vitest run` and `vite build` crash at startup, because the
+toolchain imports `styleText` from `node:util` and Node 18 has no such export.
+`.nvmrc` pins 22 and `package.json` declares `engines.node >= 22`.
+
     npm ci
-    npx playwright install chromium     # REQUIRED -- see below
+    npx playwright install --with-deps chromium    # REQUIRED -- see below
     npm test
+
+`--with-deps` installs the system libraries Chromium needs and is **Linux-only**
+— on macOS and Windows drop it and run `npx playwright install chromium`.
+Playwright is a **test** dependency only: `npm run build` and `npm run preview`
+do not touch it, so a browserless machine can still build and serve the toy. It
+is `npm test` that cannot pass without it.
 
 **The second line is not optional.** Two test files drive a real Chromium
 against the built page, and neither of their claims is decidable from Node:
@@ -110,9 +131,9 @@ against the built page, and neither of their claims is decidable from Node:
 - `tests/guards/one-implementation.test.ts` (guard 7) — that the model running
   in the browser and the model running in Node produce a byte-identical state
   hash, at BOTH the plain scenario and the toy's own parameters. This is the
-  claim that the artifact played is the artifact validated; the other six guards
-  check `sim/` in Node, and without this one nothing connects those results to
-  the bundle a visitor loads.
+  claim that the artifact played is the artifact validated; the other eight
+  guards check `sim/` in Node, and without this one nothing connects those
+  results to the bundle a visitor loads.
 
   ⚠️ **It does not establish engine-independence.** Node and Playwright's
   Chromium are both V8. What it establishes is one codebase, through one
@@ -142,7 +163,7 @@ change.
 
 ## Layout
 
-Mirrors `_pm/`, which is the sibling project furthest along:
+Layout:
 
     docs/         ROADMAP.md is canonical for "what phase, what's next";
                   the design spec, the reference base, pre-registrations
@@ -159,13 +180,13 @@ Mirrors `_pm/`, which is the sibling project furthest along:
                   sweep behind the threshold readout lives here
     scripts/      exploratory sweeps, committed so every number quoted in a
                   guard docstring can be reproduced
-    _scratch/     untracked working area
 
 ## Grounding
 
-`docs/REFERENCES.md` carries 38 works, every one resolved live against OpenAlex
-on 2026-09-02 — first-author surname, year, venue and DOI from the registry, not
-from recall. `docs/charlesworth-1983-equilibrium.md` is a full read of the null
+`docs/REFERENCES.md` carries 51 DOIs across 41 cited entries (re-tallied
+2026-09-11), every one resolved live against OpenAlex on 2026-09-02 or 2026-09-03
+— first-author surname, year, venue and DOI from the registry, not from recall.
+`docs/dois.txt` is that DOI set, and nothing else. `docs/charlesworth-1983-equilibrium.md` is a full read of the null
 model, including the reason its analytic constant does NOT transfer to this
 model (ours is haploid and deduplicates sites shared by both parents; theirs is
 diploid).

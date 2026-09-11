@@ -2,12 +2,116 @@
 
 Milestone-boundary entries. Appended in the commit that closes a milestone.
 
+## [1.0.1] — 2026-09-11
+
+A documentation-correctness release, from a 10-judge review panel on v1.0.0. **Every
+change here changes what is SAID, never what was measured.** No `sim/` behaviour, no
+`defaultParams`, no `TOY_DEFAULTS`, no constant, no pre-registration and no experiment
+was touched; nothing was re-run to produce a different number.
+
+### Fixed — claims that disagreed with the tree
+
+- **"The validation surface is seven guards" was wrong; there are nine.**
+  `tests/guards/` has held `domestication.test.ts` (guard 8) and `tolerance.test.ts`
+  (guard 9) since before v1.0, and README already cited "guard 8's arm" twice while its
+  own table stopped at seven. The table is now nine rows, each new row carrying what the
+  guard does **not** claim: guard 8 does not locate a threshold in the model, guard 9
+  does not claim the dial is graded. The same count is fixed in `docs/RELEASE-1.0.md`
+  and, as a consequence of it, in two "the other six guards" sentences
+  (`README.md`, `tests/guards/one-implementation.test.ts`) that are now eight. The v1
+  entry below is left as written — it was true on 2026-09-03 — with the later count in
+  parentheses.
+- **"Two of them falsified the thing they were testing" counted nothing in particular.**
+  The verdict table bolded only 002. Counted one way and made to match: one registered
+  **primary** was falsified (002); registered **secondaries** were falsified in 003, 004
+  and 005; and 004's third secondary was later **retracted** as unresolvable. Each row of
+  the table now says which level the falsification was at.
+- **A direction error in `docs/FINDINGS.md`.** 004's controlled edge `phi = 0.016` was
+  described as "four doublings **above** 003's first nonzero grid step of 0.125". It is
+  three doublings **below** it (0.016 → 0.032 → 0.064 → 0.125), which is the whole reason
+  003 saw control only at exactly zero — the controlled region sat underneath 003's first
+  step. The same sentence is corrected in `docs/ROADMAP.md`.
+- **`sim/silencing.ts` quoted a superseded profile.** It read "0.67 ms at generation 200
+  against 15.97 ms at 6000, a 24x slowdown" and cited `web/main.ts`, which holds
+  1.06 → 35.73 ms. Those were the pre-implementation brief's numbers and were never
+  updated to the measured ones. Now 1.06 → 35.73 ms, a **33.7x degradation** — and the
+  comment now names the quantity, because 33.7x (before-at-6000 over before-at-200) is
+  not the 34.7x **speedup** in the same row of that table (before over after, at
+  generation 6000). `web/main.ts` already warned "name the quantity before quoting a
+  multiple"; this is the sentence that did not.
+- **`sim/params.ts` said `TOY_DEFAULTS` "overrides ten of them".** It lists 17 of the 20
+  `Params` keys and actually changes **12**; the other five — `a`, `d`, `dTol`, `t`,
+  `wDom` — restate the default rather than override it. `wDom` in particular is the same
+  0.01 in the toy as in `defaultParams`, which is exactly the constant the domestication
+  limitation is about.
+- **`docs/REFERENCES.md` undercounted itself.** The header said "38 works / 42 DOIs" from
+  2026-09-03 and was never updated when §7's registry sweep and §8's dataset resolutions
+  added their own citations. Re-tallied 2026-09-11: **51 distinct DOIs across 41
+  DOI-bearing entries**, with the reproduction command in the header and the dated
+  earlier figures kept as the record of what the base held then. `docs/dois.txt` is
+  verified to be exactly that DOI set, in both directions. `README.md`'s "38 works"
+  follows.
+
+### Fixed — the toy page
+
+- **It said what it was nowhere.** A visitor landing on the Pages site got canvases and
+  no sentence. There is now a one-line masthead: what the model is, the constraint that
+  shapes it, and links to the findings, the source and the licences. It is a row of
+  `#stage` rather than of `#app` or `#controls`, deliberately — a child of `#controls`
+  becomes a sixth entry in the section list `tests/layout.test.ts` asserts by exact
+  equality, and a full-width row shortens the control column, where `#trap-panel` has
+  only 28px of measured slack above its 161px floor. Taking the height from the field
+  canvas costs no claim.
+- **The legend stated a measured band as a model property.** "the measured persistence
+  threshold of 0.03–0.075" now says it was measured **on guard 8's arm**, with that arm's
+  constants (`beta` 0.1, `pDom` 0.2, `N` 200, generation 600) and the explicit statement
+  that the band belongs to the arm and not to the model — which is what guard 8's own
+  test says and what `FINDINGS.md` already said.
+
+### Fixed — reproducing it
+
+- **Setup did not mention its hardest requirement.** `README.md` now leads with Node ≥ 22
+  and the reason (Node 18 has no `styleText` in `node:util`, and both `vitest run` and
+  `vite build` crash at startup), uses `npx playwright install --with-deps chromium`,
+  says `--with-deps` is Linux-only, and says Playwright is needed by `npm test` and not
+  by `npm run build` or `npm run preview`. `FINDINGS.md`'s "Reproducing this" gains the
+  same Playwright line.
+- **Re-running experiment 005 was presented as a casual check.** It is not: the
+  registered cost table budgets **~16 h** single-process or **~6 h** sharded across three
+  ratios, and the runner `writeFileSync`s the committed
+  `experiments/005-delay-divergence.csv` and truncates it before the first row. Both
+  facts now sit beside the command, with "do not run this to check the figures" and a
+  pointer to `Rscript docs/analysis/plot-005.R` instead.
+
+### Fixed — metadata and hygiene
+
+- **`web/hash-harness.html` was a visitor-reachable URL on the published site.** It
+  builds into `dist/`, so it is served. It now carries
+  `<meta name="robots" content="noindex">` and says in its body that it is a test fixture,
+  with a link back to the toy. It is **not** removed — guard 7 loads it.
+- **`CITATION.cff` named one licence for a dual-licensed work.** `license-url` pointed at
+  the MIT text alone. CFF 1.2.0 types that field as a **single** url and scopes it to
+  "non-standard licenses not included in the SPDX License List", so it can neither name
+  two licences nor apply to these two — both are SPDX identifiers, which is what the
+  `license` list is for. The field is removed and the reason recorded in the file.
+  `date-released` stays 2026-09-10: the tag was cut at 23:45 EDT that day.
+- **`docs/RELEASE-1.0.md` reads like a findings document and is not one.** It now opens
+  with a banner saying so and pointing at `FINDINGS.md`.
+- **`README.md`'s layout section** referenced a sibling project a reader has no access to
+  ("Mirrors `_pm/`…") and listed `_scratch/`, which is untracked and not in a clone.
+- **`## Unreleased` sat underneath `## [1.0.0]`**, so the file read as if it were part of
+  it. Its content — the bounded repertoire lookup — did ship in v1.0.0
+  (`repertoireInsertionIndex` is present at tag `v1.0.0`, and `README.md` quotes its
+  timings), so it is folded into the 1.0.0 entry rather than moved.
+
 ## [1.0.0] — 2026-09-10
 
 First public release: the toy goes on GitHub Pages and the findings become
 readable by a stranger. **The registered model ships as registered** — questions
 001–005 are answered and their limitations ship as limitations, not as fixes. No
-`sim/` behaviour, no `defaultParams`, and no constant changed in this release.
+`sim/` behaviour, no `defaultParams`, and no constant changed in this release —
+the one `sim/` edit, the bounded repertoire lookup below, is an implementation
+change measured bit-identical on every `Snapshot` field.
 
 ### Added
 
@@ -56,19 +160,6 @@ readable by a stranger. **The registered model ships as registered** — questio
 - **`.superpowers/` added to `.gitignore`.** It was hidden only by a
   machine-local global excludesfile, which does not travel with a clone.
 
-### Known limitations, shipped deliberately
-
-- **Domestication cannot happen at the shipped defaults.** `wDom = 0.01` sits
-  below the measured persistence threshold of `0.03 < wDom* ≤ 0.075`, so
-  domesticated copies appear, peak, and are lost to zero at every seed. It is a
-  calibration limit, not a missing mechanism. Retuning it would invalidate every
-  registered result above, so it was left alone.
-- **`t_sat` is not a power law in `phi`**, and the exponent measured is a
-  property of the fitting window. No shipped sentence quotes an exponent as a
-  property of the system. The next registration must test a functional _form_.
-
-## Unreleased
-
 ### The repertoire lookup is bounded — `sim/silencing.ts`, `sim/phases/trap.ts`
 
 First of v1's four carried-forward limitations to close. `Genome.repertoire` is
@@ -110,7 +201,18 @@ Also corrected: `web/controls.ts` attributed the asexual flood's frame cost to
 `O(copies × repertoire)` in a sentence directly contradicted by the paragraph
 below it, which measures most of that cost as one `fillRect` per copy.
 
-## v1 — the model, seven guards, the toy, one registered question (2026-09-03)
+### Known limitations, shipped deliberately
+
+- **Domestication cannot happen at the shipped defaults.** `wDom = 0.01` sits
+  below the measured persistence threshold of `0.03 < wDom* ≤ 0.075`, so
+  domesticated copies appear, peak, and are lost to zero at every seed. It is a
+  calibration limit, not a missing mechanism. Retuning it would invalidate every
+  registered result above, so it was left alone.
+- **`t_sat` is not a power law in `phi`**, and the exponent measured is a
+  property of the fitting window. No shipped sentence quotes an exponent as a
+  property of the system. The next registration must test a functional _form_.
+
+## v1 — the model, seven guards (nine by v1.0), the toy, one registered question (2026-09-03)
 
 First milestone. Closes `impl/sim-core-v1`. Backfilled in one entry: the branch
 covers the whole of the 20-task implementation plan, and there was no earlier
@@ -143,7 +245,7 @@ stored, which is what makes escape-by-divergence fall out rather than be coded.
 Deterministic and seeded (mulberry32 + Marsaglia polar). `tests/step.test.ts`
 pins the RNG draw stream to golden hash `9c15fd28`.
 
-### The seven guards — `tests/guards/`
+### The seven guards (nine by v1.0) — `tests/guards/`
 
 Each asserts one claim against its own matched null, with the positive control
 in the same test body, and each carries a **WHAT THIS GUARD DOES NOT CLAIM**

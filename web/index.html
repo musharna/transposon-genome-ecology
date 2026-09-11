@@ -33,13 +33,39 @@
         height: 100vh;
         overflow: hidden;
       }
+      /* The masthead is a row of #stage, NOT of #app and NOT a child of
+         #controls, and that placement is the whole point. A child of #controls
+         becomes a sixth entry in `panel.sections`, which `tests/layout.test.ts`
+         asserts by exact equality. A full-width row of #app shortens the
+         control column instead, and at 1440px `#trap-panel` has only 28px above
+         its 161px CSS floor (measured: trapHeight 189 at 1440, 161 at 800), so
+         anything taller than that collapses the trap onto its floor and the
+         "spare height is spent on the trap" assertion stops being able to pass.
+         Taking the height out of the FIELD canvas costs a claim nothing. */
       #stage {
         display: grid;
-        grid-template-rows: 1fr 180px 220px;
+        grid-template-rows: auto 1fr 180px 220px;
         gap: 8px;
         padding: 8px;
         min-width: 0;
         min-height: 0;
+      }
+      #masthead {
+        font-size: 11px;
+        line-height: 1.45;
+        color: #939eac;
+        padding: 0 2px;
+        min-width: 0;
+      }
+      #masthead strong {
+        color: #d8dee9;
+      }
+      #masthead a {
+        color: #8fbcbb;
+      }
+      #masthead .sep {
+        color: #4c566a;
+        padding: 0 4px;
       }
       #stage > canvas {
         min-height: 0;
@@ -281,6 +307,19 @@
   <body>
     <div id="app">
       <div id="stage">
+        <div id="masthead">
+          <strong>Transposons as genome ecology</strong> — a running model of
+          transposable elements as an ecosystem inside one genome. You perturb
+          the world, never the element: transposition rate is heritable, not a
+          decision.<span class="sep">·</span
+          ><a
+            href="https://github.com/musharna/transposon-genome-ecology/blob/master/docs/FINDINGS.md"
+            >What it found</a
+          ><span class="sep">·</span
+          ><a href="https://github.com/musharna/transposon-genome-ecology"
+            >Source</a
+          ><span class="sep">·</span>code MIT, prose and data CC BY 4.0
+        </div>
         <canvas id="field"></canvas>
         <canvas id="timeline"></canvas>
         <canvas id="scatter"></canvas>
@@ -352,15 +391,18 @@
             <div><i style="background: #a3be8c"></i> domesticated</div>
             <span class="note"
               >Ceasing to be a parasite is meant to be a way to persist — but
-              <strong>not at these defaults</strong>. The fitness bonus a
-              domesticated copy earns (<code>wDom</code>) ships at 0.01, below
-              the measured persistence threshold of 0.03–0.075, so domesticated
-              copies appear, peak, and are then lost to zero at every seed. The
+              <strong>not at these defaults</strong>. The bonus a domesticated
+              copy earns (<code>wDom</code>) ships at 0.01, under the 0.03–0.075
+              persistence band <strong>measured on guard 8's arm</strong> (<code
+                >beta</code
+              >
+              0.1, <code>pDom</code> 0.2, N 200, gen 600) — the band belongs to
+              that arm, <em>not</em> to the model. So domesticated copies
+              appear, peak, and are lost to zero at every seed. The
               <em>domestication probability</em> slider changes how often the
-              event happens, not whether it sticks — there is no control for the
-              bonus itself. It is a calibration limit rather than a missing
-              mechanism, and it was left alone on purpose: every registered
-              result was measured at this value.</span
+              event happens, not whether it sticks; there is no control for the
+              bonus. A calibration limit, not a missing mechanism, left alone on
+              purpose: every registered result was measured at it.</span
             >
             <div>
               <i style="background: #4a6f9e"></i> piRNA cluster — the trap
