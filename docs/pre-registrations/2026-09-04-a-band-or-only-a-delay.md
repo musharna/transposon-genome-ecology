@@ -508,7 +508,14 @@ Identical at 2.00, 3.33 and 5.00 — not similar, identical.
 > **PRIMARY: HELD.** At every registered ratio at horizon 600 the CONTROLLED set
 > reaches `phi = 0.016`, 10/10 seeds. **003's headline was a resolution
 > artefact**: "control at exact fidelity and nowhere else" came from a grid whose
-> first step above zero was 0.125, four doublings above the real edge.
+> first step above zero was 0.125, three doublings above the real edge
+> [corrected 2026-09-11: this read "four doublings"; on 004's own grid
+> 0.016 → 0.032 → 0.064 → 0.125 is three. The direction was right and only
+> the count was wrong. Corrected in place, not by erratum, because this
+> sentence is post-data results prose added by the results commit `dbdc85b`
+> — it is not part of the text registered alone at `cec9955`, and nothing
+> above `## Result` has been touched. The same error, with the direction
+> ALSO wrong, was corrected in `docs/FINDINGS.md` in v1.0.1].
 
 > **SECONDARY 1: HELD, at every ratio.** The edge falls from **0.016 at 600
 > generations to 0.004 at 1800**. The band contracts as the horizon grows. On the

@@ -1,0 +1,14 @@
+# Pre-registrations are FROZEN DOCUMENTS. Do not reformat them.
+#
+# Added 2026-09-11 after a formatter pass, triggered by a one-line correction to
+# 004's Result section, silently rewrote the whole file INCLUDING the registered
+# text above `## Result`. It changed `phi*` to `phi_` (mangling the symbol the
+# mechanistic prediction is named by), dropped a `>` blockquote marker, and ate a
+# space — none of it visible in the intended edit, all of it inside text whose
+# whole value is that it has not changed since it was committed.
+#
+# These files predate the formatter and have never been through it, so a single
+# run reflows hundreds of lines. Reverted and re-applied out of band. Anything
+# that must be corrected here is corrected with an explicit bracketed, dated
+# note, and only below `## Result`.
+docs/pre-registrations/
