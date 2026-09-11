@@ -284,10 +284,27 @@ Identical to 005: a cell is CONTROLLED, RUNAWAY (saturated), or EXTINCT, with
   relative error on a leave-one-out pass over the in-range cells, not by R² —
   005's whole finding is that R² between 0.993 and 0.9986 failed to distinguish a
   misspecified form from a right one.
+  - **AMENDED 2026-09-11, before any data existed**, while implementing
+    `experiments/006-forms.ts`: the clause above does not say how to break a
+    tie, and ties are reachable. A quadratic fitted to exact power-law data
+    recovers `q2 = 0` and reproduces it, so two candidates can both score zero.
+    **Ties within 1e-9 go to the candidate spending fewer parameters**
+    (mechanism 1, power law 2, quadratic 3). Recorded here rather than decided
+    at analysis time, which is the whole point of the freeze.
 - **Horizon for Phase 2** = 2.5 × the **largest** `t_sat` any of the three
   candidates predicts for that cell, not the selected one's. 005 used 1.75× its
   favoured candidate and realised 1.31×. Taking the max across candidates and
   raising the factor is the direct repair.
+  - ⚠️ **RECORDED 2026-09-11, before any data existed: on 005's cells this rule
+    does not bite.** Fitting the three candidates to 005's five in-range cells
+    and extrapolating, the mechanism is already the largest at both Phase 2
+    cells — 11055 against the power law's 8202 and the quadratic's 9977 at
+    `phi = 0.001`, and 22110 against 14985 and 22009 at `phi = 0.0005`. So "2.5×
+    the max" and "2.5× the mechanism" coincide here. The rule stays, because
+    which candidate is largest cannot be known before Phase 1 runs and Phase 1
+    may move it. But it must not be reported as having protected anything it did
+    not: the runner records per row which candidate supplied the horizon, and
+    the Result states whether the max was ever a candidate other than B.
 
 ## Mutation table — the runner is not committed until each is seen to fail
 
