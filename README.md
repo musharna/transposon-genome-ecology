@@ -6,6 +6,14 @@ per-copy heritable trait — so you never choose when an element copies itself.
 What you move are the conditions a lineage lives under; what happens next is
 selection.
 
+**▶ [Play it](https://musharna.github.io/transposon-genome-ecology/)** ·
+**📄 [What it found](docs/FINDINGS.md)** — five questions, each registered with its
+prediction and its falsification condition and committed to git _before_ the code that
+answered it existed. Two of them falsified the thing they were testing.
+
+Code is **MIT**; documentation, figures and data are **CC BY 4.0**. See
+[LICENSE](LICENSE), [LICENSE-docs](LICENSE-docs) and [CITATION.cff](CITATION.cff).
+
 ⚠️ **You play a LINEAGE'S EVOLVABLE STRATEGY, not an element making choices.**
 This is an accuracy constraint and it is load-bearing: **transposition rate is
 heritable, not a decision.** A design that lets the player choose when to copy is
@@ -18,6 +26,12 @@ and the element's own descendants — and two mechanics carry that:
   one conscripts you into your own suppression. The trap is made of you.
 - **Domestication is an alternate win** (syncytin, RAG). Ceasing to be a parasite
   is a way to persist, not a way to lose.
+  ⚠️ **Not at the shipped defaults.** `wDom = 0.01` sits below the measured
+  persistence threshold (`0.03 < wDom* ≤ 0.075`), so domesticated copies are made,
+  peak, and are then lost to zero at every seed. It is a calibration limit, not a
+  missing mechanism, and the constant was deliberately **not** retuned for the
+  release — every registered question above was answered at this value.
+  [Details](docs/FINDINGS.md#what-is-open).
 
 ## What is here
 
@@ -65,9 +79,18 @@ Every guard carries a **WHAT THIS GUARD DOES NOT CLAIM** section. Read it before
 quoting a result: several of these are fixed-horizon comparisons at one pinned
 arm, and guard 4's direction reverses past generation 180.
 
-**One registered question** has been asked and answered:
-`docs/pre-registrations/2026-09-02-per-copy-vs-family-rate.md` was written before
-the runner existed, and `experiments/001-per-copy-vs-family-rate.ts` answers it.
+**Five registered questions** have been asked and answered. Each pre-registration in
+`docs/pre-registrations/` was committed **alone, before its runner existed**, and each
+runner in `experiments/` answers exactly one of them. Results, verdicts and the limits
+on each: **[docs/FINDINGS.md](docs/FINDINGS.md)**.
+
+| #   | question                                     | verdict                                                  |
+| --- | -------------------------------------------- | -------------------------------------------------------- |
+| 001 | per-copy vs family-level rate                | the arms differ — the falsification clause does not fire |
+| 002 | conscription vs an innate silencer           | **falsified** — both arms viable at 3 of 9 grid points   |
+| 003 | how fresh must the trap be?                  | control only at `phi = 0` — and a resolution artefact    |
+| 004 | a band, or only a delay?                     | a delay: the edge moves 0.016 → 0.004 with the horizon   |
+| 005 | does the delay diverge, or is there a floor? | no floor above `phi = 0.002`; 150/150 saturate           |
 
 ## Setup
 

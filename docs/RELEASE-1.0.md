@@ -229,3 +229,113 @@ rename to `fig-005-tolerance.png`) and `fig-001-final-copies.png` (named only in
 code block in the superseded build plan). Neither is a broken image link.
 
 DONE: four scripts re-rendered deterministically under one house style, recorded above.
+
+## Stage 4 — write-up
+
+**New: `docs/FINDINGS.md`.** Written for a stranger. Three sentences on what the model
+is (the unit is the copy; the verb is perturbing the world; rate is heritable, not
+chosen), then one section per registered question — prediction as registered → result →
+verdict → what it does not show — followed by what is open and how to reproduce. Every
+number carries its CSV, its runner and its commit.
+
+**Every headline number was recomputed from the CSVs**, independently of the R analysis,
+before it was written down. The verification script reads only `experiments/*.csv`:
+
+| Question | Claim in FINDINGS | Recomputed from the CSV |
+| --- | --- | --- |
+| 001 | 80 runs, 40 seeds × 2 arms | 80 rows, 40 distinct seeds |
+| 001 | peak copies/genome 58.65 vs 21.49 | 58.6520 vs 21.4907 |
+| 001 | extinct 21/40 vs 25/40 | 21/40 vs 25/40 |
+| 001 | 17 of 40 per-copy runs over 60 copies; 0 of 40 family-level | 17 and 0 |
+| 002 | 180 runs; both arms viable at 3 of 9 grid points | 180 rows; 9 grid points, 3 both-viable |
+| 002 | the 9 points are 6 distinct regimes | 6 distinct `k_star` values |
+| 003 | 270 runs; CONTROLLED only at `phi = 0`, all three ratios | 270 rows; fully-controlled phi = [0.0] at 2.00, 3.33 and 5.00 |
+| 004 | 270 runs + 60 control; edge 0.016 at gen 600 | 270 + 60; max fully-controlled phi = 0.016 at all three ratios |
+| 004 | edge 0.004 at gen 1800 | max fully-controlled phi = 0.004 at all three ratios |
+| 005 | 150 runs + 90 control; 150/150 saturated, 0 censored, 0 extinct | 150 + 90; saturated 150/150, censored 0, extinct 0 |
+| 005 | 15 cells, no duplicated (ratio, phi, seed) | 15 cells; 150 distinct keys over 150 rows → 0 duplicates |
+| 005 | secondary 1 falsified by +43.1 / +42.2 / +37.0 % at `phi = 0.002` | observed 4720.1 / 5345.5 / 6101.9 vs predicted 3297.5 / 3759.5 / 4454.1 → +43.1 / +42.2 / +37.0 % |
+
+Every row agrees. The 005 percentages are computed against the `predicted_t_sat` column
+the runner wrote from 004's frozen constants, so both sides of that comparison come from
+the CSV and neither is re-derived here.
+
+**Commits cited in FINDINGS were each verified to exist** with `git log -1`: `f5ae5b1`,
+`4995f3b`, `82ab678`, `58b0656`, `126e3bd`, `778fe9c`, `e0af8b2`, `cec9955`, `5468d97`,
+`9201d74`, `909aeb0`, `3e88479`. All resolve, with the dates and subjects the write-up
+implies.
+
+**Links.** All 7 relative links in `FINDINGS.md` resolve to files that exist (checked by
+resolving each against the file's own directory). Separately, every `fig-*.png` referenced
+anywhere under `docs/` or in `README.md` exists — see stage 3.
+
+**`README.md`.** The top now carries a one-line play link
+(`https://musharna.github.io/transposon-genome-ecology/` — a placeholder the coordinator
+verifies live), a link to FINDINGS, and the licence boundary. Two corrections:
+
+- The line "**One registered question** has been asked and answered" was **false** — five
+  have been. Replaced with a five-row verdict table linking to FINDINGS.
+- The "domestication is an alternate win" bullet now carries the limitation inline.
+
+**The toy's UI.** `web/index.html` gained one note, beside the `domesticated` legend
+entry, saying that at the shipped `wDom = 0.01` domesticated copies appear, peak and are
+lost to zero, and that this is calibration rather than a missing mechanism. Nothing else
+in `web/` changed. Two errors were caught in that note before it shipped: it originally
+said "raise the bonus and they stay", implying a control that **does not exist** (the
+toy's sliders are cluster size, the `t` dial, excision rate and `pDom` — there is no
+`wDom` slider, and `pDom` changes how often the event fires, not whether it sticks); and
+it used markdown backticks inside HTML, which render literally.
+
+**Citations.**
+
+`docs/dois.txt` holds **51** unique DOIs harvested from `docs/`, `README.md` and
+`CHANGELOG.md`.
+
+*Ruling (deviation from the plan).* The plan's extraction command is
+`grep -rhoE '10\.[0-9]{4,9}/[^ )>\]"]+'`. That pattern is **malformed** and silently
+matches nothing: in POSIX ERE a backslash inside a bracket expression is a literal
+backslash, so `\]` closes the class early. Run verbatim it returned **0 DOIs**, which
+would have read as "no citations to check" — the project's own silent-zero failure mode.
+Replaced with `'10\.[0-9]{4,9}/[^] )>"]+'`, which places `]` first in the class where it
+is literal, plus a `sed` pass stripping trailing punctuation and backticks (10 DOIs were
+captured with a trailing backtick from inline code spans). Positive control: the known
+DOI `10.1038/nrg1524` appears in the output exactly once, and no entry still contains a
+backtick.
+
+`ghostcite 0.5.2` on that file:
+
+```
+total 51 · with_doi 51 · findings 0
+retraction_source: Retraction Watch snapshot 2026-07-14 (71059 rows)
+```
+
+**Zero findings — and the check was seen to fail first.** A clean result from a checker
+that cannot fail is worth nothing, so ghostcite was run on a three-line control holding
+two real DOIs and one fabricated one. It returned exactly one finding — tier `U`, line 2,
+`"DOI does not resolve (dead or fabricated DOI)"` — and passed the two real ones. The
+checker discriminates.
+
+⚠️ **Scope of that check, stated rather than implied.** `docs/dois.txt` is a bare DOI
+list, so every finding carries `claimed_author: null` and `claimed_year: null`: ghostcite
+verified that all 51 DOIs **resolve** and that none appears in the Retraction Watch
+snapshot. It did **not** verify that each DOI is the work the surrounding prose names —
+the wrong-author-for-right-DOI failure mode. That check is `docs/REFERENCES.md`'s, which
+records all 38 works / 42 DOIs resolved live against OpenAlex on 2026-09-02 with
+first-author surname, year, venue and DOI taken from the registry. The 51 here exceed 42
+because `docs/` also cites works outside `REFERENCES.md` (pre-registrations, the
+Charlesworth read, `pathway-mechanics.md`).
+
+**Each FINDINGS headline that rests on a source was checked against a full-text read**,
+recorded in `docs/pathway-mechanics.md`, not against recall:
+
+| FINDINGS sentence | Source | Confirmed by |
+| --- | --- | --- |
+| tolerance "limits fitness cost without affecting propagation", outside the piRNA pathway | Kelleher et al. 2018 | §5, verbatim: "mechanisms of tolerance do not affect propagation but rather limit the fitness costs to the host" |
+| Kelleher 2012 "argues the other way in its own system" | Kelleher, Edelman & Barbash 2012 | §4, verbatim: "mismatches between piRNAs and TE transcripts cannot explain the pattern of TE derepression in hybrids" |
+| the model is right and the shipped `wDom` is unrealistically small | Kapitonov & Jurka 2005 | §6, verbatim: "a period of intensive transformations due to diversifying/positive selection", then stabilizing selection at 79% identity |
+| Kofler's 0.2% is a property of his silencing rule and does not transfer | Kofler 2020 | §3, verbatim minimum-size quote plus the recorded non-transfer argument |
+
+`npm test` after stage 4: **22 files, 198 tests, all passed.**
+
+DONE: FINDINGS numbers agree with the CSVs they cite (checked above), ghostcite clean
+with its control seen to fire, README rewritten.
