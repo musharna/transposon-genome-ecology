@@ -7,8 +7,16 @@
 **Branch.** `release/1.0.1-rc`, cut from `master` at
 `53c0e12` ("docs: v1.0.1 plan — executor brief from the post-ship panel audit").
 
-**RC SHA.** `126ac33640d1e60845984df4c0f80069aebd7637` (`126ac33`), over two commits:
-`b2a6ce9` (the punch list) and `126ac33` (the critic gate).
+**RC.** Branch `release/1.0.1-rc`, three commits on top of `53c0e12`:
+
+| commit    | what                                                                      |
+| --------- | ------------------------------------------------------------------------- |
+| `b2a6ce9` | the punch list — all 14 items                                             |
+| `126ac33` | the critic gate — 9 class-1 and 2 class-3 findings, two of them self-inflicted |
+| tip       | this evidence log (its own SHA cannot be quoted inside it; `git rev-parse release/1.0.1-rc`) |
+
+Every measurement below was taken at `126ac33`, whose tree differs from the tip only
+by the addition of this file.
 
 **Plan.** [`docs/superpowers/specs/2026-09-11-v1.0.1-plan.md`](superpowers/specs/2026-09-11-v1.0.1-plan.md).
 
