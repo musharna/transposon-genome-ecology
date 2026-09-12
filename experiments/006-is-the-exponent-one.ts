@@ -105,6 +105,26 @@ const CONTROL_PHIS = [0.002, 0.0453] as const;
 const SATURATION_COPIES_PER_GENOME = 1500;
 const CONTROL_GENERATIONS = 80;
 
+/**
+ * How often a run in progress says it is still alive, in generations.
+ *
+ * ⚠️ NOT COSMETIC, and not a guess. Phase 1 was submitted as jobd job 3742 and
+ * reaped 91 minutes in — `watchdog_fired / idle_timeout / threshold_s=5400`,
+ * with nothing crashed. Manipulation check 2 re-runs sixty of 005's cells and
+ * printed only a header before them and a verdict after; one of those cells
+ * measures at 479 SECONDS on an idle machine, so the check is silent for about
+ * four hours while working perfectly. No watchdog can tell that from a hang,
+ * and neither can a person reading the log.
+ *
+ * A longer timeout would not have fixed it, it would have hidden it: Phase 2's
+ * horizons reach 59000+ generations, where a SINGLE run outlasts any threshold
+ * worth keeping. So the silence is removed instead of the guard being weakened.
+ * At ~0.1 s/generation this is a line every ~100 s at the slow end, and runs
+ * shorter than one interval — manipulation check 1's 80-generation
+ * configurations — stay silent.
+ */
+const HEARTBEAT_EVERY = 1000;
+
 /** 005's horizon rule, for Phase 1's in-range cells only. */
 const P1_HEADROOM = 1.75;
 const HORIZON_FLOOR = 1000;
@@ -222,6 +242,7 @@ function runOne(
   horizon: number,
   horizonFrom: string,
   horizonPredicted: number,
+  heartbeatEvery: number = HEARTBEAT_EVERY,
 ): Row {
   const { theta, sigmaS } = ratio;
   const world = createWorld(defaultParams({ ...BASE, theta, sigmaS, seed }));
@@ -244,6 +265,15 @@ function runOne(
     if (total === 0) {
       stoppedAt = world.generation;
       break;
+    }
+    // An OBSERVATION of the run, never a part of it: it reads no RNG and
+    // mutates no world state, so the draw stream is untouched and manipulation
+    // check 2 still reproduces 005 bit for bit.
+    if ((g + 1) % heartbeatEvery === 0) {
+      console.log(
+        `      ... phi=${phi} ratio=${ratio.label} seed=${seed} at generation ` +
+          `${world.generation}/${horizon}, ${(total / world.genomes.length).toFixed(0)} copies/genome`,
+      );
     }
   }
 
