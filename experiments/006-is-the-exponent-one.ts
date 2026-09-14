@@ -866,6 +866,30 @@ function phase2Grid(gateRuns: boolean): { ratio: Ratio; phi: number }[] {
   return RATIOS.flatMap((ratio) => phis.map((phi) => ({ ratio, phi })));
 }
 
+/**
+ * Phase 2's registered key set for check 5, built from the GATE and never from
+ * the rows. Inferring the gate from which rows exist would pass a file whose
+ * whole column B is missing as a closed gate. Added post-data (2026-09-14): the
+ * pre-data runner applied check 5 to Phase 1 only.
+ */
+function phase2Keys(gateRuns: boolean): Set<string> {
+  return new Set(
+    phase2Grid(gateRuns).flatMap(({ ratio, phi }) =>
+      SEEDS.map((seed) => `${phi}|${ratio.label}|${seed}`),
+    ),
+  );
+}
+
+/** The in-range cells Phase 2's horizons and gate are fitted on, per ratio. */
+function phase2FitCells(p1: Row[], label: string): Point[] {
+  return assertInRange(
+    [...inRange005(label), ...cellMeans(p1, label)].sort(
+      (a, b) => a.phi - b.phi,
+    ),
+    `Phase 2 horizon fit, ratio ${label}`,
+  );
+}
+
 /** Which candidate supplies the largest prediction, and what it is. */
 function horizonSource(phi: number, inRange: Point[]): [FormName, number] {
   const fits: [FormName, number][] = [
@@ -883,13 +907,7 @@ function runPhase2(): void {
   writeFileSync(PHASE2_CSV, `${HEADER}\n`);
   const rows: Row[] = [];
 
-  const forRatio = (label: string): Point[] =>
-    assertInRange(
-      [...inRange005(label), ...cellMeans(p1, label)].sort(
-        (a, b) => a.phi - b.phi,
-      ),
-      `Phase 2 horizon fit, ratio ${label}`,
-    );
+  const forRatio = (label: string): Point[] => phase2FitCells(p1, label);
 
   // ONE decision, for the whole column, taken at the registered ratio before
   // any cell runs -- not per ratio inside the loop.
@@ -937,6 +955,7 @@ function runPhase2(): void {
       );
     }
   }
+  manipulationCheck5(rows, phase2Keys(gate.runs), "Phase 2");
   manipulationCheck4(rows);
   manipulationCheck3(rows);
   console.log(`Phase 2 written to ${PHASE2_CSV}`);
@@ -945,6 +964,10 @@ function runPhase2(): void {
 function analyse(): void {
   const p1 = readRows(PHASE1_CSV);
   const p2 = readRows(PHASE2_CSV);
+  // The gate is re-derived from Phase 1, not read off Phase 2's rows, so a
+  // missing column B cannot pass as a closed gate. Added post-data.
+  const gate = columnBGate(phase2FitCells(p1, COLUMN_B_RATIO));
+  manipulationCheck5(p2, phase2Keys(gate.runs), "Phase 2");
   manipulationCheck4(p2);
   const usable = manipulationCheck3(p2);
 
@@ -1024,7 +1047,7 @@ function analyse(): void {
       "     from the runner committed pre-data. Step SEM = √(sem_i² + sem_j²), which\n" +
       "     ignores the shared cell's (negative) covariance and so UNDERSTATES it.\n",
   );
-  const columnBRan = p2.some((r) => Math.abs(r.phi - PHASE2_B) < 1e-12);
+  const columnBRan = gate.runs;
   const perRatio = RATIOS.map((r) => {
     const conv = convergence(
       registeredConvergenceCells(
@@ -1097,6 +1120,7 @@ export {
   PHASE1_PHIS,
   PHASE2_A,
   PHASE2_B,
+  phase2Keys,
   RATIOS,
   registeredConvergenceCells,
   SEEDS,
