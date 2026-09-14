@@ -378,4 +378,273 @@ ratio 5.00, which is not what "Column B is **not** run" says.
 
 ## Result
 
-_Not yet run. This registration is committed alone, before its runner exists._
+**Run 2026-09-11 → 2026-09-13**, on SCAR18 under jobd, both phases unsharded.
+
+- **Phase 1:** job 3743 at `6a465db`, 2026-09-11 21:39 → 2026-09-12 08:11 EDT.
+  It made 150 grid runs plus the 60 runs of check 2, in
+  `../../experiments/006-phase1.csv` and `../../experiments/006-reproduction-control.csv`,
+  committed at `1d8a4b6`.
+- **Phase 2:** job 3757 at `ee489f5`, 2026-09-12 16:21 → 2026-09-13 20:12 EDT.
+  It made 60 runs, in `../../experiments/006-phase2.csv`, committed at `268ad22`.
+
+Every registered-runner number below was re-printed by
+`npx tsx experiments/006-is-the-exponent-one.ts --analyse` on the committed CSVs on
+2026-09-14. Numbers marked **off-runner** come from read-only scripts over the same
+CSVs, and are marked because the runner does not produce them. **No figure has been
+made.**
+
+### Manipulation checks
+
+- **1, composed loop = shipped model.** PASSED in both phases, on 60 configurations.
+  The smallest surviving population was 4402 copies, so no comparison was vacuous.
+- **2, reproduction of 005.** PASSED. All 60 of 005's cells reproduce exactly on both
+  `t_sat` and state hash.
+- **3, no censoring.** ⚠️ **3 of 60 Phase 2 runs are censored at their horizon, all
+  in one cell.** How that is read is recorded below under the primary.
+- **4, horizon provenance.** PASSED. Every Phase 2 row names the candidate that sized
+  its horizon, and **every one is the mechanism.**
+  - **The max rule did not bite.** "2.5× the largest candidate" and "2.5× the
+    mechanism" were the same number throughout, as recorded pre-data. The max was
+    never a candidate other than B.
+- **5, grid integrity.** PASSED for Phase 1 in the runner.
+  - ⚠️ **The runner does not apply check 5 to Phase 2.** Verified **off-runner** from
+    the CSV: 60 rows, 60 distinct `(ratio, phi, seed)`, exactly the registered set
+    (3 ratios × {0.001, 0.0005} × seeds 6001–6010).
+
+### The column B gate, with the inputs the registration requires
+
+At ratio 5.00 the selected form was the **quadratic**, with LOO MARE 2.02% against
+3.68% for the power law and 10.87% for the mechanism. The quadratic was also the
+selected form at 2.00 and 3.33.
+
+The three candidates' predictions of `t_sat(0.0005)` were:
+
+| candidate | `t_sat(0.0005)` |
+| --- | --- |
+| quadratic (selected) | 26148 |
+| power law | 19873 |
+| mechanism | 28005 |
+
+The horizon is 2.5 × 28005 = **70013 ≤ 75000**, so **column B ran at all three
+ratios.** The pre-amendment clause (selected form ≤ 30000) would also have run it, so
+the amendment did not change the outcome.
+
+### Per-cell outcomes, Phase 2
+
+Means and SEMs are over **saturated runs only**.
+
+| ratio | `phi` | horizon | saturated | extinct | censored | mean `t_sat` (SEM) | range |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 2.00 | 0.001 | 27153 | 10 | 0 | 0 | 9001 (3.70%) | 6636–10469 |
+| 2.00 | 0.0005 | 54306 | 10 | 0 | 0 | 18338 (2.54%) | 16659–21355 |
+| 3.33 | 0.001 | 30883 | 9 | **1** | 0 | 10044 (1.04%) | 9499–10484 |
+| 3.33 | 0.0005 | 61766 | 8 | **2** | 0 | 21510 (2.22%) | 19851–23342 |
+| 5.00 | 0.001 | 35007 | 10 | 0 | 0 | 11830 (1.69%) | 10512–12646 |
+| 5.00 | 0.0005 | 70013 | 7 | 0 | **3** | 22972 (1.29%) | 21899–23903 |
+
+**Extinction, the first in this project since 003.** 004, 005 and Phase 1 had none.
+
+- All three extinct runs are at ratio 3.33:
+  - seed 6001 at `phi = 0.001`, extinct at generation 9848;
+  - seeds 6004 and 6005 at `phi = 0.0005`, extinct at generations 15576 and 13074.
+- The two at `phi = 0.0005` went extinct before any seed in their cell had saturated
+  (earliest saturation: 19851).
+- Seed 6001 went extinct inside its cell's saturation range (9499–10484).
+- Each collapsed from 460–730 copies per genome within 1000 generations of its last
+  heartbeat. These are sudden losses, not a slow decline.
+- EXTINCT is a registered outcome, and an extinct run has no `t_sat`.
+- Excluding extinct runs conditions the cell mean on survival, because extinction
+  competes with saturation. **Which way that biases the mean is not shown.**
+
+**Censoring.** Seeds 6005, 6006 and 6008 at `phi = 0.0005`, ratio 5.00, ran the full
+70013 generations.
+
+- None of the three saturated or went extinct. They stopped CONTROLLED, at 494, 573
+  and 573 copies per genome.
+- Over the run, their heartbeats ranged between roughly 200 and 900 copies per genome.
+- **The cell is bimodal.** Seven seeds saturated between 21899 and 23903. The other
+  three were still controlled at 2.9× the cell's latest saturation, and nothing fell
+  in between.
+
+### Verdicts
+
+| | as registered (censored runs excluded) | censored runs counted at their horizon |
+| --- | --- | --- |
+| PRIMARY | **HELD**, 2 of 3 | **FALSIFIED**, 2 of 3 |
+| SECONDARY 1 | **FALSIFIED** | **FALSIFIED** |
+| SECONDARY 2 | not computed by the runner; **off-runner: HELD** | HELD |
+| SECONDARY 3 | **HELD** | unchanged, because it is defined at saturation only |
+
+### PRIMARY — held by the registered procedure, NOT robust to censoring, and this Result does not claim `a = 1`
+
+`a_local` on the deepest interval, `0.0005→0.001`, with SEM propagated:
+
+| ratio | as registered | censored runs counted at their horizon |
+| --- | --- | --- |
+| 2.00 | 1.027 ± 0.065 — in | same; the cell has no censoring |
+| 3.33 | **1.099 ± 0.035 — out, high** | same; the cell has no censoring |
+| 5.00 | 0.9575 ± 0.031 — in | **1.648 ± 0.281 — out, high** |
+
+**1. The verdict turns on one cell, and exclusion biases that cell toward holding, in
+a known direction.**
+
+- Any censored run that ever saturates does so after generation 70013.
+- Excluding those runs lowers the mean at `phi = 0.0005`, and that lowers the
+  exponent.
+- Counting them at the horizon, the smallest value they could take, puts ratio 5.00 at
+  1.648. **That falsifies the primary.**
+- If those seeds ever saturate, the true value is higher still.
+- The 0.281 SEM on the counted version comes from the bimodality, not from sampling
+  noise.
+
+**2. Even as registered, ratio 5.00 sits 0.0075 inside the band.**
+
+- The rule is point-based, and the point is in.
+- Its ±1 SEM interval reaches down to 0.927.
+
+**3. The ratio that falls outside the band outright is also the only ratio with
+extinctions.**
+
+- At 3.33 the exponent is 1.4 SEM above the upper bound.
+- Survivor conditioning may move that value in an unknown direction.
+
+⚠️ **The reading of check 3 is a decision taken AFTER the data existed, and it is
+marked as such.**
+
+**The tension.** The registration pulls two ways:
+
+- The section heading says the experiment "is void if these fail".
+- Check 3 says every cell saturates inside its horizon.
+- But check 3's own text also says a censored cell "is reported as censored and its
+  `t_sat` is **excluded**".
+
+The runner, committed pre-data at `26a3a12`, implements exclude-and-report.
+
+**The decision.** On 2026-09-14, three readings were laid out: void; held; and held
+but not robust. The project owner chose the third:
+
+- the experiment is **not void**;
+- the registered verdict (HELD) is reported as printed, beside the censored-at-horizon
+  bound (FALSIFIED);
+- the primary is recorded as **not robust to censoring**.
+
+No number was changed to reach that reading.
+
+### SECONDARY 1 — FALSIFIED at all three ratios, and the mechanism is WORST at all three
+
+Mean absolute relative prediction error on Phase 2's cells:
+
+| ratio | power law | mechanism | quadratic |
+| --- | --- | --- | --- |
+| 2.00 | 15.07% | 19.56% | **11.05%** |
+| 3.33 | 15.04% | 18.92% | **7.13%** |
+| 5.00 | 11.22% | 20.14% | **9.58%** |
+
+The runner prints the per-ratio winner and no verdict word. FALSIFIED is read directly
+off the clause, since another candidate beats B at all three ratios, not just two.
+
+**Robust to censoring.** Ratios 2.00 and 3.33 have no censored runs, and the clause
+already fires on those two alone.
+
+**Every candidate misses in the same direction at every cell.** Nothing brackets the
+data:
+
+| candidate | error at each Phase 2 cell (off-runner) |
+| --- | --- |
+| power law | −8.3% to −21.8% (under-predicts) |
+| mechanism | +14.9% to +23.0% (over-predicts) |
+| quadratic | +5.3% to +14.1% (over-predicts) |
+
+⚠️ **What this does and does not say about the exponent.**
+
+- B as frozen is `t = K / phi`, with `K` fitted on in-range cells.
+- In that range `t·phi` was still falling: 14.55 → 9.44 across 005's grid at ratio
+  2.00.
+- So B scores the frozen constant as well as the exponent, and **can fail this clause
+  while the local exponent is 1.**
+- That does not rescue it. Freezing `K` in-range was registered on purpose.
+
+**Descriptive, post-hoc, not a verdict.** Past `phi = 0.002`, `t·phi` flattens:
+
+| ratio | 0.002 | 0.001 | 0.0005 (censored runs excluded) |
+| --- | --- | --- | --- |
+| 2.00 | 9.44 | 9.00 | 9.17 |
+| 3.33 | 10.69 | 10.04 | 10.76 |
+| 5.00 | 12.20 | 11.83 | 11.49 |
+
+### SECONDARY 2 — NOT IMPLEMENTED IN THE REGISTERED RUNNER; HOLDS off-runner
+
+**Registered, never coded, and found only while writing this Result.** It was computed
+**off-runner** from the committed CSVs, over the registered intervals.
+
+The step SEM is `√(se_i² + se_j²)`. That ignores the covariance from the cell two
+adjacent intervals share. The covariance is negative, so ignoring it **understates**
+the step SEM, which makes a falsifying decrease easier to find, not harder.
+
+| ratio | 0.0113→0.0226 | 0.004→0.0113 | 0.002→0.004 | 0.001→0.002 | 0.0005→0.001 | decreases > 1 SEM |
+| --- | --- | --- | --- | --- | --- | --- |
+| 2.00 | 0.865 ± 0.037 | 0.906 ± 0.019 | 0.967 ± 0.038 | 0.931 ± 0.064 | 1.027 ± 0.065 | none |
+| 3.33 | 0.789 ± 0.038 | 0.910 ± 0.017 | 0.962 ± 0.030 | 0.910 ± 0.031 | 1.099 ± 0.035 | one: 0.052 against 0.043 |
+| 5.00 | 0.865 ± 0.038 | 0.888 ± 0.018 | 0.974 ± 0.036 | 0.955 ± 0.040 | 0.958 ± 0.031 | none |
+
+- Falsification needs a decrease at two or more ratios, and only one ratio has one,
+  so the clause **holds**.
+- It also holds with censored runs counted. Only ratio 5.00's last value moves, to
+  1.648, which is an increase.
+- ⚠️ **Non-decreasing within one SEM is not the same as converging to one.** At ratio
+  5.00 the last three intervals read 0.974, 0.955 and 0.958. That is flat, not rising.
+- Until this is implemented test-first in the runner, it carries less weight than the
+  other three verdicts.
+
+### SECONDARY 3 — HELD
+
+The spread of `max|s| / t` is **1.084 / 1.060 / 1.072** at the three ratios, all
+within 1.15.
+
+- The runner takes the spread over individual saturated runs, not over cells as
+  registered.
+- A cell-level summary cannot fall outside its runs' range, whether it is a mean of
+  ratios or a ratio of means. So the cell-level spread cannot be larger, and **the
+  verdict holds on the registered statistic too.**
+
+### What 006 establishes
+
+> **006 does not show that the exponent is one.** The registered primary held 2 of 3.
+> That verdict rests on excluding three runs whose exclusion biases it toward holding,
+> and it flips when they are counted at their smallest possible value. What does
+> stand:
+>
+> - The power law under-predicts every cell below the fitted range.
+> - The mechanism, as frozen, predicts worst of the three candidates.
+> - The quadratic predicts best and still misses every cell high.
+> - At deep `phi` a regime appears that no earlier question saw: extinction at ratio
+>   3.33, and a bimodal cell at 5.00 where three seeds were still controlled at nearly
+>   3× the latest saturation.
+
+### Scope, restated because the result invites over-reading
+
+- **Whether the three controlled seeds at `phi = 0.0005`, ratio 5.00, ever saturate is
+  not established.**
+  - They are consistent with a floor at some seeds, and equally with a delay longer
+    than 2.9× the cell's latest saturation. 006 cannot tell those apart.
+  - This is 005's floor question, reopened below `phi = 0.002`.
+  - ⚠️ **It must not be answered by extending those runs and re-scoring 006.** That
+    would change a registered cell's method after seeing its result. It is a
+    candidate for a separately registered question.
+- **The direction of survivor bias from extinction is not shown.**
+- **One model, one freeze.** As registered, nothing here is a claim about transposable
+  elements in any organism.
+
+### Post-data items, marked
+
+1. **The reading of check 3**, decided by the owner on 2026-09-14 (above).
+2. **Secondary 2 was computed off-runner.** The registered runner has no
+   implementation.
+3. **Check 5 for Phase 2 was verified off-runner.** The runner does not run it for
+   Phase 2.
+4. **Check 3's printed message is wrong about the extinct runs.** It reports all six
+   non-saturated runs, the 3 extinct and the 3 censored, as runs that "did NOT
+   saturate inside their horizon". That wording misdescribes the extinctions.
+   - Both kinds are excluded from every `t_sat` statistic, which is correct for each
+     (an extinct run has no `t_sat`).
+   - The wording is not yet fixed, and the fix will change wording only, not numbers.

@@ -13,7 +13,7 @@ change. Transposition rate is **heritable, not a decision**, which is the constr
 whole design is built to respect: a version that let you press "copy now" would be
 modelling something that does not exist.
 
-Five questions were registered in advance — each written down, with its prediction and
+Six questions were registered in advance — each written down, with its prediction and
 its falsification condition, and committed to git **before the code that answers it
 existed** — and then answered. This page is what they found. Scientific correctness is
 the floor here, not the point: the thing being built is a toy you can poke.
@@ -25,7 +25,7 @@ verdict does not survive inspection, that is said too.
 
 ---
 
-## The five questions
+## The six questions
 
 ### 001 — Does it matter that rate is per-copy rather than per-family?
 
@@ -208,6 +208,91 @@ headroom at `phi = 0.002` was **1.31×, not 1.80×**, and the worst single seed 
 censored and the falsified prediction's magnitude would have been unmeasurable. That
 sizing rule is circular and should have come from the model's worst plausible error.
 
+### 006 — Is the exponent one?
+
+**Registered** at [`f457e3a`](pre-registrations/2026-09-11-is-the-exponent-one.md),
+committed alone before any runner. It was amended twice before any data existed
+(`333ce8d`, `eec8d95`). The runner, `experiments/006-is-the-exponent-one.ts`, was committed
+at `26a3a12` with every mutation-table row seen to fail. Data:
+
+- `experiments/006-phase1.csv`: 150 runs;
+- `experiments/006-reproduction-control.csv`: 60 runs;
+- `experiments/006-phase2.csv`: 60 runs, at `phi` = 0.001 and 0.0005.
+
+**No figure yet.**
+
+005 showed that the exponent is a property of the fitting window, so this question does
+not fit one. It asks whether the **local** exponent converges, as `phi` falls, to the
+value the model's own mechanism derives with no free parameter: **`a = 1`**. It scores
+that on two `phi` cells below anything run before.
+
+**Verdict: the registered primary HELD, and it does not survive a change in how three
+runs are counted. This page does not claim `a = 1`.**
+
+- **PRIMARY — HELD, 2 of 3 as registered, and NOT ROBUST.** The local exponent on
+  `0.0005→0.001` must lie in [0.95, 1.05]. The primary is falsified if it lies outside
+  that band at two or more ratios:
+
+  | ratio | as registered                 | censored runs counted at their horizon |
+  | ----- | ----------------------------- | -------------------------------------- |
+  | 2.00  | 1.027 ± 0.065 — in            | same                                   |
+  | 3.33  | **1.099 ± 0.035 — out, high** | same                                   |
+  | 5.00  | 0.958 ± 0.031 — in            | **1.648 ± 0.281 — out, high**          |
+  - At `phi = 0.0005`, ratio 5.00, three of ten seeds never saturated inside the
+    70013-generation horizon. They were still controlled at 494–573 copies per genome.
+    The other seven saturated at 21899–23903, so the cell is bimodal.
+  - As registered, those three runs are excluded. **Exclusion lowers the cell mean, so
+    it biases the verdict toward holding.**
+  - Counting them at the horizon, the least they could be, falsifies the primary.
+
+- **SECONDARY 1 — FALSIFIED**, with the mechanism worst at every ratio.
+
+  | ratio | power law | mechanism | quadratic |
+  | ----- | --------- | --------- | --------- |
+  | 2.00  | 15.1%     | 19.6%     | **11.1%** |
+  | 3.33  | 15.0%     | 18.9%     | **7.1%**  |
+  | 5.00  | 11.2%     | 20.1%     | **9.6%**  |
+
+  The table shows each form's out-of-sample error. The power law under-predicts every
+  deep cell, and the other two over-predict every one. The verdict does not depend on
+  the censored runs.
+
+- **SECONDARY 2 — HELD, but computed outside the registered runner**, which never
+  implemented it. At ratio 5.00 the last three local exponents read 0.974, 0.955 and
+  0.958. That is flat, not rising.
+- **SECONDARY 3 — HELD.** The spread of `max|s| / t` is 1.08 / 1.06 / 1.07, against a
+  1.15 bound.
+
+**How the censoring was read, decided after the data.** The registration is internally
+inconsistent:
+
+- its manipulation-check heading says a failed check voids the experiment;
+- check 3 itself says censored runs are excluded and counted.
+
+The runner, committed before any data, implemented exclude-and-count. The owner
+decided the Result would report that verdict **beside** the censored-at-horizon bound
+and call it not robust. No number moved.
+
+**What it does not show.**
+
+- It does not show that the exponent is one.
+- It does not show whether the three controlled seeds ever saturate. That is 005's
+  floor question, reopened below `phi = 0.002`, and it must be answered by a new
+  registration, not by extending 006's runs.
+- It does not show which way extinction biases a cell mean. **The first extinctions
+  since 003** are all at ratio 3.33: one seed at `phi = 0.001` and two at 0.0005.
+  004, 005 and Phase 1 had none. Each was a sudden collapse from 460–730 copies per
+  genome.
+
+**Why Secondary 1 can fail while the exponent is one.**
+
+- The mechanism is `t = K / phi`, with `K` frozen from in-range cells where `t·phi` was
+  still falling.
+- So it over-predicts every deep cell by 15–23%, and Secondary 1 scores that constant
+  as well as the exponent.
+- That explains the failure. It does not excuse it, because freezing `K` was
+  registered.
+
 ---
 
 ## What is open
@@ -237,9 +322,20 @@ golden hash that pins the RNG draw stream, and the registered questions above we
 answered at the shipped value. Retuning a constant so that a nicer outcome appears is
 exactly the post-hoc move this project's whole method exists to prevent.
 
-**The next registration.** Not a third refit of the same power law on a third window —
-**a test of the functional FORM**. Declaring the corrected exponent "the answer" is the
-precise mistake 004 made.
+**The next registration.** 006 tested the functional form, as 005 asked. It left one
+question open that it cannot answer itself:
+
+> **At `phi = 0.0005`, ratio 5.00, do the three seeds still controlled at generation
+> 70013 ever saturate?**
+
+That question decides whether 005's "no floor" survives below `phi = 0.002`. It needs its
+own registration, with its own horizon rule, and must not be answered by extending 006's
+runs. Also owed on 006:
+
+- Secondary 2 implemented in the runner, test-first.
+- Check 3's message corrected. It calls extinct runs horizon-censored; the fix changes
+  wording, not numbers.
+- A figure.
 
 **Also open, carried deliberately:**
 

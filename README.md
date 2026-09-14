@@ -7,11 +7,15 @@ What you move are the conditions a lineage lives under; what happens next is
 selection.
 
 **▶ [Play it](https://musharna.github.io/transposon-genome-ecology/)** ·
-**📄 [What it found](docs/FINDINGS.md)** — five questions, each registered with its
+**📄 [What it found](docs/FINDINGS.md)** — six questions, each registered with its
 prediction and its falsification condition and committed to git _before_ the code that
-answered it existed. **One registered primary was falsified (002); registered
-secondaries were falsified in 003, 004 and 005, and 004's third secondary was later
-retracted as unresolvable.**
+answered it existed.
+
+- **One registered primary was falsified:** 002.
+- **Registered secondaries were falsified** in 003, 004, 005 and 006.
+- **004's third secondary was later retracted** as unresolvable.
+- **006's primary held as registered, but is not robust:** counting three censored runs
+  at their horizon falsifies it.
 
 Code is **MIT** (`sim/ web/ scripts/ tools/ tests/`, `experiments/**/*.ts`, and
 `docs/analysis/*.R` — source code is MIT wherever it lives, including under `docs/`);
@@ -93,7 +97,7 @@ Every guard carries a **WHAT THIS GUARD DOES NOT CLAIM** section. Read it before
 quoting a result: several of these are fixed-horizon comparisons at one pinned
 arm, and guard 4's direction reverses past generation 180.
 
-**Five registered questions** have been asked and answered. Each pre-registration in
+**Six registered questions** have been asked and answered. Each pre-registration in
 `docs/pre-registrations/` was committed **alone, before its runner existed**, and each
 runner in `experiments/` answers exactly one of them. Results, verdicts and the limits
 on each: **[docs/FINDINGS.md](docs/FINDINGS.md)**.
@@ -105,6 +109,7 @@ on each: **[docs/FINDINGS.md](docs/FINDINGS.md)**.
 | 003 | how fresh must the trap be?                  | primary held trivially; **secondary 1 FALSIFIED** — control only at `phi = 0`, and that is a resolution artefact                  |
 | 004 | a band, or only a delay?                     | primary held — a delay: the edge moves 0.016 → 0.004 with the horizon; **secondary 2 FALSIFIED**, secondary 3's verdict retracted |
 | 005 | does the delay diverge, or is there a floor? | primary held — no floor above `phi = 0.002`, 150/150 saturate; **secondary 1 FALSIFIED**                                          |
+| 006 | is the exponent one?                         | primary held 2/3 as registered but **not robust** — 3 censored runs counted at horizon falsify it; **secondary 1 FALSIFIED**      |
 
 ## Setup
 
