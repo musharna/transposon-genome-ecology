@@ -648,3 +648,26 @@ within 1.15.
    - Both kinds are excluded from every `t_sat` statistic, which is correct for each
      (an extinct run has no `t_sat`).
    - The wording is not yet fixed, and the fix will change wording only, not numbers.
+
+### Addendum, 2026-09-14 — items 2 and 4 above are resolved in the runner at `ba9ca86`
+
+Appended rather than edited in, so the list above stays as it was written.
+
+- **Item 2: Secondary 2 is now implemented in the runner, test-first, POST-DATA.**
+  - The code is in `experiments/006-forms.ts`, with tests in
+    `tests/006-secondary2.test.ts`. Nine mutations were each seen to fail their
+    named test.
+  - It scores only the registered intervals. Phase 1's interleaved cells are
+    refused, and so is any missing registered cell.
+  - On the committed CSVs, `--analyse` prints **SECONDARY 2: HELD (a decrease beyond
+    one SEM at 1 of 3 ratios)**.
+  - Every exponent, SEM and the one decrease match the off-runner table above
+    exactly. The verdict above therefore now comes from the registered runner, and
+    it was implemented after the data existed.
+- **Item 4: check 3's message now reports censored, extinct and
+  stopped-early-without-either as separate classes.** Tests are in
+  `tests/006-check3.test.ts`.
+  - The rows it returns are unchanged.
+  - The rest of `--analyse`'s output is byte-identical before and after, so no
+    number moved.
+- **Item 3 is unchanged.** The runner still does not apply check 5 to Phase 2.

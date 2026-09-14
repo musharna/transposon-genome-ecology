@@ -257,9 +257,11 @@ runs are counted. This page does not claim `a = 1`.**
   deep cell, and the other two over-predict every one. The verdict does not depend on
   the censored runs.
 
-- **SECONDARY 2 — HELD, but computed outside the registered runner**, which never
-  implemented it. At ratio 5.00 the last three local exponents read 0.974, 0.955 and
-  0.958. That is flat, not rising.
+- **SECONDARY 2 — HELD**, with a decrease beyond one SEM at 1 of 3 ratios; it takes 2 to
+  falsify. ⚠️ The pre-data runner never implemented it. It was first computed by a
+  read-only script, then added to the runner test-first at `ba9ca86`, after the data
+  existed, and the runner reproduces the script's numbers exactly. At ratio 5.00 the last
+  three local exponents read 0.974, 0.955 and 0.958. That is flat, not rising.
 - **SECONDARY 3 — HELD.** The spread of `max|s| / t` is 1.08 / 1.06 / 1.07, against a
   1.15 bound.
 
@@ -332,10 +334,8 @@ That question decides whether 005's "no floor" survives below `phi = 0.002`. It 
 own registration, with its own horizon rule, and must not be answered by extending 006's
 runs. Also owed on 006:
 
-- Secondary 2 implemented in the runner, test-first.
-- Check 3's message corrected. It calls extinct runs horizon-censored; the fix changes
-  wording, not numbers.
 - A figure.
+- Check 5 applied to Phase 2 inside the runner. It was verified by hand from the CSV.
 
 **Also open, carried deliberately:**
 
@@ -386,7 +386,7 @@ and **R 4.3.3** with ggplot2 4.0.2, patchwork 1.2.0 and png 0.1-8 for the figure
 ```sh
 npm ci
 npx playwright install chromium   # tests only
-npm test            # 23 files, 216 tests
+npm test            # 27 files, 253 tests
 npm run typecheck
 npm run build       # -> dist/
 npm run preview     # serve the built toy
