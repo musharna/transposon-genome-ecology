@@ -46,13 +46,17 @@ import { domesticate, lose } from "../sim/phases/lifecycle.js";
 import { reproduce } from "../sim/phases/reproduce.js";
 import { transpose } from "../sim/phases/transpose.js";
 import {
+  convergence,
   fitMechanism,
   fitPowerLaw,
   fitQuadratic,
   horizonFor,
   localExponent,
   predict,
+  secondary2Falsified,
   selectForm,
+  summariseCell,
+  type Cell,
   type FormName,
   type Point,
 } from "./006-forms.js";
@@ -529,7 +533,18 @@ const keysFor = (
 // MANIPULATION CHECK 3 — no censoring, Phase 2 only.
 
 function manipulationCheck3(rows: Row[]): Row[] {
-  const censored = rows.filter((r) => r.saturated === 0);
+  // Three ways a run ends without a t_sat, and only one of them is censoring.
+  // Until 2026-09-14 (post-data, wording only) all three were printed as "did
+  // NOT saturate inside their horizon", which misdescribed Phase 2's three
+  // extinctions. The rows returned below are unchanged.
+  const unsaturated = rows.filter((r) => r.saturated === 0);
+  const extinct = unsaturated.filter((r) => r.extinct === 1);
+  const censored = unsaturated.filter(
+    (r) => r.extinct === 0 && r.stoppedAt >= r.horizon,
+  );
+  const stoppedEarly = unsaturated.filter(
+    (r) => r.extinct === 0 && r.stoppedAt < r.horizon,
+  );
   console.log(`MANIPULATION CHECK 3 — censoring in Phase 2`);
 
   // ⚠️ THE FLAG IS NOT THE EVIDENCE. Mutation table row 3 records a censored
@@ -553,23 +568,48 @@ function manipulationCheck3(rows: Row[]): Row[] {
       "manipulation check 3 failed — a censored run is recorded as saturated. The experiment is VOID.",
     );
   }
+  if (unsaturated.length === 0) {
+    console.log(
+      `  PASSED — all ${rows.length} runs saturated inside horizon.\n`,
+    );
+    return rows.filter((r) => r.saturated === 1);
+  }
   if (censored.length > 0) {
     console.error(
-      `  ⚠️ ${censored.length} of ${rows.length} runs did NOT saturate inside their horizon.`,
+      `  ⚠️ ${censored.length} of ${rows.length} runs were CENSORED at their horizon — still neither saturated nor extinct when it ran out.`,
     );
-    for (const c of censored.slice(0, 10)) {
+    for (const c of censored) {
       console.error(
-        `    phi=${c.phi} ratio=${c.ratio} seed=${c.seed}: horizon ${c.horizon}, stopped at ${c.stoppedAt}`,
+        `    phi=${c.phi} ratio=${c.ratio} seed=${c.seed}: horizon ${c.horizon}, stopped at ${c.stoppedAt}, ${c.copiesPerGenome} copies/genome`,
       );
     }
     console.error(
       `  These are EXCLUDED from every t_sat statistic and reported as censored.`,
     );
   } else {
-    console.log(
-      `  PASSED — all ${rows.length} runs saturated inside horizon.\n`,
-    );
+    console.log(`  No run was censored at its horizon.`);
   }
+  if (extinct.length > 0) {
+    console.log(
+      `  ${extinct.length} of ${rows.length} runs went EXTINCT — a registered outcome, not censoring. An extinct run has no t_sat, so these are excluded too:`,
+    );
+    for (const c of extinct) {
+      console.log(
+        `    phi=${c.phi} ratio=${c.ratio} seed=${c.seed}: extinct at generation ${c.stoppedAt} (horizon ${c.horizon})`,
+      );
+    }
+  }
+  if (stoppedEarly.length > 0) {
+    console.error(
+      `  ⚠️ ${stoppedEarly.length} of ${rows.length} runs stopped BEFORE their horizon without saturating or going extinct. That is NOT a registered outcome; excluded, and it needs explaining:`,
+    );
+    for (const c of stoppedEarly) {
+      console.error(
+        `    phi=${c.phi} ratio=${c.ratio} seed=${c.seed}: horizon ${c.horizon}, stopped at ${c.stoppedAt}`,
+      );
+    }
+  }
+  console.log("");
   return rows.filter((r) => r.saturated === 1);
 }
 
@@ -603,17 +643,53 @@ function manipulationCheck4(rows: Row[]): void {
 // ---------------------------------------------------------------------------
 // CELL MEANS AND THE VERDICTS
 
-const cellMeans = (rows: Row[], ratio: string): Point[] => {
+const saturatedTimes = (rows: Row[], ratio: string): Map<number, number[]> => {
   const by = new Map<number, number[]>();
   for (const r of rows) {
     if (r.ratio !== ratio || r.saturated !== 1) continue;
     const t = Number(r.saturationGeneration);
     by.set(r.phi, [...(by.get(r.phi) ?? []), t]);
   }
-  return [...by.entries()]
+  return by;
+};
+
+const cellMeans = (rows: Row[], ratio: string): Point[] =>
+  [...saturatedTimes(rows, ratio).entries()]
     .map(([phi, ts]) => ({ phi, t: ts.reduce((a, b) => a + b, 0) / ts.length }))
     .sort((a, b) => a.phi - b.phi);
-};
+
+const cellSummaries = (rows: Row[], ratio: string): Cell[] =>
+  [...saturatedTimes(rows, ratio).entries()]
+    .map(([phi, ts]) => summariseCell(phi, ts))
+    .sort((a, b) => a.phi - b.phi);
+
+/**
+ * SECONDARY 2's cells: the ones its clause lists, and no others.
+ *
+ * Phase 1's cells interleave these, and adjacent-cell exponents on that finer
+ * ladder are both noisier and NOT the intervals registered — so letting them in
+ * would change the verdict, not refine it. Returned from the largest `phi` down.
+ * A registered cell that is absent is an error, never a shorter sequence.
+ */
+const SECONDARY2_PHIS = [0.0226, 0.0113, 0.004, 0.002, PHASE2_A] as const;
+
+function registeredConvergenceCells(
+  cells: Cell[],
+  columnBRan: boolean,
+): Cell[] {
+  const wanted: number[] = columnBRan
+    ? [...SECONDARY2_PHIS, PHASE2_B]
+    : [...SECONDARY2_PHIS];
+  return wanted.map((phi) => {
+    const c = cells.find((x) => Math.abs(x.phi - phi) < 1e-12);
+    if (!c) {
+      throw new Error(
+        `SECONDARY 2: registered cell phi=${phi} is missing. A sequence with a hole is not the registered sequence.`,
+      );
+    }
+    return c;
+  });
+}
 
 function readRows(path: string): Row[] {
   if (!existsSync(path))
@@ -652,6 +728,19 @@ function readRows(path: string): Row[] {
 
 /** 005's five in-range cells, read from its committed CSV. */
 function inRange005(ratio: string): Point[] {
+  return [...saturatedTimes005(ratio).entries()]
+    .map(([phi, ts]) => ({ phi, t: ts.reduce((a, b) => a + b, 0) / ts.length }))
+    .sort((a, b) => a.phi - b.phi);
+}
+
+/** 005's five cells with their standard errors, for SECONDARY 2. */
+function cells005(ratio: string): Cell[] {
+  return [...saturatedTimes005(ratio).entries()]
+    .map(([phi, ts]) => summariseCell(phi, ts))
+    .sort((a, b) => a.phi - b.phi);
+}
+
+function saturatedTimes005(ratio: string): Map<number, number[]> {
   const lines = readFileSync(CSV_005, "utf8").trim().split("\n");
   const cols = lines[0]!.split(",");
   const at = (f: string[], n: string) => f[cols.indexOf(n)]!;
@@ -665,9 +754,7 @@ function inRange005(ratio: string): Point[] {
       Number(at(f, "saturation_generation")),
     ]);
   }
-  return [...by.entries()]
-    .map(([phi, ts]) => ({ phi, t: ts.reduce((a, b) => a + b, 0) / ts.length }))
-    .sort((a, b) => a.phi - b.phi);
+  return by;
 }
 
 /**
@@ -931,6 +1018,45 @@ function analyse(): void {
     );
   }
 
+  console.log("\n=== SECONDARY 2 — convergence, not coincidence ===\n");
+  console.log(
+    "  ⚠️ Implemented 2026-09-14, AFTER the data existed: registered, but missing\n" +
+      "     from the runner committed pre-data. Step SEM = √(sem_i² + sem_j²), which\n" +
+      "     ignores the shared cell's (negative) covariance and so UNDERSTATES it.\n",
+  );
+  const columnBRan = p2.some((r) => Math.abs(r.phi - PHASE2_B) < 1e-12);
+  const perRatio = RATIOS.map((r) => {
+    const conv = convergence(
+      registeredConvergenceCells(
+        [...cells005(r.label), ...cellSummaries(usable, r.label)],
+        columnBRan,
+      ),
+    );
+    console.log(
+      `  ratio ${r.label}: ` +
+        conv.intervals
+          .map((i) => `[${i.lo}→${i.hi}] ${i.a.toFixed(3)}±${i.sem.toFixed(3)}`)
+          .join("  "),
+    );
+    console.log(
+      conv.decreases.length === 0
+        ? `    no decrease beyond one combined SEM`
+        : conv.decreases
+            .map(
+              (d) =>
+                `    DECREASE [${d.from.lo}→${d.from.hi}] → [${d.to.lo}→${d.to.hi}]: ` +
+                `${d.drop.toFixed(3)} against a combined SEM of ${d.combinedSem.toFixed(3)}`,
+            )
+            .join("\n"),
+    );
+    return conv;
+  });
+  const decreasing = perRatio.filter((c) => c.decreases.length > 0).length;
+  console.log(
+    `\n  SECONDARY 2: ${secondary2Falsified(perRatio) ? "FALSIFIED" : "HELD"} ` +
+      `(a decrease beyond one SEM at ${decreasing} of 3 ratios; falsified at 2 or more)`,
+  );
+
   console.log(
     "\n=== SECONDARY 3 — the mechanism's own intermediate quantity ===\n",
   );
@@ -972,6 +1098,7 @@ export {
   PHASE2_A,
   PHASE2_B,
   RATIOS,
+  registeredConvergenceCells,
   SEEDS,
   type Row,
 };

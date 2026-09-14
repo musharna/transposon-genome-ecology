@@ -141,6 +141,92 @@ export function localExponent(a: Point, b: Point): number {
   return -(Math.log(b.t) - Math.log(a.t)) / (Math.log(b.phi) - Math.log(a.phi));
 }
 
+/** A cell mean with its standard error, over the saturated seeds only. */
+export interface Cell extends Point {
+  /** Standard error of `t`, in generations. */
+  sem: number;
+  /** Seeds the mean is over. */
+  n: number;
+}
+
+export function summariseCell(phi: number, ts: number[]): Cell {
+  if (ts.length < 2) {
+    throw new Error(
+      `cell phi=${phi} has ${ts.length} saturated run(s); a standard error needs at least two`,
+    );
+  }
+  const t = mean(ts);
+  const sd = Math.sqrt(
+    ts.reduce((s, x) => s + (x - t) ** 2, 0) / (ts.length - 1),
+  );
+  return { phi, t, sem: sd / Math.sqrt(ts.length), n: ts.length };
+}
+
+export interface Interval {
+  lo: number;
+  hi: number;
+  a: number;
+  sem: number;
+}
+
+/**
+ * `localExponent` with its SEM propagated from the two cells, as the
+ * registration's pre-specified analysis says: the exponent is a difference of
+ * log means over `ln(hi/lo)`, so each cell contributes its RELATIVE error.
+ */
+export function localExponentWithSem(x: Cell, y: Cell): Interval {
+  const [lo, hi] = x.phi < y.phi ? [x, y] : [y, x];
+  return {
+    lo: lo.phi,
+    hi: hi.phi,
+    a: localExponent(x, y),
+    sem: Math.hypot(lo.sem / lo.t, hi.sem / hi.t) / Math.log(hi.phi / lo.phi),
+  };
+}
+
+export interface Convergence {
+  /** From the largest `phi` down, the order the registration lists them in. */
+  intervals: Interval[];
+  /** Steps where the exponent FELL by more than one combined SEM. */
+  decreases: {
+    from: Interval;
+    to: Interval;
+    drop: number;
+    combinedSem: number;
+  }[];
+}
+
+/**
+ * SECONDARY 2's per-ratio test: the local exponent is non-decreasing as `phi`
+ * falls, within one combined SEM per step.
+ *
+ * ⚠️ Implemented AFTER THE DATA EXISTED — registered, but missing from the
+ * runner committed pre-data. "Combined SEM" is `√(sem_i² + sem_j²)`, ignoring
+ * the covariance from the cell adjacent intervals share. That covariance is
+ * negative, so ignoring it UNDERSTATES the step SEM: a falsifying decrease is
+ * easier to find, not harder. Only a DECREASE counts; the clause predicts rises.
+ */
+export function convergence(cells: Cell[]): Convergence {
+  const byPhi = [...cells].sort((p, q) => q.phi - p.phi);
+  const intervals = byPhi
+    .slice(0, -1)
+    .map((c, i) => localExponentWithSem(c, byPhi[i + 1]!));
+  const decreases: Convergence["decreases"] = [];
+  for (let i = 0; i + 1 < intervals.length; i++) {
+    const from = intervals[i]!;
+    const to = intervals[i + 1]!;
+    const drop = from.a - to.a;
+    const combinedSem = Math.hypot(from.sem, to.sem);
+    if (drop > combinedSem) decreases.push({ from, to, drop, combinedSem });
+  }
+  return { intervals, decreases };
+}
+
+/** FALSIFIED IF the sequence decreases beyond one SEM at two or more ratios. */
+export function secondary2Falsified(perRatio: Convergence[]): boolean {
+  return perRatio.filter((c) => c.decreases.length > 0).length >= 2;
+}
+
 const FITTERS: Record<FormName, (pts: Point[]) => Fit> = {
   "power-law": fitPowerLaw,
   mechanism: fitMechanism,
