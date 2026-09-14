@@ -671,3 +671,17 @@ Appended rather than edited in, so the list above stays as it was written.
   - The rest of `--analyse`'s output is byte-identical before and after, so no
     number moved.
 - **Item 3 is unchanged.** The runner still does not apply check 5 to Phase 2.
+
+### Addendum 2, 2026-09-14 — item 3 above is resolved in the runner at `6a89efe`
+
+- **The runner now applies check 5 to Phase 2, POST-DATA, test-first.** Tests are in
+  `tests/006-check5-phase2.test.ts`.
+  - `--analyse` and `--phase 2` check Phase 2's rows against a key set built from
+    the column B gate.
+  - The gate is re-derived from Phase 1, never inferred from which rows exist.
+    Otherwise a file missing all of column B would pass as a closed gate.
+- **On the committed CSV it passes:** 60 rows, exactly the registered set. That
+  matches the off-runner verification above.
+- **The end-to-end negative control fails as it should.** With column B deleted from
+  the CSV, `--analyse` voids with "0 duplicated, 30 missing, 0 unexpected". The CSV
+  was restored afterwards, and its checksum was verified.

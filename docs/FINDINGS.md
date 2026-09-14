@@ -332,10 +332,7 @@ question open that it cannot answer itself:
 
 That question decides whether 005's "no floor" survives below `phi = 0.002`. It needs its
 own registration, with its own horizon rule, and must not be answered by extending 006's
-runs. Also owed on 006:
-
-- A figure.
-- Check 5 applied to Phase 2 inside the runner. It was verified by hand from the CSV.
+runs. Also owed on 006: a figure.
 
 **Also open, carried deliberately:**
 
@@ -386,7 +383,7 @@ and **R 4.3.3** with ggplot2 4.0.2, patchwork 1.2.0 and png 0.1-8 for the figure
 ```sh
 npm ci
 npx playwright install chromium   # tests only
-npm test            # 27 files, 253 tests
+npm test            # 28 files, 260 tests
 npm run typecheck
 npm run build       # -> dist/
 npm run preview     # serve the built toy
