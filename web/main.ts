@@ -10,7 +10,12 @@ import {
 } from "../sim/index.js";
 import { TOY_DEFAULTS } from "./params.js";
 import { mountControls, rebuildWorld } from "./controls.js";
-import { BAR_FLOOR_PX, barLength, sharePercent } from "./tally.js";
+import {
+  BAR_FLOOR_PX,
+  barLength,
+  liveSentence,
+  sharePercent,
+} from "./tally.js";
 import {
   ACTIVE_COLOUR,
   DOMESTICATED_COLOUR,
@@ -47,6 +52,21 @@ const insetCanvas = document.getElementById(
   "cluster-inset",
 ) as HTMLCanvasElement;
 const readout = document.getElementById("readout") as HTMLDivElement;
+const live = document.getElementById("live") as HTMLDivElement;
+/**
+ * Shortest interval between rewrites of the `aria-live` mirror, in ms.
+ *
+ * The readout is repainted every frame, and a polite live region rewritten
+ * forty times a second is an announcement queue that never drains -- a screen
+ * reader would be reading generation 800 as the model passed 2000. The mirror
+ * restates the numbers the readout already prints, nothing else, and is
+ * rewritten only when that sentence changes and at most this often.
+ */
+export const LIVE_MIN_MS = 3000;
+let liveText = "";
+let liveAt = -Infinity;
+
+
 const el = (id: string) => document.getElementById(id) as HTMLElement;
 
 function fit(canvas: HTMLCanvasElement): CanvasRenderingContext2D {
@@ -284,6 +304,14 @@ function frame(): void {
   setBar("active", snap.activeCopies, total);
   setBar("silenced", snap.silencedCopies, total);
   setBar("domesticated", snap.domesticatedCopies, total);
+
+  const now = performance.now();
+  const sentence = liveSentence(snap);
+  if (sentence !== liveText && now - liveAt >= LIVE_MIN_MS) {
+    live.textContent = sentence;
+    liveText = sentence;
+    liveAt = now;
+  }
 
   requestAnimationFrame(frame);
 }

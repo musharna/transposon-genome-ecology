@@ -4,6 +4,17 @@ Milestone-boundary entries. Appended in the commit that closes a milestone.
 
 ## Unreleased
 
+### Added
+
+- **Basic accessibility of the page.** `<main>`/`<aside>` landmarks, an `h1` in the masthead
+  and `h2` panel titles (drawn exactly as the divs they replace, so `tests/layout.test.ts`'s
+  measured heights hold); every slider named through `<label for>`; `role="img"` and an
+  `aria-label` on all four canvases; a visually-hidden `aria-live="polite"` mirror of the
+  readout's counts (`liveSentence` in `web/tally.ts`, same snapshot fields, rewritten at most
+  every 3 s); `:focus-visible` styles; a `prefers-reduced-motion` block. CSS only for the
+  latter: `frame()` in `web/main.ts` steps the model and paints in the same rAF callback, so
+  lowering the render cadence would slow the simulation. Pinned by `tests/a11y.test.ts`.
+
 ### Fixed
 
 - **`tests/layout.test.ts`'s flood waits were budgeted in the wrong unit.** They gated on
