@@ -239,7 +239,9 @@ export function mountControls(
     for (const paint of painters) paint();
   };
 
-  const title = doc.createElement("div");
+  // An h2 like the other panel titles in web/index.html, so the panel is a
+  // section a screen reader can jump to rather than a run of unlabelled text.
+  const title = doc.createElement("h2");
   title.className = "panel-title";
   title.textContent = "pokes — the world, not the element";
   host.append(title);
@@ -264,6 +266,11 @@ export function mountControls(
     input.step = String(s.stepSize);
     input.value = String(params[s.key]);
     input.dataset["poke"] = s.key;
+    // The caption IS the accessible name, and `for` is what binds it: a
+    // <label> that merely precedes an input names nothing. Ids are namespaced
+    // on the poke key so they cannot collide with the page's own ids.
+    input.id = `poke-${s.key}`;
+    caption.htmlFor = input.id;
 
     // Painted from PARAMS, not from `input.value`: the caption's job is to
     // report the number the simulation is reading, so it reads it back. The

@@ -40,3 +40,23 @@ export function barLength(
 export function sharePercent(count: number, total: number): number {
   return total > 0 ? (count / total) * 100 : 0;
 }
+
+/**
+ * The readout's counts as one sentence, for the `aria-live` mirror in
+ * web/index.html. SAME NUMBERS, SAME SOURCE: it reads the snapshot the readout
+ * rows are printed from and computes nothing of its own, so the spoken and the
+ * printed population cannot disagree.
+ */
+export function liveSentence(snap: {
+  generation: number;
+  totalCopies: number;
+  activeCopies: number;
+  silencedCopies: number;
+  domesticatedCopies: number;
+}): string {
+  return (
+    `generation ${snap.generation}: ${snap.totalCopies} copies, ` +
+    `${snap.activeCopies} active, ${snap.silencedCopies} silenced, ` +
+    `${snap.domesticatedCopies} domesticated`
+  );
+}
