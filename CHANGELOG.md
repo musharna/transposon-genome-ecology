@@ -4,6 +4,8 @@ Milestone-boundary entries. Appended in the commit that closes a milestone.
 
 ## Unreleased
 
+## [1.0.2] — 2026-09-17
+
 ### Added
 
 - **Basic accessibility of the page.** `<main>`/`<aside>` landmarks, an `h1` in the masthead
