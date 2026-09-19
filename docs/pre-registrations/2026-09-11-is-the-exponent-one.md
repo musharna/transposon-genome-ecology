@@ -703,3 +703,23 @@ written.
   step values and SEMs to 3 dp, PRIMARY HELD (2 of 3), and 1.648 ± 0.281 under the
   censored count. Seven injected faults each stop it, and so does an external edit to
   the Phase 2 CSV (restored, checksum verified).
+
+### Addendum 4, 2026-09-19 — `runOne` gains an optional read-only observer, for 007
+
+- **POST-DATA change to this runner, made for registered question 007**
+  (`2026-09-19-do-the-controlled-seeds-saturate.md`, committed at `4641c64` before
+  this change). 007 imports `runOne` instead of copying it. It needs the state hash at
+  generation 70013 and copies per genome every 1000 generations, from inside the loop.
+- **The change:** an optional last parameter, `onGeneration(world)`. 006 never passes
+  it. It is called once per completed generation that did not stop the run, at the
+  heartbeat's position, and under the heartbeat's rule: it reads no RNG and changes no
+  state.
+- **Shown to leave 006 untouched:**
+  - `--analyse` output is byte-identical before and after.
+  - The golden hash `9c15fd28` has not moved.
+  - All 277 tests pass. That includes `tests/006-observer.test.ts`, which asserts that
+    a row returned with an observer equals one returned without, and that the
+    observer is called once per generation, in order.
+  - `--analyse` reads the CSVs and never calls `runOne`, so it is the weaker of these
+    proofs. The strong proof is at run time: 007's positive control must reproduce
+    ten of this question's Phase 2 rows exactly, hash for hash.

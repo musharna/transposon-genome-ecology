@@ -247,6 +247,14 @@ function runOne(
   horizonFrom: string,
   horizonPredicted: number,
   heartbeatEvery: number = HEARTBEAT_EVERY,
+  // ⚠️ ADDED POST-DATA, 2026-09-19, for registered question 007, which reads
+  // the state hash at a fixed generation and copies/genome every 1000
+  // generations from inside THIS loop rather than from a copy of it. 006 never
+  // passes it. Called once per completed generation that did not stop the run,
+  // at the heartbeat's position and under the heartbeat's rule: it must read no
+  // RNG and mutate no world state. `tests/006-observer.test.ts` pins that the
+  // row is unchanged by it; 007's replay checks catch an observer that draws.
+  onGeneration?: (world: World) => void,
 ): Row {
   const { theta, sigmaS } = ratio;
   const world = createWorld(defaultParams({ ...BASE, theta, sigmaS, seed }));
@@ -273,6 +281,7 @@ function runOne(
     // An OBSERVATION of the run, never a part of it: it reads no RNG and
     // mutates no world state, so the draw stream is untouched and manipulation
     // check 2 still reproduces 005 bit for bit.
+    onGeneration?.(world);
     if ((g + 1) % heartbeatEvery === 0) {
       console.log(
         `      ... phi=${phi} ratio=${ratio.label} seed=${seed} at generation ` +
