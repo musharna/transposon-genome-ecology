@@ -144,8 +144,11 @@ linetype_ratio <- c("2.00" = "solid", "3.33" = "42", "5.00" = "12")
 # defect the comment above says this declaration exists to prevent, re-created
 # in the same file by the fix for it. Demonstrated: set the literal above to
 # "#e5e5e5" and the script still exited 0 with every gridline at 1.26:1.
+# `band_fill` is the area fill of a registered band (006's [0.95, 1.05]); an area
+# fill that cleared 3:1 against white would hide the gridlines inside it, so the
+# band's non-text contrast is carried by its outline in `bracket`, not the fill.
 tge_ink <- c(bracket = "#4b5563", rule = "grey35", extrapolation_rule = "grey45",
-             gridline = tge_ink_gridline)
+             gridline = tge_ink_gridline, band_fill = "grey90")
 
 # Panel adjustments a figure may need. Also kept here rather than inline.
 # ⚠️ SPLIT IN TWO. Bundling the spacing with the y-grid blanking meant figure 1,
