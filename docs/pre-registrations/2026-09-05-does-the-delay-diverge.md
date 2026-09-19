@@ -1057,3 +1057,26 @@ no figure code touches, and each carries an injection control. But the
 registration said "any change made after data exists will be marked as such",
 and a figure spec is part of the registration. Recorded here rather than left in
 a narrative table.
+
+**Deviation 7, 2026-09-19 — POST-DATA, figure code only: the "model frozen at
+`12e7b08`" guard now compares the model's CODE, not its bytes.** From round 26 of
+the figure gate, `plot-005.R` verified the caption's "Model frozen at 12e7b08" with
+`git diff --quiet 12e7b08 -- sim`. Commit `b2a6ce9` (the 1.0.1 docs pass) corrected
+two doc comments in `sim/params.ts` and `sim/silencing.ts` and changed no code.
+From then on, through v1.0.1 and v1.0.2, the script refused to draw either figure,
+and it did so on a claim that was still true.
+
+- **The check now matches the claim.** It compares digests from
+  `scripts/sim-code-digest.mjs`, which passes every `.ts` file under `sim/` through
+  TypeScript's compiler with comments removed, at `12e7b08` and in the working tree.
+  Comments, formatting and type annotations cannot move the digest, and a change to
+  emitted code does. Untracked files under `sim/` are still refused.
+- **Verified, not asserted:**
+  - With comments removed, `sim/` at `12e7b08` and at HEAD is byte-identical.
+  - In-script controls run on a copy of `sim/`: the copy digests the same, an added
+    comment does not move the digest, and an added line of code does.
+  - End to end, `wDom: 0.01` → `0.02` in `sim/params.ts` stops the script with "the
+    CODE in sim/ (comments removed) differs", and a comment-only edit passes. The file
+    was restored and its checksum verified.
+- **No number, verdict or pixel changed.** Both figures re-render byte-identical to
+  the committed PNGs.

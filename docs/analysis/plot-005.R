@@ -1422,18 +1422,50 @@ local({
   }
   # ⚠️ THE WORKING TREE, NOT A COMMIT LOG. `git log A..HEAD -- sim/` cannot see
   # UNCOMMITTED modifications under sim/ — which is exactly the state an analysis
-  # script runs in, and the state every review of this file ran it in. `git diff
-  # <commit> -- sim` compares the WORKING TREE against that commit for tracked
-  # paths, and `ls-files --others` catches files that are there but not tracked.
-  # ⚠️ A hand-rolled version of this hashed `list.files("sim")`, which SKIPS
-  # DOTFILES, so it reported a difference that did not exist (`.gitkeep`). Asking
-  # git the question git already answers beats re-implementing it.
-  suppressWarnings(system2("git", c("diff", "--quiet", MODEL_COMMIT, "--", "sim"),
-                           stdout = TRUE, stderr = FALSE))
-  dirty <- attr(suppressWarnings(system2("git", c("diff", "--quiet", MODEL_COMMIT, "--", "sim"),
-                                         stdout = TRUE, stderr = FALSE)), "status")
-  if (!is.null(dirty) && dirty != 0L) {
-    stop(sprintf("the caption says the model is frozen at %s, but sim/ in the WORKING TREE differs from sim/ at that commit",
+  # script runs in, and the state every review of this file ran it in. So the
+  # comparison below reads sim/ ON DISK against sim/ at the commit, and
+  # `ls-files --others` still catches files that are there but not tracked.
+  # ⚠️ THE MODEL, NOT ITS BYTES (2026-09-19, post-data, figure code only). This
+  # was `git diff --quiet <commit> -- sim`, a BYTE comparison, while the claim is
+  # that the model is frozen. Commit b2a6ce9 corrected two doc comments in sim/
+  # and nothing else, and from then on this guard refused to draw — through
+  # v1.0.1 and v1.0.2 — on a claim that was still true. It now compares
+  # `scripts/sim-code-digest.mjs` digests, which pass every .ts file through
+  # TypeScript's compiler with comments removed: comments, formatting and type
+  # annotations cannot move the digest, and any change to emitted code can.
+  # ⚠️ A hand-rolled version of the old check hashed `list.files("sim")`, which
+  # SKIPS DOTFILES, so it reported a difference that did not exist (`.gitkeep`).
+  # The digest walks every file, dotfiles included; the copy control below
+  # asserts that a faithful copy of sim/ digests the same as sim/ itself.
+  code_digest <- function(args) {
+    out <- suppressWarnings(system2("node", c("scripts/sim-code-digest.mjs", args),
+                                    stdout = TRUE, stderr = TRUE))
+    st <- attr(out, "status")
+    if ((!is.null(st) && st != 0L) || length(out) != 1L || !grepl("^[0-9a-f]{64}$", out)) {
+      stop(sprintf("scripts/sim-code-digest.mjs %s did not return a digest (status %s): %s",
+                   paste(args, collapse = " "), if (is.null(st)) 0L else st,
+                   paste(head(out, 5), collapse = " | ")))
+    }
+    out
+  }
+  frozen <- code_digest(c("--ref", MODEL_COMMIT))
+  now <- code_digest(c("--dir", "sim"))
+  # CONTROLS, on a copy of sim/: the copy must digest as sim/ does; a comment
+  # added must NOT move the digest; a line of code added MUST. ⚠️ The code
+  # mutation names no existing value: a first version rewrote `wDom: 0.01`, so
+  # with sim/ itself edited away from 0.01 the CONTROL failed first and the
+  # script stopped for the wrong reason, hiding the verdict of the real check.
+  ctl <- tempfile("simctl"); dir.create(ctl)
+  stopifnot(file.copy("sim", ctl, recursive = TRUE))
+  ctl_sim <- file.path(ctl, "sim"); ctl_params <- file.path(ctl_sim, "params.ts")
+  stopifnot(identical(code_digest(c("--dir", ctl_sim)), now))
+  cat("\n// a comment added by the plot-005 control\n", file = ctl_params, append = TRUE)
+  stopifnot(identical(code_digest(c("--dir", ctl_sim)), now))
+  cat("export const plot005Control = 1;\n", file = ctl_params, append = TRUE)
+  stopifnot(!identical(code_digest(c("--dir", ctl_sim)), now))
+  unlink(ctl, recursive = TRUE)
+  if (!identical(frozen, now)) {
+    stop(sprintf("the caption says the model is frozen at %s, but the CODE in sim/ (comments removed) differs from sim/ at that commit",
                  MODEL_COMMIT))
   }
   untracked <- suppressWarnings(system2("git", c("ls-files", "--others",
