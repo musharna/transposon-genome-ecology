@@ -66,7 +66,14 @@
         padding: 0 2px;
         min-width: 0;
       }
-      #masthead strong {
+      /* A real heading, drawn exactly as the <strong> it replaces: inline, the
+         masthead's own font, no margin. The masthead's 32px in the identity
+         above depends on this staying one run of text. */
+      #masthead h1 {
+        display: inline;
+        font: inherit;
+        font-weight: bold;
+        margin: 0;
         color: #d8dee9;
       }
       #masthead a {
@@ -113,7 +120,12 @@
         font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
         margin: 0;
       }
+      /* Headings, not divs, so a screen reader can walk the column by section.
+         Every default a UA gives an h2 is reset here because tests/layout.test.ts
+         asserts the sections' exact heights. */
       .panel-title {
+        margin: 0;
+        font-weight: normal;
         color: #939eac;
         text-transform: uppercase;
         letter-spacing: 0.06em;
@@ -311,13 +323,50 @@
         font-size: 10px;
         margin-top: 6px;
       }
+      /* Off-screen but in the accessibility tree. `display: none` would hide it
+         from assistive technology too. */
+      .visually-hidden {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        margin: -1px;
+        padding: 0;
+        border: 0;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        clip-path: inset(50%);
+        white-space: nowrap;
+      }
+      /* Keyboard focus is visible; pointer focus is not restyled. */
+      :focus-visible {
+        outline: 2px solid #8fbcbb;
+        outline-offset: 2px;
+      }
+      .poke-slider:focus-visible {
+        outline-offset: 4px;
+      }
+      /* CSS ONLY. The canvases redraw from a requestAnimationFrame loop in
+         web/main.ts whose callback both advances the simulation and paints, so
+         lowering its cadence would slow the model, not just the picture — see
+         `frame()` there. Nothing in this stylesheet animates today; this pins
+         the policy for anything added later. */
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+          scroll-behavior: auto !important;
+        }
+      }
     </style>
   </head>
   <body>
     <div id="app">
-      <div id="stage">
+      <main id="stage">
         <div id="masthead">
-          <strong>Transposons as genome ecology</strong> — a running model of
+          <h1>Transposons as genome ecology</h1> — a running model of
           transposable elements as an ecosystem inside one genome. You perturb
           the world, never the element: transposition rate is heritable, not a
           decision.<span class="sep">·</span
@@ -329,14 +378,19 @@
             >Source</a
           ><span class="sep">·</span>code MIT, prose and data CC BY 4.0
         </div>
-        <canvas id="field"></canvas>
-        <canvas id="timeline"></canvas>
-        <canvas id="scatter"></canvas>
-      </div>
-      <div id="controls">
+        <canvas id="field" role="img" aria-label="Field: every genome as a row, every transposon copy as a mark coloured by state"></canvas>
+        <canvas id="timeline" role="img" aria-label="Timeline: copies by state over generations"></canvas>
+        <canvas id="scatter" role="img" aria-label="Scatter plot: per-copy transposition rate against sequence coordinate"></canvas>
+      </main>
+      <aside id="controls" aria-label="Readouts and controls">
         <div>
-          <div class="panel-title">population</div>
+          <h2 class="panel-title">population</h2>
           <div id="readout"></div>
+          <!-- The same numbers the readout prints, restated for a screen reader.
+               Updated only when the text changes and at most every LIVE_MIN_MS
+               (web/main.ts): a polite region rewritten 40 times a second is an
+               announcement queue that never drains. -->
+          <div id="live" class="visually-hidden" aria-live="polite" aria-atomic="true"></div>
         </div>
 
         <!-- Filled by mountControls (web/controls.ts). Empty in the document
@@ -352,7 +406,7 @@
         <div id="controls-slot"></div>
 
         <div id="tally">
-          <div class="panel-title">all copies, by state</div>
+          <h2 class="panel-title">all copies, by state</h2>
           <div class="row">
             <span class="k">active</span>
             <span class="track"><i class="bar" id="bar-active"></i></span>
@@ -376,12 +430,12 @@
         </div>
 
         <div id="trap-panel">
-          <div class="panel-title">the trap, magnified</div>
-          <canvas id="cluster-inset"></canvas>
+          <h2 class="panel-title">the trap, magnified</h2>
+          <canvas id="cluster-inset" role="img" aria-label="The piRNA cluster, magnified"></canvas>
         </div>
 
         <div id="legend-panel">
-          <div class="panel-title">legend</div>
+          <h2 class="panel-title">legend</h2>
           <div id="legend">
             <div><i style="background: #bf616a"></i> active</div>
             <div>
@@ -419,7 +473,7 @@
             <div><i style="background: #8a6d2f"></i> beneficial sites</div>
           </div>
         </div>
-      </div>
+      </aside>
     </div>
     <script type="module" src="./main.ts"></script>
   </body>
