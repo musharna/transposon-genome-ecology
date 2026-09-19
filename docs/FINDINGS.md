@@ -219,7 +219,8 @@ at `26a3a12` with every mutation-table row seen to fail. Data:
 - `experiments/006-reproduction-control.csv`: 60 runs;
 - `experiments/006-phase2.csv`: 60 runs, at `phi` = 0.001 and 0.0005.
 
-**No figure yet.**
+Figure: `analysis/fig-006-local-exponent.png`. It was made after the Result, is not
+registered, and describes the result without testing anything.
 
 005 showed that the exponent is a property of the fitting window, so this question does
 not fit one. It asks whether the **local** exponent converges, as `phi` falls, to the
@@ -332,7 +333,7 @@ question open that it cannot answer itself:
 
 That question decides whether 005's "no floor" survives below `phi = 0.002`. It needs its
 own registration, with its own horizon rule, and must not be answered by extending 006's
-runs. Also owed on 006: a figure.
+runs.
 
 **Also open, carried deliberately:**
 
@@ -409,6 +410,7 @@ Rscript docs/analysis/plot-002.R
 Rscript docs/analysis/plot-003.R
 Rscript docs/analysis/plot-004.R
 Rscript docs/analysis/plot-005.R
+Rscript docs/analysis/plot-006.R
 ```
 
 Each script re-asserts its experiment's manipulation checks against the CSV before it

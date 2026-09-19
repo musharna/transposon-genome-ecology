@@ -685,3 +685,21 @@ Appended rather than edited in, so the list above stays as it was written.
 - **The end-to-end negative control fails as it should.** With column B deleted from
   the CSV, `--analyse` voids with "0 duplicated, 30 missing, 0 unexpected". The CSV
   was restored afterwards, and its checksum was verified.
+
+### Addendum 3, 2026-09-18 — a figure, made at `70ca0bf`
+
+"No figure has been made" above was true when the Result was written, and is left as
+written.
+
+- **A figure now exists, POST-DATA and descriptive:** `../analysis/fig-006-local-exponent.png`,
+  from `../analysis/plot-006.R`. It was not registered, and it tests nothing.
+- **It draws Secondary 2's five registered steps per ratio**, with the local exponent
+  and ±1 SEM of each. The [0.95, 1.05] band is drawn over the primary step
+  (0.0005→0.001) only. At ratio 5.00, the censored-at-horizon count is drawn as a bound
+  (an open mark and an up-arrow at 1.648), with no error bar. Phase 1's cells and 005's
+  `phi = 0.0453` are not in that sequence and are not drawn. Secondary 1 stays a table.
+- **It changes no number and no verdict.** The script recounts what it draws from the
+  committed CSVs and refuses to draw unless the recount reproduces `--analyse`: all 15
+  step values and SEMs to 3 dp, PRIMARY HELD (2 of 3), and 1.648 ± 0.281 under the
+  censored count. Seven injected faults each stop it, and so does an external edit to
+  the Phase 2 CSV (restored, checksum verified).
