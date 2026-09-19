@@ -1132,6 +1132,9 @@ export {
   phase2Keys,
   RATIOS,
   registeredConvergenceCells,
+  // Exported (not changed) 2026-09-19 so 007 imports the saturation threshold
+  // instead of restating it.
+  SATURATION_COPIES_PER_GENOME,
   SEEDS,
   type Row,
 };
