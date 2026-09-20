@@ -7,15 +7,18 @@ What you move are the conditions a lineage lives under; what happens next is
 selection.
 
 **▶ [Play it](https://musharna.github.io/transposon-genome-ecology/)** ·
-**📄 [What it found](docs/FINDINGS.md)** — six questions, each registered with its
+**📄 [What it found](docs/FINDINGS.md)** — seven questions, each registered with its
 prediction and its falsification condition and committed to git _before_ the code that
 answered it existed.
 
-- **One registered primary was falsified:** 002.
+- **Two registered primaries were falsified:** 002 and 007.
 - **Registered secondaries were falsified** in 003, 004, 005 and 006.
 - **004's third secondary was later retracted** as unresolvable.
 - **006's primary held as registered, but is not robust:** counting three censored runs
   at their horizon falsifies it.
+- **007 followed those three runs ten times further:** one died, two were still
+  controlled, so 005's "no floor" is **not supported** below `phi = 0.002` at ratio 5.00
+  — and no floor is claimed.
 
 Code is **MIT** (`sim/ web/ scripts/ tools/ tests/`, `experiments/**/*.ts`, and
 `docs/analysis/*.R` — source code is MIT wherever it lives, including under `docs/`);

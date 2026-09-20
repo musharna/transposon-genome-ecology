@@ -15,3 +15,7 @@ Rplots.pdf
 # inert, so these are regenerable scratch, not results.
 experiments/*.shard-*.csv
 experiments/006-smoke.csv
+# 007's per-shard intermediates, same reasoning as the line above: `--merge`
+# rebuilds the two committed CSVs from them and re-checks the whole grid, so a
+# shard file is regenerable scratch rather than a result.
+experiments/007-shards/

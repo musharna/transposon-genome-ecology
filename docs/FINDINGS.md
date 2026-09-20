@@ -13,7 +13,7 @@ change. Transposition rate is **heritable, not a decision**, which is the constr
 whole design is built to respect: a version that let you press "copy now" would be
 modelling something that does not exist.
 
-Six questions were registered in advance — each written down, with its prediction and
+Seven questions were registered in advance — each written down, with its prediction and
 its falsification condition, and committed to git **before the code that answers it
 existed** — and then answered. This page is what they found. Scientific correctness is
 the floor here, not the point: the thing being built is a toy you can poke.
@@ -25,7 +25,7 @@ verdict does not survive inspection, that is said too.
 
 ---
 
-## The six questions
+## The seven questions
 
 ### 001 — Does it matter that rate is per-copy rather than per-family?
 
@@ -296,6 +296,59 @@ and call it not robust. No number moved.
 - That explains the failure. It does not excuse it, because freezing `K` was
   registered.
 
+### 007 — Do the controlled seeds saturate?
+
+**Registered** at
+[`4641c64`](pre-registrations/2026-09-19-do-the-controlled-seeds-saturate.md),
+committed alone before any runner. The runner,
+`experiments/007-do-the-controlled-seeds-saturate.ts`, was committed at `1531adc` with
+every mutation-table row seen to fail. It **imports 006's run loop and its definition of
+saturation** rather than restating them, so 007's definitions cannot drift from 006's;
+006's `runOne` gained an optional read-only observer for that purpose (`6cd6560`, 006
+Addendum 4). Data: `experiments/007-runs.csv`, 33 runs, and `experiments/007-series.csv`.
+
+The question 006 left open: at `phi = 0.0005`, ratio 5.00, the three seeds still
+controlled at generation 70013 — do they ever saturate? 007 re-runs them **from
+generation 0**, not resumed, to a registered horizon of **H = 239,030 generations**, ten
+times the cell's latest saturation. Manipulation check 1 required each seed's state hash
+at generation 70013 to equal 006's; all three matched, so these are the runs 006
+recorded. All six manipulation checks passed.
+
+**Verdict: the registered primary is FALSIFIED. The overall outcome is
+floor-consistent, with one extinction. No floor is claimed.**
+
+- **PRIMARY — FALSIFIED.** All three named seeds were to saturate before H. None did.
+
+  | seed | label           | stopped at | copies/genome | fitted at `2H` |
+  | ---- | --------------- | ---------- | ------------- | -------------- |
+  | 6005 | extinct         | 230096     | 0             | —              |
+  | 6006 | controlled-flat | 239030     | 714.9         | 759.5          |
+  | 6008 | controlled-flat | 239030     | 474.6         | 722.6          |
+
+  Both survivors drift upward, far too slowly to matter: extended a second full horizon,
+  each registered fit is still under half of the 1500 threshold.
+
+- **SECONDARY — descriptive, no verdict.** Of 20 fresh seeds in the same cell, **19
+  saturated** (20916–24380, the same band as 006's seven) and **one went extinct**
+  (7007, at 113878). None reached H. Still controlled at generation 70013: **1 of 20**,
+  Wilson 95% [0.009, 0.236] — and that one was 7007, which later died rather than being
+  held. The controlled mode did not recur in twenty fresh draws.
+
+**What it licenses, in the registered wording:** **"no floor" is not supported below
+`phi = 0.002` at ratio 5.00, and a floor is not claimed.** A flat run over a finite
+horizon cannot establish one. 005's registered claim — no floor _above_ 0.002 — is
+untouched, and 006 is not re-scored.
+
+**What it does not show.** Not that a floor exists: two seeds flat over 239,030
+generations is consistent with a floor and equally with a delay beyond 10× the cell's
+latest saturation. That is a fact about the horizon, not about the model. Nothing here
+extends below `phi = 0.0005`, to ratio 3.33, or to any organism.
+
+**Unregistered, recorded because the series show it:** both extinctions were abrupt, not
+declines — 6005 sampled 492 copies per genome at generation 229000 and 0.14 at 230000;
+7007 sampled 594 at 113000 and died at 113878. That matches the collapses 006 saw at
+ratio 3.33. It is an observation, not evidence.
+
 ---
 
 ## What is open
@@ -325,15 +378,20 @@ golden hash that pins the RNG draw stream, and the registered questions above we
 answered at the shipped value. Retuning a constant so that a nicer outcome appears is
 exactly the post-hoc move this project's whole method exists to prevent.
 
-**The next registration.** 006 tested the functional form, as 005 asked. It left one
-question open that it cannot answer itself:
+**The floor question, answered as far as a horizon can answer it.** 006 left this open:
 
 > **At `phi = 0.0005`, ratio 5.00, do the three seeds still controlled at generation
 > 70013 ever saturate?**
 
-That question decides whether 005's "no floor" survives below `phi = 0.002`. It needs its
-own registration, with its own horizon rule, and must not be answered by extending 006's
-runs.
+**007 asked it under its own registration and its own horizon, and the answer is no — not
+within ten times the cell's latest saturation.** One of the three went extinct; the other
+two were still controlled at 239,030 generations, drifting far too slowly to reach
+saturation in another full horizon. So **005's "no floor" is not supported below
+`phi = 0.002` at ratio 5.00**, and no floor is claimed: a finite horizon cannot establish
+one. What stays open is exactly that gap — telling a floor from a delay longer than any
+horizon this project can afford would need a different kind of argument, not a longer run.
+
+**No question is registered next.**
 
 **Also open, carried deliberately:**
 
@@ -424,6 +482,19 @@ CSV) uses the runner named in each section above, for example:
 ```sh
 npx tsx experiments/005-delay-divergence.ts    # ~16 h single-process, ~6 h sharded
 ```
+
+**007 re-scores from its committed CSVs without re-running anything**, since its
+analysis is a separate mode of the same runner:
+
+```sh
+npx tsx experiments/007-do-the-controlled-seeds-saturate.ts --analyse
+```
+
+That re-asserts all six manipulation checks against `experiments/007-runs.csv` and
+`experiments/007-series.csv` and prints the verdicts in seconds. `--run <shard>` (one of
+`control`, `named-6005`, `named-6006`, `named-6008`, `fresh-1`…`fresh-4`) regenerates a
+shard into `experiments/007-shards/`, which is **~14 hours** of wall time in total with
+three shards at once; `--merge` then rebuilds the two committed CSVs from them.
 
 ⚠️ **Do not run this to check the figures.** Two reasons. It is expensive — the
 registered cost table budgets **~16 hours** of wall time for all 243 runs in one

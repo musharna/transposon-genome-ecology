@@ -226,3 +226,108 @@ The runs go through jobd, sharded so that independent runs run in parallel.
 - **A finite horizon cannot prove a floor.** The strongest statement 007 can make
   against "no floor" is "not supported".
 - **006 is not re-scored**, whatever 007 finds.
+
+## Result — 2026-09-19
+
+**Provenance.** Commit `1531adc`, clean tree, node v22.14.0, host SCAR18. Eight jobd
+shards, 3881–3888, ran from 01:47:54 to 15:53:30 EDT on 2026-09-19, three at a time.
+Data: `experiments/007-runs.csv`, 33 runs, and `experiments/007-series.csv`. Scored by
+`npx tsx experiments/007-do-the-controlled-seeds-saturate.ts --analyse`, whose output
+is quoted below in full.
+
+### Manipulation checks 1–6: all passed
+
+1. **Replay.** Each named seed's `stateHash` at generation 70013 equalled its 006
+   end-state hash: 6005 `6036f311`, 6006 `1ba1bbf0`, 6008 `6b518b4c`.
+2. **Positive control.** All ten seeds 6001–6010 at `phi = 0.001` saturated, each with
+   `t_sat` and end-state hash identical to its row in `experiments/006-phase2.csv`
+   (10512–12646).
+3. **Grid.** Exactly 3 named, 20 fresh and 10 control runs; none duplicated or missing.
+4. **Horizon.** Every named and fresh row records 239030; every control row 35007.
+5. **Series.** One sample per 1000 generations for every run, no gaps, no duplicates.
+6. **Model.** `07f0ccabe735a307e24e7a45b1b1327df531a65b7a1e076780d045ad8608c5de`, the
+   digest of `12e7b08`, in every shard log.
+
+### PRIMARY — FALSIFIED
+
+> All three named seeds saturate before H.
+
+None of the three saturated.
+
+| seed | label            | stopped at | copies/genome | the fit over `H/2`–`H`                          |
+| ---- | ---------------- | ---------- | ------------- | ----------------------------------------------- |
+| 6005 | extinct          | 230096     | 0             | not fitted; an extinct run is labelled from its row |
+| 6006 | controlled-flat  | 239030     | 714.90        | slope 3.2584e-7/gen over 120 samples; fitted 702.6 at `H`, 759.5 at `2H` |
+| 6008 | controlled-flat  | 239030     | 474.63        | slope 8.6836e-7/gen over 120 samples; fitted 587.2 at `H`, 722.6 at `2H` |
+
+Both surviving seeds drift upward, and both drift far too slowly: extended a full
+second horizon, each fitted line is still under half of the 1500 threshold.
+
+### Overall outcome — floor-consistent, with 1 extinction
+
+Two named seeds are controlled-flat, so the registered rule gives **floor-consistent**.
+The third, 6005, went **extinct** at generation 230096 and is reported as its own
+count. It is not read as a floor: it was not held at a controlled level, it was lost.
+
+### What this licenses about 005's "no floor" — the registered wording
+
+> **"No floor" is not supported below `phi = 0.002` at ratio 5.00. A floor is not
+> claimed.** A flat run over a finite horizon cannot establish one.
+
+005's registered claim, "no floor above `phi = 0.002`", is untouched — 007 tested a
+cell below it. 006's cell, method and verdicts are likewise untouched.
+
+### SECONDARY — how common is the controlled mode? Descriptive, no verdict
+
+Of the 20 fresh seeds 7001–7020:
+
+- **19 saturated**, between generations 20916 (seed 7003) and 24380 (seed 7012) — the
+  same band as the seven that saturated in 006's Phase 2, 21899–23903.
+- **1 went extinct**: seed 7007, at generation 113878.
+- **controlled-flat: 0. controlled-trending: 0.** No fresh seed reached H.
+- Still controlled at generation 70013: **1 of 20**, Wilson 95% [0.009, 0.236] — that
+  one being 7007, which later went extinct rather than being held.
+- Still controlled at H: **0 of 20**, Wilson 95% [0.000, 0.161].
+
+So the controlled mode did not recur in twenty fresh draws of the same cell. Nothing
+in the model predicts this fraction and none was registered; the interval is the whole
+statement.
+
+### Unregistered observations — not scored, not claims
+
+Recorded because they are visible in the series and would otherwise be lost. Neither
+was registered, so neither is evidence for anything here.
+
+- **Both extinctions were abrupt**, not a decline. Seed 6005 sampled 492.2
+  copies/genome at generation 229000 and 0.14 at 230000, dying at 230096; seed 7007
+  sampled 593.5 at 113000 and died at 113878. A controlled seed appears to end by
+  collapsing from its usual level, not by sinking through it.
+- **The two survivors sat where 006 left them.** Over the whole 239030 generations,
+  6006 ranged 200.3–1011.7 copies/genome (mean 670.1) and 6008 ranged 220.3–855.9
+  (mean 557.8) — the same 200–900 band 006 reported at a horizon 3.4× shorter. Their
+  silenced fractions at H were 0.633 and 0.751.
+
+### The analyse output, verbatim
+
+```
+MANIPULATION CHECKS 1-6 PASSED
+
+=== PRIMARY — delay: all three named seeds saturate before H ===
+  seed 6005: extinct (extinct at 230096)
+  seed 6006: controlled-flat (slope 3.258e-7/gen over 120 samples, fitted 760 copies/genome at 2H)
+  seed 6008: controlled-flat (slope 8.684e-7/gen over 120 samples, fitted 723 copies/genome at 2H)
+  PRIMARY: FALSIFIED
+  OVERALL: floor-consistent; extinctions 1
+=== SECONDARY — fresh seeds, descriptive, no verdict ===
+  controlled at 70013: 1 of 20 [0.009, 0.236]
+  controlled at H: 0 of 20 [0.000, 0.161]
+  saturated 19, extinct 1, controlled-flat 0, controlled-trending 0
+```
+
+### What 007 does not say
+
+- It does not establish a floor. Two seeds flat over 239030 generations is consistent
+  with a floor and equally with a delay longer than 10× the cell's latest saturation.
+  That is a statement about the horizon, not about the model.
+- It says nothing about `phi` below 0.0005, about ratio 3.33, or about any organism.
+- It does not re-score 006, and 006's tables are unchanged.
