@@ -4,6 +4,18 @@ Milestone-boundary entries. Appended in the commit that closes a milestone.
 
 ## Unreleased
 
+### Added
+
+- **The repertoire lookup's cost is now tested, counted in entries read.** The 2026-09-03 fix
+  (`isSilenced` binary-searches the sorted repertoire instead of scanning it) was guarded
+  only on its ANSWER (`tests/silencing.test.ts`, which the scan also passes) and on the
+  flooded-frame ceiling of 20 000 ms in `tests/layout.test.ts`, which the 1 ms → 36 ms
+  regression also passes. `tests/silencing-cost.test.ts` wraps each real genome's
+  repertoire in a Proxy and requires every lookup to read at most ⌈log₂(n + 1)⌉ + 2
+  entries, for `isSilenced` and for the render field's `nearestSignedDistance`. Seen to
+  fail: with either function put back to a scan, only this file fails ("read 38 of 41
+  repertoire entries (ceiling 8)"), while the 18 silencing and 15 render-field tests pass.
+
 ## [1.0.2] — 2026-09-17
 
 ### Added
