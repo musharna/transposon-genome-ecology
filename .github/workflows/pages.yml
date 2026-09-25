@@ -53,7 +53,7 @@ jobs:
 
       # `dist/.nojekyll` comes from `web/public/` via the build. Without it Pages
       # runs Jekyll, which strips paths beginning with an underscore.
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: dist
 
