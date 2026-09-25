@@ -26,7 +26,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           # Read from .nvmrc rather than repeated here: package.json also pins
           # engines >=22, and a third copy of the version is a third thing to
